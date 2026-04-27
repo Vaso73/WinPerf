@@ -8,4 +8,5 @@ public sealed class WinPerfSettings
     public List<string> RecentCustomCommands { get; set; } = [];
     public double? DashboardEngineOutputHeight { get; set; }
     public double? DashboardLeftRailWidth { get; set; }
+    public string? UiDensity { get; set; }
 }
