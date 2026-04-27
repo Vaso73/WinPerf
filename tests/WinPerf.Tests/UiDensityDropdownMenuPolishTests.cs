@@ -1,0 +1,39 @@
+namespace WinPerf.Tests;
+
+public sealed class UiDensityDropdownMenuPolishTests
+{
+    private static readonly string MainWindowXaml = File.ReadAllText(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", "MainWindow.xaml"));
+
+    private static readonly string MainWindowSource = File.ReadAllText(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", "MainWindow.xaml.cs"));
+
+    [Fact]
+    public void DensityDropdownMenu_UsesCompactMenuSizing()
+    {
+        Assert.Contains("x:Name=\"UiDensityContextMenu\"", MainWindowXaml);
+        Assert.Contains("MinWidth=\"124\"", MainWindowXaml);
+        Assert.Contains("Padding=\"4\"", MainWindowXaml);
+        Assert.Contains("Property=\"FontSize\" Value=\"11\"", MainWindowXaml);
+        Assert.Contains("Property=\"MinHeight\" Value=\"26\"", MainWindowXaml);
+        Assert.Contains("Property=\"Padding\" Value=\"8,3\"", MainWindowXaml);
+    }
+
+    [Fact]
+    public void DensityDropdownMenu_ShowsGreenCheckOnActiveItem()
+    {
+        Assert.Contains("private void ApplyUiDensityMenuItemState(MenuItem menuItem, bool isActive, string label)", MainWindowSource);
+        Assert.Contains("menuItem.Header = isActive", MainWindowSource);
+        Assert.Contains("$\"✓ {label}\"", MainWindowSource);
+        Assert.Contains("FindResource(isActive ? \"AccentGreen\" : \"TextMain\")", MainWindowSource);
+        Assert.Contains("menuItem.FontWeight = isActive ? FontWeights.Bold : FontWeights.SemiBold;", MainWindowSource);
+        Assert.Contains("menuItem.Opacity = isActive ? 1.0 : 0.78;", MainWindowSource);
+    }
+
+    [Fact]
+    public void DensityDropdownMenu_AppliesStateToBothItems()
+    {
+        Assert.Contains("ApplyUiDensityMenuItemState(CompactUiDensityMenuItem, isCompact, \"Compact\");", MainWindowSource);
+        Assert.Contains("ApplyUiDensityMenuItemState(ComfortableUiDensityMenuItem, !isCompact, \"Comfortable\");", MainWindowSource);
+    }
+}
