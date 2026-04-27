@@ -38,6 +38,22 @@ public partial class MainWindow : Window
     }
 
 
+
+    private void AdvancedCommandButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AdvancedCommandWindow
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            EngineOutputText.Text =
+                "Advanced command preview:" + Environment.NewLine +
+                dialog.CommandText;
+        }
+    }
+
     private void CustomCommandButton_Click(object sender, RoutedEventArgs e)
     {
         var initialCommand = EngineOutputText.Text.StartsWith("Command preview:", StringComparison.Ordinal)
