@@ -10,6 +10,26 @@
     <SolidColorBrush x:Key="AccentGreen" Color="#22C55E" />
     <SolidColorBrush x:Key="AccentAmber" Color="#F59E0B" />
 
+    <Style x:Key="TextBlockBase" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+    </Style>
+
+    <Style x:Key="TextBoxBase" TargetType="TextBox">
+        <Setter Property="Background" Value="#0B1628" />
+        <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <Style x:Key="ComboBoxBase" TargetType="ComboBox">
+        <Setter Property="Background" Value="#0B1628" />
+        <Setter Property="Foreground" Value="#0F172A" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
     <Style x:Key="CardBase" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource Panel}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />

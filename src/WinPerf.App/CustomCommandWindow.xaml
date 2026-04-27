@@ -20,26 +20,14 @@
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
 
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource TextMain}" />
-            <Setter Property="FontFamily" Value="Segoe UI" />
-        </Style>
+        <Style TargetType="TextBlock" BasedOn="{StaticResource TextBlockBase}" />
 
-        <Style TargetType="TextBox">
-            <Setter Property="Background" Value="#0B1628" />
-            <Setter Property="Foreground" Value="{StaticResource TextMain}" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
-            <Setter Property="BorderThickness" Value="1" />
+        <Style TargetType="TextBox" BasedOn="{StaticResource TextBoxBase}">
             <Setter Property="Padding" Value="12" />
-            <Setter Property="FontSize" Value="14" />
             <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
         </Style>
 
-        <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="#0B1628" />
-            <Setter Property="Foreground" Value="#0F172A" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
-            <Setter Property="BorderThickness" Value="1" />
+        <Style TargetType="ComboBox" BasedOn="{StaticResource ComboBoxBase}">
             <Setter Property="Padding" Value="10,0,10,0" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontFamily" Value="Consolas" />
