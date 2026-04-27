@@ -100,6 +100,67 @@
             <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
+
+        <Style TargetType="ContextMenu">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Background" Value="{StaticResource PanelSoft}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <StackPanel IsItemsHost="True"
+                                        KeyboardNavigation.DirectionalNavigation="Cycle" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"
+                                              RecognizesAccessKey="True"
+                                              VerticalAlignment="Center"
+                                              Margin="2,0" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#172A44" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#172A44" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </Window.Resources>
 
             <Border Background="{StaticResource Bg}"
@@ -201,13 +262,6 @@
                     <Border CornerRadius="14" Padding="12" Margin="0,0,0,10">
                         <TextBlock Text="History" Foreground="{StaticResource TextMuted}" />
                     </Border>
-                    <Button Content="Settings"
-                            Style="{StaticResource SecondaryButton}"
-                            HorizontalContentAlignment="Left"
-                            Padding="12"
-                            Margin="0,0,0,0"
-                            Click="SettingsButton_Click" />
-
 <StackPanel x:Name="ConfigColumn" Margin="0,18,0,0">
                     <Border Style="{StaticResource Card}" Margin="0,0,0,16">
                         <StackPanel>
@@ -314,19 +368,20 @@
                                             Click="StopButton_Click" />
                                 </StackPanel>
 
-                                <StackPanel Orientation="Horizontal">
-                                    <Button x:Name="AdvancedCommandButton"
-                                            Content="Advanced"
-                                            Style="{StaticResource SecondaryButton}"
-                                            Width="118"
-                                            Margin="0,0,10,0"
-                                            Click="AdvancedCommandButton_Click" />
-                                    <Button x:Name="CustomCommandButton"
-                                            Content="Custom"
-                                            Style="{StaticResource SecondaryButton}"
-                                            Width="96"
-                                            Click="CustomCommandButton_Click" />
-                                </StackPanel>
+                                <Button x:Name="CommandMenuButton"
+                                        Content="Command ▾"
+                                        Style="{StaticResource SecondaryButton}"
+                                        HorizontalContentAlignment="Center"
+                                        Click="CommandMenuButton_Click">
+                                    <Button.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Advanced builder..."
+                                                      Click="AdvancedCommandMenuItem_Click" />
+                                            <MenuItem Header="Custom command..."
+                                                      Click="CustomCommandMenuItem_Click" />
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -528,7 +583,10 @@
                            Text="Engine  ●  Not configured"
                            Foreground="{StaticResource TextMuted}"
                            FontSize="12"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center"
+                           Cursor="Hand"
+                           ToolTip="Click to configure iperf3 engine"
+                           MouseLeftButtonUp="EngineStatusText_MouseLeftButtonUp" />
             </DockPanel>
         </Border>
         </Grid>
