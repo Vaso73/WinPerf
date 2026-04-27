@@ -269,7 +269,26 @@
                                        Margin="0,0,0,14" />
 
                             <TextBlock Text="Server" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                            <TextBox x:Name="ServerBox" Text="10.100.100.1" Margin="0,5,0,12" />
+                            <Grid Margin="0,5,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="82" />
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox x:Name="ServerBox"
+                                          Grid.Column="0"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="True"
+                                          Text="10.100.100.1" />
+
+                                <Button x:Name="RemoveServerButton"
+                                        Grid.Column="2"
+                                        Content="Remove"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Padding="8,0"
+                                        Click="RemoveServerButton_Click" />
+                            </Grid>
 
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
@@ -357,8 +376,9 @@
                 <Grid Grid.Column="1" Margin="18,0,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="170" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="150" />
+                        <RowDefinition Height="*" MinHeight="220" />
+                        <RowDefinition Height="14" />
+                        <RowDefinition Height="150" MinHeight="95" />
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0">
@@ -371,7 +391,7 @@
                         <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,12,0">
                             <StackPanel>
                                 <TextBlock Text="Throughput" Foreground="{StaticResource TextMuted}" />
-                                <TextBlock Text="0 Mbps" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
+                                <TextBlock x:Name="ThroughputValueText" Text="0 Mbps" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
                                 <TextBlock Text="Live average" Foreground="{StaticResource Accent}" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
@@ -379,7 +399,7 @@
                         <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,12,0">
                             <StackPanel>
                                 <TextBlock Text="Jitter" Foreground="{StaticResource TextMuted}" />
-                                <TextBlock Text="0.00 ms" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
+                                <TextBlock x:Name="JitterValueText" Text="0.00 ms" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
                                 <TextBlock Text="UDP only" Foreground="{StaticResource AccentAmber}" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
@@ -387,7 +407,7 @@
                         <Border Grid.Column="2" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="Loss" Foreground="{StaticResource TextMuted}" />
-                                <TextBlock Text="0.0 %" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
+                                <TextBlock x:Name="LossValueText" Text="0.0 %" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
                                 <TextBlock Text="UDP only" Foreground="{StaticResource AccentGreen}" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
@@ -405,7 +425,8 @@
                                            DockPanel.Dock="Left"
                                            FontSize="18"
                                            FontWeight="SemiBold" />
-                                <TextBlock Text="Waiting for test..."
+                                <TextBlock x:Name="LiveStatusText"
+                                           Text="Waiting for test..."
                                            DockPanel.Dock="Right"
                                            Foreground="{StaticResource TextMuted}" />
                             </DockPanel>
@@ -426,17 +447,47 @@
                         </Grid>
                     </Border>
 
-                    <Border Grid.Row="2" Style="{StaticResource Card}">
-                        <StackPanel>
+                    <GridSplitter Grid.Row="2"
+                                  Height="6"
+                                  Margin="0,4"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"
+                                  Background="{StaticResource BorderSoft}"
+                                  Cursor="SizeNS"
+                                  Opacity="0.75"
+                                  ResizeDirection="Rows"
+                                  ResizeBehavior="PreviousAndNext"
+                                  ShowsPreview="True"
+                                  ToolTip="Drag to resize Engine Output" />
+
+                    <Border Grid.Row="3" Style="{StaticResource Card}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
                             <TextBlock Text="Engine Output"
                                        FontSize="18"
                                        FontWeight="SemiBold"
                                        Margin="0,0,0,10" />
-                            <TextBlock x:Name="EngineOutputText"
-                                       Text="iperf3 JSON stream output will appear here."
-                                       Foreground="{StaticResource TextMuted}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
+
+                            <TextBox x:Name="EngineOutputText"
+                                     Grid.Row="1"
+                                     Text="iperf3 JSON stream output will appear here."
+                                     Foreground="{StaticResource TextMuted}"
+                                     Background="#07101D"
+                                     BorderBrush="{StaticResource BorderSoft}"
+                                     BorderThickness="1"
+                                     Padding="8"
+                                     FontFamily="Consolas"
+                                     FontSize="11"
+                                     IsReadOnly="True"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     HorizontalScrollBarVisibility="Disabled"
+                                     VerticalScrollBarVisibility="Auto" />
+                        </Grid>
                     </Border>
                 </Grid>
             </Grid>

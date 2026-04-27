@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using WinPerf.App.Settings;
@@ -17,6 +19,8 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _currentRunCancellation;
     private readonly StringBuilder _engineOutput = new();
 
+    private const int MaxRecentServers = 20;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -24,6 +28,7 @@ public partial class MainWindow : Window
 
         _settings = _settingsStore.Load();
         RefreshEngineStatus();
+        PopulateRecentServers();
     }
 
 
@@ -63,7 +68,7 @@ public partial class MainWindow : Window
         {
             var options = new IperfTestOptions
             {
-                Server = ServerBox.Text.Trim(),
+                Server = GetServerText(),
                 Port = ParsePositiveInt(PortBox, "Port"),
                 Streams = ParsePositiveInt(StreamsBox, "Streams"),
                 DurationSeconds = ParsePositiveInt(DurationBox, "Duration"),
@@ -73,8 +78,11 @@ public partial class MainWindow : Window
 
             var command = IperfCommandBuilder.BuildClientCommand(_engineResolution.ExecutablePath, options);
 
+            SaveRecentServer(options.Server);
+
             _currentRunCancellation = new CancellationTokenSource();
             SetRunState(isRunning: true);
+            ResetLiveMetrics();
 
             _engineOutput.Clear();
             AppendEngineOutput("Running command:");
@@ -87,6 +95,22 @@ public partial class MainWindow : Window
                 {
                     await Dispatcher.InvokeAsync(() =>
                     {
+                        if (line.Stream == IperfOutputStream.StandardOutput)
+                        {
+                            if (IperfJsonStreamParser.TryParseIntervalSample(line.Text, out var sample))
+                            {
+                                UpdateLiveMetrics(sample);
+                                AppendEngineOutput(FormatIntervalSample(sample));
+                                return;
+                            }
+
+                            if (TryFormatJsonStreamEvent(line.Text, out var eventMessage))
+                            {
+                                AppendEngineOutput(eventMessage);
+                                return;
+                            }
+                        }
+
                         AppendEngineOutput(line.Text);
                     });
                 },
@@ -184,6 +208,92 @@ public partial class MainWindow : Window
         }
     }
 
+    private string GetServerText()
+    {
+        return ServerBox.Text.Trim();
+    }
+
+    private void PopulateRecentServers()
+    {
+        ServerBox.Items.Clear();
+
+        var servers = (_settings.RecentServers ?? [])
+            .Where(server => !string.IsNullOrWhiteSpace(server))
+            .Select(server => server.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxRecentServers)
+            .ToList();
+
+        foreach (var server in servers)
+        {
+            ServerBox.Items.Add(server);
+        }
+
+        ServerBox.Text = !string.IsNullOrWhiteSpace(_settings.LastServer)
+            ? _settings.LastServer
+            : servers.FirstOrDefault() ?? "10.100.100.1";
+    }
+
+    private void SaveRecentServer(string server)
+    {
+        server = server.Trim();
+
+        if (string.IsNullOrWhiteSpace(server))
+        {
+            return;
+        }
+
+        var servers = new List<string> { server };
+
+        servers.AddRange(
+            (_settings.RecentServers ?? [])
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => item.Trim())
+                .Where(item => !string.Equals(item, server, StringComparison.OrdinalIgnoreCase)));
+
+        _settings.LastServer = server;
+        _settings.RecentServers = servers
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxRecentServers)
+            .ToList();
+
+        _settingsStore.Save(_settings);
+        PopulateRecentServers();
+        ServerBox.Text = server;
+    }
+
+    private void RemoveServerButton_Click(object sender, RoutedEventArgs e)
+    {
+        var server = GetServerText();
+
+        if (string.IsNullOrWhiteSpace(server))
+        {
+            return;
+        }
+
+        var servers = (_settings.RecentServers ?? [])
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Where(item => !string.Equals(item, server, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxRecentServers)
+            .ToList();
+
+        _settings.RecentServers = servers;
+
+        if (string.Equals(_settings.LastServer, server, StringComparison.OrdinalIgnoreCase))
+        {
+            _settings.LastServer = servers.FirstOrDefault();
+        }
+
+        _settingsStore.Save(_settings);
+        PopulateRecentServers();
+
+        ServerBox.Text = _settings.LastServer
+            ?? servers.FirstOrDefault()
+            ?? "10.100.100.1";
+    }
+
     private IperfMode GetSelectedMode()
     {
         var selectedText = (ModeBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
@@ -215,6 +325,7 @@ public partial class MainWindow : Window
         StopButton.IsEnabled = isRunning;
         AdvancedCommandButton.IsEnabled = !isRunning;
         CustomCommandButton.IsEnabled = !isRunning;
+        RemoveServerButton.IsEnabled = !isRunning;
     }
 
     private void AppendEngineOutput(string text)
@@ -229,5 +340,120 @@ public partial class MainWindow : Window
         }
 
         EngineOutputText.Text = _engineOutput.ToString();
+        EngineOutputText.ScrollToEnd();
+    }
+
+    private void ResetLiveMetrics()
+    {
+        ThroughputValueText.Text = "0 Mbps";
+        JitterValueText.Text = "-- ms";
+        LossValueText.Text = "-- %";
+        LiveStatusText.Text = "Waiting for samples...";
+    }
+
+    private void UpdateLiveMetrics(IperfIntervalSample sample)
+    {
+        if (sample.MegabitsPerSecond is double megabitsPerSecond)
+        {
+            ThroughputValueText.Text = FormatMegabits(megabitsPerSecond);
+        }
+
+        JitterValueText.Text = sample.JitterMs is double jitterMs
+            ? jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms"
+            : "n/a";
+
+        LossValueText.Text = sample.LostPercent is double lostPercent
+            ? lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %"
+            : "n/a";
+
+        LiveStatusText.Text = sample.Seconds is double seconds
+            ? "Last sample " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
+            : "Receiving samples...";
+    }
+
+    private static string FormatMegabits(double megabitsPerSecond)
+    {
+        var format = megabitsPerSecond >= 100
+            ? "0"
+            : "0.0";
+
+        return megabitsPerSecond.ToString(format, CultureInfo.InvariantCulture) + " Mbps";
+    }
+
+    private static string FormatIntervalSample(IperfIntervalSample sample)
+    {
+        var parts = new List<string>();
+
+        parts.Add(sample.Seconds is double seconds
+            ? "Interval " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
+            : "Interval");
+
+        if (sample.MegabitsPerSecond is double megabitsPerSecond)
+        {
+            parts.Add(FormatMegabits(megabitsPerSecond));
+        }
+
+        if (sample.JitterMs is double jitterMs)
+        {
+            parts.Add("jitter " + jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+        }
+
+        if (sample.LostPercent is double lostPercent)
+        {
+            parts.Add("loss " + lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %");
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private static bool TryFormatJsonStreamEvent(string text, out string message)
+    {
+        message = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            var root = document.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("event", out var eventElement))
+            {
+                return false;
+            }
+
+            var eventName = eventElement.GetString();
+
+            message = eventName?.ToLowerInvariant() switch
+            {
+                "start" => "Test started.",
+                "end" => "Test completed.",
+                "error" => "iperf3 error: " + GetJsonEventDataText(root),
+                null or "" => "iperf3 event received.",
+                _ => "iperf3 event: " + eventName
+            };
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string GetJsonEventDataText(JsonElement root)
+    {
+        if (!root.TryGetProperty("data", out var data))
+        {
+            return "unknown error";
+        }
+
+        return data.ValueKind == JsonValueKind.String
+            ? data.GetString() ?? "unknown error"
+            : data.ToString();
     }
 }
