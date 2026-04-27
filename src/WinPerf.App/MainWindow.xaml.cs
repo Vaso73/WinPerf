@@ -505,8 +505,20 @@ public partial class MainWindow : Window
             ? "Active UI density: Compact. Click to choose UI density."
             : "Active UI density: Comfortable. Click to choose UI density.";
 
-        CompactUiDensityMenuItem.IsChecked = isCompact;
-        ComfortableUiDensityMenuItem.IsChecked = !isCompact;
+        ApplyUiDensityMenuItemState(CompactUiDensityMenuItem, isCompact, "Compact");
+        ApplyUiDensityMenuItemState(ComfortableUiDensityMenuItem, !isCompact, "Comfortable");
+    }
+
+    private void ApplyUiDensityMenuItemState(MenuItem menuItem, bool isActive, string label)
+    {
+        menuItem.IsChecked = isActive;
+        menuItem.Header = isActive
+            ? $"✓ {label}"
+            : label;
+
+        menuItem.Foreground = FindResource(isActive ? "AccentGreen" : "TextMain") as Brush ?? Brushes.White;
+        menuItem.FontWeight = isActive ? FontWeights.Bold : FontWeights.SemiBold;
+        menuItem.Opacity = isActive ? 1.0 : 0.78;
     }
 
     private static string NormalizeUiDensity(string? value)

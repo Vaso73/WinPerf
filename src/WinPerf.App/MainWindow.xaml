@@ -676,7 +676,21 @@ HorizontalContentAlignment="Center"
                           Margin="12,0,0,0"
                           Click="UiDensityButton_Click">
                     <Button.ContextMenu>
-                        <ContextMenu>
+                        <ContextMenu x:Name="UiDensityContextMenu"
+                                     MinWidth="124"
+                                     Padding="4"
+                                     Background="{StaticResource PanelSoft}"
+                                     BorderBrush="{StaticResource BorderSoft}"
+                                     BorderThickness="1">
+                            <ContextMenu.Resources>
+                                <Style TargetType="{x:Type MenuItem}">
+                                    <Setter Property="FontSize" Value="11" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="MinHeight" Value="26" />
+                                    <Setter Property="Padding" Value="8,3" />
+                                    <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+                                </Style>
+                            </ContextMenu.Resources>
                             <MenuItem x:Name="CompactUiDensityMenuItem"
                                       Header="Compact"
                                       IsCheckable="True"
