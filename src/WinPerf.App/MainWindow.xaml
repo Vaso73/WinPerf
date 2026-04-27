@@ -114,7 +114,8 @@
                         Padding="12">
                     <StackPanel>
                         <TextBlock Text="Engine" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                        <TextBlock Text="iperf3.exe not configured"
+                        <TextBlock x:Name="EngineStatusText"
+                                   Text="iperf3.exe not configured"
                                    FontSize="13"
                                    TextWrapping="Wrap"
                                    Margin="0,4,0,0" />
@@ -143,9 +144,10 @@
                 <StackPanel DockPanel.Dock="Right"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right">
-                    <Button Content="Open History"
+                    <Button Content="Settings"
                             Style="{StaticResource SecondaryButton}"
-                            Margin="0,0,10,0" />
+                            Margin="0,0,10,0"
+                            Click="SettingsButton_Click" />
                     <Button Content="Start Test"
                             Style="{StaticResource PrimaryButton}" />
                 </StackPanel>

@@ -1,14 +1,24 @@
 using System.Windows;
 using System.Windows.Controls;
+using WinPerf.App.Settings;
 using WinPerf.Core.Iperf;
 
 namespace WinPerf.App;
 
 public partial class MainWindow : Window
 {
+    private readonly WinPerfSettingsStore _settingsStore = new();
+    private readonly IperfExecutableResolver _executableResolver = new();
+
+    private WinPerfSettings _settings = new();
+    private IperfExecutableResolution _engineResolution = new(false, null, "NotConfigured", "iperf3.exe is not configured.");
+
     public MainWindow()
     {
         InitializeComponent();
+
+        _settings = _settingsStore.Load();
+        RefreshEngineStatus();
     }
 
     private void StartButton_Click(object sender, RoutedEventArgs e)
@@ -25,7 +35,7 @@ public partial class MainWindow : Window
                 AddressFamily = IperfAddressFamily.IPv4
             };
 
-            var command = IperfCommandBuilder.BuildClientCommand("iperf3.exe", options);
+            var command = IperfCommandBuilder.BuildClientCommand(GetExecutablePathForPreview(), options);
 
             EngineOutputText.Text =
                 "Command preview:" + Environment.NewLine +
@@ -38,6 +48,39 @@ public partial class MainWindow : Window
     }
 
 
+
+
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SettingsWindow(_settings.IperfExecutablePath)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            _settings.IperfExecutablePath = dialog.IperfExecutablePath;
+            _settingsStore.Save(_settings);
+            RefreshEngineStatus();
+        }
+    }
+
+    private void RefreshEngineStatus()
+    {
+        _engineResolution = _executableResolver.Resolve(AppContext.BaseDirectory, new IperfEngineSettings
+        {
+            ExecutablePath = _settings.IperfExecutablePath
+        });
+
+        EngineStatusText.Text = _engineResolution.IsConfigured
+            ? $"{_engineResolution.Source}: {_engineResolution.ExecutablePath}"
+            : _engineResolution.Message;
+    }
+
+    private string GetExecutablePathForPreview()
+    {
+        return _engineResolution.ExecutablePath ?? "iperf3.exe";
+    }
 
     private void AdvancedCommandButton_Click(object sender, RoutedEventArgs e)
     {
