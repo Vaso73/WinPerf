@@ -35,7 +35,6 @@ public partial class MainWindow : Window
         PopulateRecentServers();
         ApplyDashboardLayout();
 
-        Loaded += (_, _) => ApplyResponsiveDashboardLayout();
         Closing += (_, _) => SaveDashboardLayout();
     }
 
@@ -177,73 +176,46 @@ public partial class MainWindow : Window
         }
     }
 
-    private void DashboardContentGrid_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        ApplyResponsiveDashboardLayout();
-    }
-
-    private void ApplyResponsiveDashboardLayout()
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        var useStackedLayout = DashboardContentGrid.ActualWidth < 920;
-
-        if (useStackedLayout)
-        {
-            Grid.SetRow(ConfigColumn, 0);
-            Grid.SetRowSpan(ConfigColumn, 1);
-            Grid.SetColumn(ConfigColumn, 0);
-            Grid.SetColumnSpan(ConfigColumn, 2);
-
-            Grid.SetRow(ResultsGrid, 1);
-            Grid.SetRowSpan(ResultsGrid, 1);
-            Grid.SetColumn(ResultsGrid, 0);
-            Grid.SetColumnSpan(ResultsGrid, 2);
-            ResultsGrid.Margin = new Thickness(0, 18, 0, 0);
-            return;
-        }
-
-        Grid.SetRow(ConfigColumn, 0);
-        Grid.SetRowSpan(ConfigColumn, 2);
-        Grid.SetColumn(ConfigColumn, 0);
-        Grid.SetColumnSpan(ConfigColumn, 1);
-
-        Grid.SetRow(ResultsGrid, 0);
-        Grid.SetRowSpan(ResultsGrid, 2);
-        Grid.SetColumn(ResultsGrid, 1);
-        Grid.SetColumnSpan(ResultsGrid, 1);
-        ResultsGrid.Margin = new Thickness(18, 0, 0, 0);
-    }
-
     private void ApplyDashboardLayout()
     {
-        if (_settings.DashboardEngineOutputHeight is not double height)
+        if (_settings.DashboardEngineOutputHeight is double height &&
+            !double.IsNaN(height) &&
+            !double.IsInfinity(height) &&
+            height >= EngineOutputRow.MinHeight)
         {
-            return;
+            EngineOutputRow.Height = new GridLength(height, GridUnitType.Pixel);
+            LiveThroughputRow.Height = new GridLength(1, GridUnitType.Star);
         }
 
-        if (double.IsNaN(height) || double.IsInfinity(height) || height < EngineOutputRow.MinHeight)
+        if (_settings.DashboardLeftRailWidth is double width &&
+            !double.IsNaN(width) &&
+            !double.IsInfinity(width) &&
+            width >= LeftRailColumn.MinWidth)
         {
-            return;
+            LeftRailColumn.Width = new GridLength(
+                Math.Min(width, LeftRailColumn.MaxWidth),
+                GridUnitType.Pixel);
         }
-
-        EngineOutputRow.Height = new GridLength(height, GridUnitType.Pixel);
-        LiveThroughputRow.Height = new GridLength(1, GridUnitType.Star);
     }
 
     private void SaveDashboardLayout()
     {
         var height = EngineOutputRow.ActualHeight;
 
-        if (double.IsNaN(height) || double.IsInfinity(height) || height < EngineOutputRow.MinHeight)
+        if (!double.IsNaN(height) && !double.IsInfinity(height) && height >= EngineOutputRow.MinHeight)
         {
-            return;
+            _settings.DashboardEngineOutputHeight = Math.Round(height, 0);
         }
 
-        _settings.DashboardEngineOutputHeight = Math.Round(height, 0);
+        var width = LeftRailColumn.ActualWidth;
+
+        if (!double.IsNaN(width) && !double.IsInfinity(width) && width >= LeftRailColumn.MinWidth)
+        {
+            _settings.DashboardLeftRailWidth = Math.Round(
+                Math.Min(width, LeftRailColumn.MaxWidth),
+                0);
+        }
+
         _settingsStore.Save(_settings);
     }
 
@@ -254,9 +226,19 @@ public partial class MainWindow : Window
             ExecutablePath = _settings.IperfExecutablePath
         });
 
-        EngineStatusText.Text = _engineResolution.IsConfigured
-            ? $"{_engineResolution.Source}: {_engineResolution.ExecutablePath}"
-            : _engineResolution.Message;
+        if (_engineResolution.IsConfigured)
+        {
+            var source = string.IsNullOrWhiteSpace(_engineResolution.Source)
+                ? "Configured"
+                : _engineResolution.Source;
+
+            EngineStatusText.Text = $"Engine  ●  Ready  ●  {source}";
+            EngineStatusText.ToolTip = _engineResolution.ExecutablePath;
+            return;
+        }
+
+        EngineStatusText.Text = "Engine  ●  Not configured";
+        EngineStatusText.ToolTip = _engineResolution.Message;
     }
 
     private void AdvancedCommandButton_Click(object sender, RoutedEventArgs e)
