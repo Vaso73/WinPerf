@@ -167,9 +167,12 @@
 
                     <TextBox x:Name="CommandBox"
                              Grid.Row="1"
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto"
+                             MinHeight="48"
+                             AcceptsReturn="False"
+                             TextWrapping="NoWrap"
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Disabled"
+                             VerticalContentAlignment="Center"
                              Text="iperf3.exe -c 10.100.100.1 -p 5201 -t 10 -P 10 --json-stream -4" />
                 </Grid>
             </Border>
