@@ -69,170 +69,170 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                Background="#07101D"
-                BorderBrush="{StaticResource BorderSoft}"
-                BorderThickness="0,0,0,1"
-                CornerRadius="11,11,0,0">
-            <Grid>
-                <StackPanel Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="6,0,0,0">
-                    <Image Source="Assets/WinPerf.ico"
-                           Width="16"
-                           Height="16"
-                           Margin="0,0,6,0" />
-                    <TextBlock Text="WinPerf Settings"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                </StackPanel>
+            <Border Grid.Row="0"
+                    Background="#07101D"
+                    BorderBrush="{StaticResource BorderSoft}"
+                    BorderThickness="0,0,0,1"
+                    CornerRadius="11,11,0,0">
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="6,0,0,0">
+                        <Image Source="Assets/WinPerf.ico"
+                               Width="16"
+                               Height="16"
+                               Margin="0,0,6,0" />
+                        <TextBlock Text="WinPerf Settings"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
 
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button x:Name="MinimizeButton"
-                            Content="—"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="MinimizeButton_Click" />
-                    <Button x:Name="MaximizeRestoreButton"
-                            Content="□"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="MaximizeRestoreButton_Click" />
-                    <Button x:Name="CloseButton"
-                            Content="×"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="CloseButton_Click" />
-                </StackPanel>
-            </Grid>
-        </Border>
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="MinimizeButton"
+                                Content="—"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="MinimizeButton_Click" />
+                        <Button x:Name="MaximizeRestoreButton"
+                                Content="□"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="MaximizeRestoreButton_Click" />
+                        <Button x:Name="CloseButton"
+                                Content="×"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="CloseButton_Click" />
+                    </StackPanel>
+                </Grid>
+            </Border>
 
             <Grid Grid.Row="1" Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,8">
-            <TextBlock Text="Settings"
-                       FontSize="22"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="Configure the iperf3 engine used by WinPerf. Auto-download/update will be added later."
-                       Foreground="{StaticResource TextMuted}"
-                       FontSize="11"
-                       TextWrapping="Wrap"
-                       Margin="0,3,0,0" />
-        </StackPanel>
+                <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="Settings"
+                               FontSize="22"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Configure the iperf3 engine used by WinPerf. Auto-download/update will be added later."
+                               Foreground="{StaticResource TextMuted}"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Margin="0,3,0,0" />
+                </StackPanel>
 
-        <Border Grid.Row="1"
-                Background="{StaticResource Panel}"
-                BorderBrush="{StaticResource BorderSoft}"
-                BorderThickness="1"
-                CornerRadius="12"
-                Padding="10">
-            <StackPanel>
-                <TextBlock Text="iperf3 executable"
-                           FontSize="11"
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,8" />
-
-                <TextBlock Text="Path to iperf3.exe"
-                           Foreground="{StaticResource TextMuted}"
-                           FontSize="11" />
-
-                <Grid Margin="0,5,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="8" />
-                        <ColumnDefinition Width="105" />
-                        <ColumnDefinition Width="8" />
-                        <ColumnDefinition Width="150" />
-                        <ColumnDefinition Width="8" />
-                        <ColumnDefinition Width="80" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBox x:Name="IperfPathBox"
-                             Grid.Column="0"
-                             VerticalContentAlignment="Center" />
-
-                    <Button Grid.Column="2"
-                            Content="Browse"
-                            Style="{StaticResource SecondaryButton}"
-                            Click="BrowseButton_Click" />
-
-                    <Button Grid.Column="4"
-                            Content="Import portable"
-                            Style="{StaticResource SecondaryButton}"
-                            Click="ImportPortableButton_Click" />
-
-                    <Button Grid.Column="6"
-                            Content="Clear"
-                            Style="{StaticResource SecondaryButton}"
-                            Click="ClearButton_Click" />
-                </Grid>
-
-                <Border Background="{StaticResource PanelSoft}"
+                <Border Grid.Row="1"
+                        Background="{StaticResource Panel}"
                         BorderBrush="{StaticResource BorderSoft}"
                         BorderThickness="1"
                         CornerRadius="12"
                         Padding="10">
                     <StackPanel>
-                        <TextBlock Text="Fallback path"
+                        <TextBlock Text="iperf3 executable"
+                                   FontSize="11"
                                    FontWeight="SemiBold"
-                                   Margin="0,0,0,6" />
-                        <TextBlock Text="If no manual path is configured, WinPerf tries tools\iperf3\iperf3.exe next to WinPerf.exe. Use Import portable to copy the selected iperf3 folder there."
+                                   Margin="0,0,0,8" />
+
+                        <TextBlock Text="Path to iperf3.exe"
                                    Foreground="{StaticResource TextMuted}"
-                                   TextWrapping="Wrap" />
+                                   FontSize="11" />
+
+                        <Grid Margin="0,5,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="105" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="80" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox x:Name="IperfPathBox"
+                                     Grid.Column="0"
+                                     VerticalContentAlignment="Center" />
+
+                            <Button Grid.Column="2"
+                                    Content="Browse"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="BrowseButton_Click" />
+
+                            <Button Grid.Column="4"
+                                    Content="Import portable"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="ImportPortableButton_Click" />
+
+                            <Button Grid.Column="6"
+                                    Content="Clear"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="ClearButton_Click" />
+                        </Grid>
+
+                        <Border Background="{StaticResource PanelSoft}"
+                                BorderBrush="{StaticResource BorderSoft}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="10">
+                            <StackPanel>
+                                <TextBlock Text="Fallback path"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,6" />
+                                <TextBlock Text="If no manual path is configured, WinPerf tries tools\iperf3\iperf3.exe next to WinPerf.exe. Use Import portable to copy the selected iperf3 folder there."
+                                           Foreground="{StaticResource TextMuted}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Border>
-            </StackPanel>
-        </Border>
 
-        <Grid Grid.Row="2" Margin="0,8,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="210" />
-            </Grid.ColumnDefinitions>
+                <Grid Grid.Row="2" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="210" />
+                    </Grid.ColumnDefinitions>
 
-            <TextBlock x:Name="ValidationText"
-                       Grid.Column="0"
-                       Foreground="{StaticResource TextMuted}"
-                       VerticalAlignment="Center"
-                       TextWrapping="NoWrap"
-                       TextTrimming="CharacterEllipsis"
-                       Margin="0,0,12,0" />
+                    <TextBlock x:Name="ValidationText"
+                               Grid.Column="0"
+                               Foreground="{StaticResource TextMuted}"
+                               VerticalAlignment="Center"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis"
+                               Margin="0,0,12,0" />
 
-            <StackPanel Grid.Column="1"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right">
-                <Button Content="Save"
-                        Style="{StaticResource PrimaryButton}"
-                        Width="100"
-                        Margin="0,0,6,0"
-                        Click="SaveButton_Click" />
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+                        <Button Content="Save"
+                                Style="{StaticResource PrimaryButton}"
+                                Width="100"
+                                Margin="0,0,6,0"
+                                Click="SaveButton_Click" />
 
-                <Button Content="Cancel"
-                        Style="{StaticResource SecondaryButton}"
-                        Width="100"
-                        Click="CancelButton_Click" />
-            </StackPanel>
-        </Grid>
+                        <Button Content="Cancel"
+                                Style="{StaticResource SecondaryButton}"
+                                Width="100"
+                                Click="CancelButton_Click" />
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
     </Border>
