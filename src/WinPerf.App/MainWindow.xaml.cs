@@ -33,6 +33,10 @@ public partial class MainWindow : Window
         _settings = _settingsStore.Load();
         RefreshEngineStatus();
         PopulateRecentServers();
+        ApplyDashboardLayout();
+
+        Loaded += (_, _) => ApplyResponsiveDashboardLayout();
+        Closing += (_, _) => SaveDashboardLayout();
     }
 
 
@@ -108,6 +112,13 @@ public partial class MainWindow : Window
                                 return;
                             }
 
+                            if (IperfJsonStreamParser.TryParseEndSummarySample(line.Text, out var endSample))
+                            {
+                                UpdateLiveMetrics(endSample);
+                                AppendEngineOutput(FormatEndSummarySample(endSample));
+                                return;
+                            }
+
                             if (TryFormatJsonStreamEvent(line.Text, out var eventMessage))
                             {
                                 AppendEngineOutput(eventMessage);
@@ -164,6 +175,76 @@ public partial class MainWindow : Window
             _settingsStore.Save(_settings);
             RefreshEngineStatus();
         }
+    }
+
+    private void DashboardContentGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        ApplyResponsiveDashboardLayout();
+    }
+
+    private void ApplyResponsiveDashboardLayout()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        var useStackedLayout = DashboardContentGrid.ActualWidth < 920;
+
+        if (useStackedLayout)
+        {
+            Grid.SetRow(ConfigColumn, 0);
+            Grid.SetRowSpan(ConfigColumn, 1);
+            Grid.SetColumn(ConfigColumn, 0);
+            Grid.SetColumnSpan(ConfigColumn, 2);
+
+            Grid.SetRow(ResultsGrid, 1);
+            Grid.SetRowSpan(ResultsGrid, 1);
+            Grid.SetColumn(ResultsGrid, 0);
+            Grid.SetColumnSpan(ResultsGrid, 2);
+            ResultsGrid.Margin = new Thickness(0, 18, 0, 0);
+            return;
+        }
+
+        Grid.SetRow(ConfigColumn, 0);
+        Grid.SetRowSpan(ConfigColumn, 2);
+        Grid.SetColumn(ConfigColumn, 0);
+        Grid.SetColumnSpan(ConfigColumn, 1);
+
+        Grid.SetRow(ResultsGrid, 0);
+        Grid.SetRowSpan(ResultsGrid, 2);
+        Grid.SetColumn(ResultsGrid, 1);
+        Grid.SetColumnSpan(ResultsGrid, 1);
+        ResultsGrid.Margin = new Thickness(18, 0, 0, 0);
+    }
+
+    private void ApplyDashboardLayout()
+    {
+        if (_settings.DashboardEngineOutputHeight is not double height)
+        {
+            return;
+        }
+
+        if (double.IsNaN(height) || double.IsInfinity(height) || height < EngineOutputRow.MinHeight)
+        {
+            return;
+        }
+
+        EngineOutputRow.Height = new GridLength(height, GridUnitType.Pixel);
+        LiveThroughputRow.Height = new GridLength(1, GridUnitType.Star);
+    }
+
+    private void SaveDashboardLayout()
+    {
+        var height = EngineOutputRow.ActualHeight;
+
+        if (double.IsNaN(height) || double.IsInfinity(height) || height < EngineOutputRow.MinHeight)
+        {
+            return;
+        }
+
+        _settings.DashboardEngineOutputHeight = Math.Round(height, 0);
+        _settingsStore.Save(_settings);
     }
 
     private void RefreshEngineStatus()
@@ -673,6 +754,28 @@ public partial class MainWindow : Window
             : "0.0";
 
         return megabitsPerSecond.ToString(format, CultureInfo.InvariantCulture) + " Mbps";
+    }
+
+    private static string FormatEndSummarySample(IperfIntervalSample sample)
+    {
+        var parts = new List<string> { "Test completed" };
+
+        if (sample.MegabitsPerSecond is double megabitsPerSecond)
+        {
+            parts.Add(FormatMegabits(megabitsPerSecond));
+        }
+
+        if (sample.JitterMs is double jitterMs)
+        {
+            parts.Add("jitter " + jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+        }
+
+        if (sample.LostPercent is double lostPercent)
+        {
+            parts.Add("loss " + lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %");
+        }
+
+        return string.Join(" · ", parts) + ".";
     }
 
     private static string FormatIntervalSample(IperfIntervalSample sample)

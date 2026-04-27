@@ -58,6 +58,68 @@ public sealed class IperfJsonStreamParserTests
     }
 
     [Fact]
+    public void TryParseIntervalSample_ParsesUdpMetricsFromStreams()
+    {
+        const string json = """
+        {
+          "event": "interval",
+          "data": {
+            "streams": [
+              {
+                "socket": 4,
+                "udp": {
+                  "seconds": 1,
+                  "bits_per_second": 956000000,
+                  "jitter_ms": 0.037,
+                  "lost_percent": 0.12
+                }
+              }
+            ],
+            "sum": {
+              "seconds": 1,
+              "bits_per_second": 956000000
+            }
+          }
+        }
+        """;
+
+        var ok = IperfJsonStreamParser.TryParseIntervalSample(json, out var sample);
+
+        Assert.True(ok);
+        Assert.Equal(956, sample.MegabitsPerSecond);
+        Assert.Equal(0.037, sample.JitterMs);
+        Assert.Equal(0.12, sample.LostPercent);
+    }
+
+    [Fact]
+    public void TryParseEndSummarySample_ParsesUdpEndSummary()
+    {
+        const string json = """
+        {
+          "event": "end",
+          "data": {
+            "sum_received": {
+              "seconds": 10.015306,
+              "bits_per_second": 922711633.573652,
+              "jitter_ms": 0.014175647615401027,
+              "lost_packets": 0,
+              "packets": 819348,
+              "lost_percent": 0,
+              "sender": false
+            }
+          }
+        }
+        """;
+
+        var ok = IperfJsonStreamParser.TryParseEndSummarySample(json, out var sample);
+
+        Assert.True(ok);
+        Assert.Equal(922.711633573652, sample.MegabitsPerSecond!.Value, precision: 9);
+        Assert.Equal(0.014175647615401027, sample.JitterMs!.Value, precision: 12);
+        Assert.Equal(0, sample.LostPercent);
+    }
+
+    [Fact]
     public void TryParseIntervalSample_IgnoresNonIntervalEvent()
     {
         const string json = """{"event":"start","data":{}}""";
