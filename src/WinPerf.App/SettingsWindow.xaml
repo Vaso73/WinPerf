@@ -88,6 +88,8 @@
                         <ColumnDefinition Width="10" />
                         <ColumnDefinition Width="105" />
                         <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="135" />
+                        <ColumnDefinition Width="10" />
                         <ColumnDefinition Width="90" />
                     </Grid.ColumnDefinitions>
 
@@ -101,6 +103,11 @@
                             Click="BrowseButton_Click" />
 
                     <Button Grid.Column="4"
+                            Content="Import portable"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="ImportPortableButton_Click" />
+
+                    <Button Grid.Column="6"
                             Content="Clear"
                             Style="{StaticResource SecondaryButton}"
                             Click="ClearButton_Click" />
@@ -115,7 +122,7 @@
                         <TextBlock Text="Fallback path"
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,6" />
-                        <TextBlock Text="If no manual path is configured, WinPerf will later try tools\iperf3\iperf3.exe next to WinPerf.exe."
+                        <TextBlock Text="If no manual path is configured, WinPerf tries tools\iperf3\iperf3.exe next to WinPerf.exe. Use Import portable to copy the selected iperf3 folder there."
                                    Foreground="{StaticResource TextMuted}"
                                    TextWrapping="Wrap" />
                     </StackPanel>

@@ -106,7 +106,7 @@ public partial class MainWindow : Window
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new SettingsWindow(_settings.IperfExecutablePath)
+        var dialog = new SettingsWindow(_settings.IperfExecutablePath, AppContext.BaseDirectory)
         {
             Owner = this
         };
