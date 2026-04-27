@@ -46,6 +46,6 @@ public sealed class UiDensityToggleTests
         Assert.Contains("DashboardContentPanel.Margin = isCompact", MainWindowSource);
         Assert.Contains("MetricsRow.Height = new GridLength(isCompact ? 150 : 170);", MainWindowSource);
         Assert.Contains("EngineOutputRow.Height = new GridLength(isCompact ? 120 : 150);", MainWindowSource);
-        Assert.Contains("Width = Math.Clamp(Width, MinWidth, isCompact ? 1080 : 1220);", MainWindowSource);
+        Assert.Contains("Width = Math.Max(Width, MinWidth);", MainWindowSource);
     }
 }
