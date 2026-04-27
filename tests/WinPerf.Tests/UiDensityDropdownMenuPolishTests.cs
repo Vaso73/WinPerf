@@ -12,11 +12,11 @@ public sealed class UiDensityDropdownMenuPolishTests
     public void DensityDropdownMenu_UsesCompactMenuSizing()
     {
         Assert.Contains("x:Name=\"UiDensityContextMenu\"", MainWindowXaml);
-        Assert.Contains("MinWidth=\"124\"", MainWindowXaml);
+        Assert.Contains("MinWidth=\"104\"", MainWindowXaml);
         Assert.Contains("Padding=\"4\"", MainWindowXaml);
         Assert.Contains("Property=\"FontSize\" Value=\"11\"", MainWindowXaml);
-        Assert.Contains("Property=\"MinHeight\" Value=\"26\"", MainWindowXaml);
-        Assert.Contains("Property=\"Padding\" Value=\"8,3\"", MainWindowXaml);
+        Assert.Contains("Property=\"MinHeight\" Value=\"24\"", MainWindowXaml);
+        Assert.Contains("Property=\"Padding\" Value=\"6,2\"", MainWindowXaml);
     }
 
     [Fact]
@@ -25,6 +25,8 @@ public sealed class UiDensityDropdownMenuPolishTests
         Assert.Contains("private void ApplyUiDensityMenuItemState(MenuItem menuItem, bool isActive, string label)", MainWindowSource);
         Assert.Contains("menuItem.Header = isActive", MainWindowSource);
         Assert.Contains("$\"✓ {label}\"", MainWindowSource);
+        Assert.Contains("menuItem.IsCheckable = false;", MainWindowSource);
+        Assert.Contains("menuItem.IsChecked = false;", MainWindowSource);
         Assert.Contains("FindResource(isActive ? \"AccentGreen\" : \"TextMain\")", MainWindowSource);
         Assert.Contains("menuItem.FontWeight = isActive ? FontWeights.Bold : FontWeights.SemiBold;", MainWindowSource);
         Assert.Contains("menuItem.Opacity = isActive ? 1.0 : 0.78;", MainWindowSource);

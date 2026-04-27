@@ -16,8 +16,8 @@ public sealed class DashboardControlLayoutPolishTests
         Assert.Contains("x:Name=\"StartButton\"", MainWindowXaml);
         Assert.Contains("x:Name=\"StopButton\"", MainWindowXaml);
         Assert.Contains("MinHeight=\"36\"", MainWindowXaml);
-        Assert.DoesNotContain("Width=\"104\"", MainWindowXaml);
-        Assert.DoesNotContain("Width=\"84\"", MainWindowXaml);
+        Assert.DoesNotMatch("x:Name=\\\"StartButton\\\"[\\s\\S]{0,500}Width=\\\"104\\\"", MainWindowXaml);
+        Assert.DoesNotMatch("x:Name=\\\"StopButton\\\"[\\s\\S]{0,500}Width=\\\"84\\\"", MainWindowXaml);
     }
 
     [Fact]

@@ -26,7 +26,7 @@ public sealed class UiDensityToggleTests
         Assert.Contains("x:Name=\"ComfortableUiDensityMenuItem\"", MainWindowXaml);
         Assert.Contains("Header=\"Compact\"", MainWindowXaml);
         Assert.Contains("Header=\"Comfortable\"", MainWindowXaml);
-        Assert.Contains("IsCheckable=\"True\"", MainWindowXaml);
+        Assert.DoesNotContain("IsCheckable=\"True\"", MainWindowXaml);
     }
 
     [Fact]

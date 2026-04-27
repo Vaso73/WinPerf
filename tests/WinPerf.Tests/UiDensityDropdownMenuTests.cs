@@ -23,7 +23,8 @@ public sealed class UiDensityDropdownMenuTests
         Assert.Contains("private void UpdateUiDensityMenuUx(bool isCompact)", MainWindowSource);
         Assert.Contains("ApplyUiDensityMenuItemState(CompactUiDensityMenuItem, isCompact, \"Compact\");", MainWindowSource);
         Assert.Contains("ApplyUiDensityMenuItemState(ComfortableUiDensityMenuItem, !isCompact, \"Comfortable\");", MainWindowSource);
-        Assert.Contains("menuItem.IsChecked = isActive;", MainWindowSource);
+        Assert.Contains("menuItem.IsCheckable = false;", MainWindowSource);
+        Assert.Contains("menuItem.IsChecked = false;", MainWindowSource);
     }
 
     [Fact]
