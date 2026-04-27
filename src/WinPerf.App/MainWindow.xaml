@@ -689,7 +689,34 @@ HorizontalContentAlignment="Center"
                                     <Setter Property="MinHeight" Value="22" />
                                     <Setter Property="Padding" Value="4,2" />
                                     <Setter Property="Foreground" Value="{StaticResource TextMain}" />
-                                </Style>
+                                                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="{x:Type MenuItem}">
+                                                <Border x:Name="ItemBorder"
+                                                        Background="Transparent"
+                                                        CornerRadius="6"
+                                                        MinHeight="{TemplateBinding MinHeight}"
+                                                        Padding="{TemplateBinding Padding}"
+                                                        SnapsToDevicePixels="True">
+                                                    <TextBlock Text="{TemplateBinding Header}"
+                                                               Foreground="{TemplateBinding Foreground}"
+                                                               FontSize="{TemplateBinding FontSize}"
+                                                               FontWeight="{TemplateBinding FontWeight}"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="None" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsHighlighted" Value="True">
+                                                        <Setter TargetName="ItemBorder" Property="Background" Value="#1A2B45" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.5" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+</Style>
                             </ContextMenu.Resources>
                             <MenuItem x:Name="CompactUiDensityMenuItem"
                                       Header="Compact"

@@ -17,6 +17,10 @@ public sealed class UiDensityDropdownMenuPolishTests
         Assert.Contains("Property=\"FontSize\" Value=\"11\"", MainWindowXaml);
         Assert.Contains("Property=\"MinHeight\" Value=\"22\"", MainWindowXaml);
         Assert.Contains("Property=\"Padding\" Value=\"4,2\"", MainWindowXaml);
+        Assert.Contains("ControlTemplate TargetType=\"{x:Type MenuItem}\"", MainWindowXaml);
+        Assert.Contains("Text=\"{TemplateBinding Header}\"", MainWindowXaml);
+        Assert.Contains("Foreground=\"{TemplateBinding Foreground}\"", MainWindowXaml);
+        Assert.Contains("TextTrimming=\"None\"", MainWindowXaml);
     }
 
     [Fact]
