@@ -1,0 +1,12 @@
+namespace WinPerf.Core.Iperf;
+
+public sealed record IperfTestOptions
+{
+    public required string Server { get; init; }
+    public int Port { get; init; } = 5201;
+    public IperfMode Mode { get; init; } = IperfMode.TcpUpload;
+    public int Streams { get; init; } = 1;
+    public int DurationSeconds { get; init; } = 10;
+    public IperfAddressFamily AddressFamily { get; init; } = IperfAddressFamily.IPv4;
+    public string UdpBandwidth { get; init; } = "0";
+}
