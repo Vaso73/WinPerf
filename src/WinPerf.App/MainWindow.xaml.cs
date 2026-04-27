@@ -238,6 +238,12 @@ public partial class MainWindow : Window
 
     private void SaveDashboardLayout()
     {
+        CaptureDashboardLayout();
+        _settingsStore.Save(_settings);
+    }
+
+    private void CaptureDashboardLayout()
+    {
         var height = EngineOutputRow.ActualHeight;
 
         if (!double.IsNaN(height) && !double.IsInfinity(height) && height >= EngineOutputRow.MinHeight)
@@ -254,7 +260,6 @@ public partial class MainWindow : Window
                 0);
         }
 
-        _settingsStore.Save(_settings);
     }
 
     private void UpdateLastSummary(IperfTestOptions options, int exitCode)
@@ -336,6 +341,8 @@ public partial class MainWindow : Window
 
     private void UiDensityButton_Click(object sender, RoutedEventArgs e)
     {
+        CaptureDashboardLayout();
+
         _settings.UiDensity = IsCompactUiDensity()
             ? UiDensityComfortable
             : UiDensityCompact;
