@@ -672,6 +672,15 @@
                     </Button.ContextMenu>
                 </Button>
 
+                <Button x:Name="SettingsButton"
+                        DockPanel.Dock="Right"
+                        Content="Settings"
+                        Style="{StaticResource StatusPillButton}"
+                        MinWidth="86"
+                        Margin="12,0,0,0"
+                        ToolTip="Open Settings"
+                        Click="SettingsButton_Click" />
+
                 <TextBlock x:Name="EngineStatusText"
                            DockPanel.Dock="Left"
                            Text="Engine  ●  Not configured"

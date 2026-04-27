@@ -191,7 +191,7 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="8" />
-                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="180" />
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0">
@@ -222,7 +222,7 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="8" />
-                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="180" />
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0">
