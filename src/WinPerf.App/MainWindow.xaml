@@ -166,7 +166,7 @@
                                        Margin="0,0,0,14" />
 
                             <TextBlock Text="Server" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                            <TextBox Text="10.100.100.1" Margin="0,5,0,12" />
+                            <TextBox x:Name="ServerBox" Text="10.100.100.1" Margin="0,5,0,12" />
 
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
@@ -176,7 +176,7 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="Mode" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                                    <ComboBox SelectedIndex="0" Margin="0,5,0,0">
+                                    <ComboBox x:Name="ModeBox" SelectedIndex="0" Margin="0,5,0,0">
                                         <ComboBoxItem Content="TCP Upload" />
                                         <ComboBoxItem Content="TCP Download" />
                                         <ComboBoxItem Content="TCP Bidirectional" />
@@ -186,7 +186,7 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                                    <TextBox Text="5201" Margin="0,5,0,0" />
+                                    <TextBox x:Name="PortBox" Text="5201" Margin="0,5,0,0" />
                                 </StackPanel>
                             </Grid>
 
@@ -198,22 +198,26 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="Streams" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                                    <TextBox Text="10" Margin="0,5,0,0" />
+                                    <TextBox x:Name="StreamsBox" Text="10" Margin="0,5,0,0" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Text="Duration" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                                    <TextBox Text="10 s" Margin="0,5,0,0" />
+                                    <TextBox x:Name="DurationBox" Text="10" Margin="0,5,0,0" />
                                 </StackPanel>
                             </Grid>
 
                             <StackPanel Orientation="Horizontal">
-                                <Button Content="Start"
+                                <Button x:Name="StartButton"
+                                        Content="Start"
                                         Style="{StaticResource PrimaryButton}"
                                         Width="118"
-                                        Margin="0,0,10,0" />
-                                <Button Content="Stop"
+                                        Margin="0,0,10,0"
+                                        Click="StartButton_Click" />
+                                <Button x:Name="StopButton"
+                                        Content="Stop"
                                         Style="{StaticResource SecondaryButton}"
-                                        Width="92" />
+                                        Width="92"
+                                        IsEnabled="False" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -308,8 +312,10 @@
                                        FontSize="18"
                                        FontWeight="SemiBold"
                                        Margin="0,0,0,10" />
-                            <TextBlock Text="iperf3 JSON stream output will appear here."
-                                       Foreground="{StaticResource TextMuted}" />
+                            <TextBlock x:Name="EngineOutputText"
+                                       Text="iperf3 JSON stream output will appear here."
+                                       Foreground="{StaticResource TextMuted}"
+                                       TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </Grid>
