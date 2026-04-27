@@ -6,8 +6,8 @@
         Icon="Assets/WinPerf.ico"
         Width="1220"
         Height="800"
-        MinWidth="1080"
-        MinHeight="700"
+        MinWidth="900"
+        MinHeight="620"
         Background="#08111F"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
@@ -142,7 +142,11 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1">
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+        <Grid MinWidth="1180"
+              MinHeight="720">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="230" />
             <ColumnDefinition Width="*" />
@@ -415,6 +419,7 @@
             </Grid>
         </Grid>
         </Grid>
+        </ScrollViewer>
         </Grid>
     </Border>
 </Window>
