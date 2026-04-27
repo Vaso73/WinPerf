@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        WindowPlacementStore.Track(this, "MainWindow");
 
         _settings = _settingsStore.Load();
         RefreshEngineStatus();

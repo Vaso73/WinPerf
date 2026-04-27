@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using Microsoft.Win32;
+using WinPerf.App.Settings;
 
 namespace WinPerf.App;
 
@@ -11,6 +12,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(string? currentIperfPath, string appDirectory)
     {
         InitializeComponent();
+        WindowPlacementStore.Track(this, "SettingsWindow");
 
         _appDirectory = appDirectory;
         IperfPathBox.Text = currentIperfPath ?? string.Empty;

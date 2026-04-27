@@ -1,6 +1,7 @@
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using WinPerf.App.Settings;
 
 namespace WinPerf.App;
 
@@ -9,6 +10,7 @@ public partial class AdvancedCommandWindow : Window
     public AdvancedCommandWindow()
     {
         InitializeComponent();
+        WindowPlacementStore.Track(this, "AdvancedCommandWindow");
     }
 
     public string CommandText => PreviewBox.Text.Trim();

@@ -1,4 +1,5 @@
 using System.Windows;
+using WinPerf.App.Settings;
 
 namespace WinPerf.App;
 
@@ -7,6 +8,7 @@ public partial class CustomCommandWindow : Window
     public CustomCommandWindow(string initialCommand)
     {
         InitializeComponent();
+        WindowPlacementStore.Track(this, "CustomCommandWindow");
 
         if (!string.IsNullOrWhiteSpace(initialCommand))
         {
