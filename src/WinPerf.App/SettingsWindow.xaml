@@ -4,19 +4,19 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="WinPerf Settings"
         Icon="Assets/WinPerf.ico"
-        Width="900"
-        Height="600"
-        MinWidth="760"
-        MinHeight="560"
+        Width="820"
+        Height="540"
+        MinWidth="700"
+        MinHeight="500"
         Background="#08111F"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         ResizeMode="CanResize">
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="42"
+        <shell:WindowChrome CaptionHeight="38"
                             ResizeBorderThickness="6"
                             GlassFrameThickness="0"
-                            CornerRadius="14" />
+                            CornerRadius="12" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
         <SolidColorBrush x:Key="Panel" Color="#0F1B2E" />
@@ -61,11 +61,11 @@
     <Border Background="#08111F"
             BorderBrush="#38BDF8"
             BorderThickness="1"
-            CornerRadius="14"
+            CornerRadius="12"
             SnapsToDevicePixels="True">
         <Grid Background="#08111F">
             <Grid.RowDefinitions>
-                <RowDefinition Height="42" />
+                <RowDefinition Height="38" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -73,17 +73,17 @@
                 Background="#07101D"
                 BorderBrush="{StaticResource BorderSoft}"
                 BorderThickness="0,0,0,1"
-                CornerRadius="13,13,0,0">
+                CornerRadius="11,11,0,0">
             <Grid>
                 <StackPanel Orientation="Horizontal"
                             VerticalAlignment="Center"
-                            Margin="12,0,0,0">
+                            Margin="6,0,0,0">
                     <Image Source="Assets/WinPerf.ico"
-                           Width="18"
-                           Height="18"
-                           Margin="0,0,8,0" />
+                           Width="16"
+                           Height="16"
+                           Margin="0,0,6,0" />
                     <TextBlock Text="WinPerf Settings"
-                               FontSize="13"
+                               FontSize="11"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                 </StackPanel>
@@ -93,78 +93,78 @@
                             shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button x:Name="MinimizeButton"
                             Content="—"
-                            Width="46"
-                            Height="42"
+                            Width="40"
+                            Height="38"
                             Background="Transparent"
                             Foreground="{StaticResource TextMain}"
                             BorderThickness="0"
-                            FontSize="14"
+                            FontSize="11"
                             Click="MinimizeButton_Click" />
                     <Button x:Name="MaximizeRestoreButton"
                             Content="□"
-                            Width="46"
-                            Height="42"
+                            Width="40"
+                            Height="38"
                             Background="Transparent"
                             Foreground="{StaticResource TextMain}"
                             BorderThickness="0"
-                            FontSize="13"
+                            FontSize="11"
                             Click="MaximizeRestoreButton_Click" />
                     <Button x:Name="CloseButton"
                             Content="×"
-                            Width="46"
-                            Height="42"
+                            Width="40"
+                            Height="38"
                             Background="Transparent"
                             Foreground="{StaticResource TextMain}"
                             BorderThickness="0"
-                            FontSize="18"
+                            FontSize="11"
                             Click="CloseButton_Click" />
                 </StackPanel>
             </Grid>
         </Border>
 
-            <Grid Grid.Row="1" Margin="24">
+            <Grid Grid.Row="1" Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,18">
+        <StackPanel Grid.Row="0" Margin="0,0,0,8">
             <TextBlock Text="Settings"
-                       FontSize="26"
+                       FontSize="22"
                        FontWeight="SemiBold" />
             <TextBlock Text="Configure the iperf3 engine used by WinPerf. Auto-download/update will be added later."
                        Foreground="{StaticResource TextMuted}"
-                       FontSize="14"
+                       FontSize="11"
                        TextWrapping="Wrap"
-                       Margin="0,5,0,0" />
+                       Margin="0,3,0,0" />
         </StackPanel>
 
         <Border Grid.Row="1"
                 Background="{StaticResource Panel}"
                 BorderBrush="{StaticResource BorderSoft}"
                 BorderThickness="1"
-                CornerRadius="18"
-                Padding="18">
+                CornerRadius="12"
+                Padding="10">
             <StackPanel>
                 <TextBlock Text="iperf3 executable"
-                           FontSize="18"
+                           FontSize="11"
                            FontWeight="SemiBold"
-                           Margin="0,0,0,12" />
+                           Margin="0,0,0,8" />
 
                 <TextBlock Text="Path to iperf3.exe"
                            Foreground="{StaticResource TextMuted}"
-                           FontSize="12" />
+                           FontSize="11" />
 
                 <Grid Margin="0,5,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="8" />
                         <ColumnDefinition Width="105" />
-                        <ColumnDefinition Width="10" />
-                        <ColumnDefinition Width="170" />
-                        <ColumnDefinition Width="10" />
-                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="80" />
                     </Grid.ColumnDefinitions>
 
                     <TextBox x:Name="IperfPathBox"
@@ -190,8 +190,8 @@
                 <Border Background="{StaticResource PanelSoft}"
                         BorderBrush="{StaticResource BorderSoft}"
                         BorderThickness="1"
-                        CornerRadius="14"
-                        Padding="14">
+                        CornerRadius="12"
+                        Padding="10">
                     <StackPanel>
                         <TextBlock Text="Fallback path"
                                    FontWeight="SemiBold"
@@ -204,10 +204,10 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="2" Margin="0,18,0,0">
+        <Grid Grid.Row="2" Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="210" />
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Name="ValidationText"
@@ -216,20 +216,20 @@
                        VerticalAlignment="Center"
                        TextWrapping="NoWrap"
                        TextTrimming="CharacterEllipsis"
-                       Margin="0,0,16,0" />
+                       Margin="0,0,12,0" />
 
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right">
                 <Button Content="Save"
                         Style="{StaticResource PrimaryButton}"
-                        Width="110"
-                        Margin="0,0,10,0"
+                        Width="100"
+                        Margin="0,0,6,0"
                         Click="SaveButton_Click" />
 
                 <Button Content="Cancel"
                         Style="{StaticResource SecondaryButton}"
-                        Width="110"
+                        Width="100"
                         Click="CancelButton_Click" />
             </StackPanel>
         </Grid>

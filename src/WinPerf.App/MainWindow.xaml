@@ -4,19 +4,19 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="WinPerf"
         Icon="Assets/WinPerf.ico"
-        Width="1220"
-        Height="800"
-        MinWidth="900"
-        MinHeight="620"
+        Width="1080"
+        Height="720"
+        MinWidth="820"
+        MinHeight="560"
         Background="#08111F"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResize">
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="42"
+        <shell:WindowChrome CaptionHeight="38"
                             ResizeBorderThickness="6"
                             GlassFrameThickness="0"
-                            CornerRadius="14" />
+                            CornerRadius="12" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
         <SolidColorBrush x:Key="Bg" Color="#08111F" />
@@ -114,7 +114,7 @@
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10"
+                                CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
                             <StackPanel IsItemsHost="True"
                                         KeyboardNavigation.DirectionalNavigation="Cycle" />
@@ -138,7 +138,7 @@
                     <ControlTemplate TargetType="MenuItem">
                         <Border x:Name="Root"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="7"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter ContentSource="Header"
                                               RecognizesAccessKey="True"
@@ -166,11 +166,11 @@
             <Border Background="{StaticResource Bg}"
             BorderBrush="#38BDF8"
             BorderThickness="1"
-            CornerRadius="14"
+            CornerRadius="12"
             SnapsToDevicePixels="True">
         <Grid Background="{StaticResource Bg}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="42" />
+            <RowDefinition Height="38" />
             <RowDefinition Height="*" />
             <RowDefinition Height="30" />
         </Grid.RowDefinitions>
@@ -179,17 +179,17 @@
                 Background="#07101D"
                 BorderBrush="{StaticResource BorderSoft}"
                 BorderThickness="0,0,0,1"
-                CornerRadius="13,13,0,0">
+                CornerRadius="11,11,0,0">
             <Grid>
                 <StackPanel Orientation="Horizontal"
                             VerticalAlignment="Center"
-                            Margin="12,0,0,0">
+                            Margin="6,0,0,0">
                     <Image Source="Assets/WinPerf.ico"
-                           Width="18"
-                           Height="18"
-                           Margin="0,0,8,0" />
+                           Width="16"
+                           Height="16"
+                           Margin="0,0,6,0" />
                     <TextBlock Text="WinPerf"
-                               FontSize="13"
+                               FontSize="11"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                 </StackPanel>
@@ -199,30 +199,30 @@
                             shell:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button x:Name="MinimizeButton"
                             Content="—"
-                            Width="46"
-                            Height="42"
+                            Width="40"
+                            Height="38"
                             Background="Transparent"
                             Foreground="{StaticResource TextMain}"
                             BorderThickness="0"
-                            FontSize="14"
+                            FontSize="11"
                             Click="MinimizeButton_Click" />
                     <Button x:Name="MaximizeRestoreButton"
                             Content="□"
-                            Width="46"
-                            Height="42"
+                            Width="40"
+                            Height="38"
                             Background="Transparent"
                             Foreground="{StaticResource TextMain}"
                             BorderThickness="0"
-                            FontSize="13"
+                            FontSize="11"
                             Click="MaximizeRestoreButton_Click" />
                     <Button x:Name="CloseButton"
                             Content="×"
-                            Width="46"
-                            Height="42"
+                            Width="40"
+                            Height="38"
                             Background="Transparent"
                             Foreground="{StaticResource TextMain}"
                             BorderThickness="0"
-                            FontSize="18"
+                            FontSize="11"
                             Click="CloseButton_Click" />
                 </StackPanel>
             </Grid>
@@ -247,30 +247,30 @@
                                FontWeight="Bold" />
                     <TextBlock Text="Network Performance Toolkit"
                                Foreground="{StaticResource TextMuted}"
-                               FontSize="12"
+                               FontSize="11"
                                Margin="0,3,0,28" />
 
-                    <Border Background="{StaticResource PanelSoft}" CornerRadius="14" Padding="12" Margin="0,0,0,10">
+                    <Border Background="{StaticResource PanelSoft}" CornerRadius="12" Padding="10" Margin="0,0,0,8">
                         <TextBlock Text="Dashboard" FontWeight="SemiBold" />
                     </Border>
-                    <Border CornerRadius="14" Padding="12" Margin="0,0,0,10">
+                    <Border CornerRadius="12" Padding="10" Margin="0,0,0,8">
                         <TextBlock Text="Speed Test" Foreground="{StaticResource TextMuted}" />
                     </Border>
-                    <Border CornerRadius="14" Padding="12" Margin="0,0,0,10">
+                    <Border CornerRadius="12" Padding="10" Margin="0,0,0,8">
                         <TextBlock Text="Server Mode" Foreground="{StaticResource TextMuted}" />
                     </Border>
-                    <Border CornerRadius="14" Padding="12" Margin="0,0,0,10">
+                    <Border CornerRadius="12" Padding="10" Margin="0,0,0,8">
                         <TextBlock Text="History" Foreground="{StaticResource TextMuted}" />
                     </Border>
-<StackPanel x:Name="ConfigColumn" Margin="0,18,0,0">
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+<StackPanel x:Name="ConfigColumn" Margin="0,8,0,0">
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="Test Configuration"
-                                       FontSize="18"
+                                       FontSize="11"
                                        FontWeight="SemiBold"
-                                       Margin="0,0,0,14" />
+                                       Margin="0,0,0,8" />
 
-                            <TextBlock Text="Test profile" Foreground="{StaticResource TextMuted}" FontSize="12" />
+                            <TextBlock Text="Test profile" Foreground="{StaticResource TextMuted}" FontSize="11" />
                             <ComboBox x:Name="DashboardProfileBox"
                                       DisplayMemberPath="Name"
                                       SelectionChanged="DashboardProfileBox_SelectionChanged"
@@ -280,9 +280,9 @@
                                        Foreground="{StaticResource TextMuted}"
                                        FontSize="11"
                                        TextWrapping="Wrap"
-                                       Margin="0,0,0,12" />
+                                       Margin="0,0,0,8" />
 
-                            <TextBlock Text="Server" Foreground="{StaticResource TextMuted}" FontSize="12" />
+                            <TextBlock Text="Server" Foreground="{StaticResource TextMuted}" FontSize="11" />
                             <Grid Margin="0,5,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition />
@@ -300,19 +300,19 @@
                                         Grid.Column="2"
                                         Content="Remove"
                                         Style="{StaticResource SecondaryButton}"
-                                        Padding="8,0"
+                                        Padding="6,0"
                                         Click="RemoveServerButton_Click" />
                             </Grid>
 
-                            <Grid Margin="0,0,0,12">
+                            <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="100" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Mode" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                                    <ComboBox x:Name="ModeBox" SelectedIndex="0" Margin="0,5,0,0">
+                                    <TextBlock Text="Mode" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <ComboBox x:Name="ModeBox" SelectedIndex="0" Margin="0,3,0,0">
                                         <ComboBoxItem Content="TCP Upload" />
                                         <ComboBoxItem Content="TCP Download" />
                                         <ComboBoxItem Content="TCP Bidirectional" />
@@ -321,31 +321,31 @@
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="12" />
-                                    <TextBox x:Name="PortBox" Text="5201" Margin="0,5,0,0" />
+                                    <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <TextBox x:Name="PortBox" Text="5201" Margin="0,3,0,0" />
                                 </StackPanel>
                             </Grid>
 
-                            <Grid Margin="0,0,0,16">
+                            <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition />
-                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="8" />
                                     <ColumnDefinition />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Streams" Foreground="{StaticResource TextMuted}" FontSize="12" />
+                                    <TextBlock Text="Streams" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <TextBox x:Name="StreamsBox"
                                                Text="10"
-                                               Margin="0,5,0,0"
+                                               Margin="0,3,0,0"
                                                TextChanged="DashboardInputChanged"
                                                KeyUp="DashboardInputChanged"
                                                LostFocus="DashboardInputChanged" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Duration" Foreground="{StaticResource TextMuted}" FontSize="12" />
+                                    <TextBlock Text="Duration" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <TextBox x:Name="DurationBox"
                                                Text="10"
-                                               Margin="0,5,0,0"
+                                               Margin="0,3,0,0"
                                                TextChanged="DashboardInputChanged"
                                                KeyUp="DashboardInputChanged"
                                                LostFocus="DashboardInputChanged" />
@@ -353,17 +353,17 @@
                             </Grid>
 
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <Button x:Name="StartButton"
                                             Content="Start"
                                             Style="{StaticResource PrimaryButton}"
-                                            Width="118"
-                                            Margin="0,0,10,0"
+                                            Width="104"
+                                            Margin="0,0,6,0"
                                             Click="StartButton_Click" />
                                     <Button x:Name="StopButton"
                                             Content="Stop"
                                             Style="{StaticResource SecondaryButton}"
-                                            Width="96"
+                                            Width="84"
                                             IsEnabled="False"
                                             Click="StopButton_Click" />
                                 </StackPanel>
@@ -385,8 +385,8 @@
 
                                   <Border x:Name="CommandOverridePanel"
                                           Visibility="Collapsed"
-                                          Margin="0,10,0,0"
-                                          Padding="10,8"
+                                          Margin="0,8,0,0"
+                                          Padding="8,6"
                                           CornerRadius="12"
                                           Background="#141B24"
                                           BorderBrush="#2B3544"
@@ -402,7 +402,7 @@
                                               <TextBlock x:Name="CommandOverrideBadgeText"
                                                          Text="Command override active"
                                                          FontWeight="SemiBold"
-                                                         FontSize="12" />
+                                                         FontSize="11" />
                                               <TextBlock Text="Start uses these arguments instead of dashboard fields."
                                                          Foreground="{StaticResource TextMuted}"
                                                          FontSize="11"
@@ -414,7 +414,7 @@
                                                   Grid.Column="2"
                                                   Content="Clear"
                                                   Style="{StaticResource SecondaryButton}"
-                                                  Padding="10,0"
+                                                  Padding="6,0"
                                                   MinWidth="58"
                                                   Click="ClearCommandOverrideButton_Click" />
                                       </Grid>
@@ -426,14 +426,14 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="Last Summary"
-                                       FontSize="18"
+                                       FontSize="11"
                                        FontWeight="SemiBold"
-                                       Margin="0,0,0,14" />
+                                       Margin="0,0,0,8" />
                             <TextBlock x:Name="LastSummaryText"
                                        Text="No completed test yet."
                                        Foreground="{StaticResource TextMuted}"
                                        TextWrapping="Wrap"
-                                       LineHeight="18" />
+                                       LineHeight="16" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -466,8 +466,8 @@
                                FontWeight="SemiBold" />
                     <TextBlock Text="Run iperf3 throughput tests with live visualization and saved results."
                                Foreground="{StaticResource TextMuted}"
-                               FontSize="14"
-                               Margin="0,4,0,0" />
+                               FontSize="11"
+                               Margin="0,3,0,0" />
                 </StackPanel>
 
             </DockPanel>
@@ -492,7 +492,7 @@
                         <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,12,0">
                             <StackPanel>
                                 <TextBlock Text="Throughput" Foreground="{StaticResource TextMuted}" />
-                                <TextBlock x:Name="ThroughputValueText" Text="0 Mbps" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
+                                <TextBlock x:Name="ThroughputValueText" Text="0 Mbps" FontSize="34" FontWeight="Bold" Margin="0,8,0,0" />
                                 <TextBlock Text="Live average" Foreground="{StaticResource Accent}" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
@@ -500,7 +500,7 @@
                         <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,12,0">
                             <StackPanel>
                                 <TextBlock Text="Jitter" Foreground="{StaticResource TextMuted}" />
-                                <TextBlock x:Name="JitterValueText" Text="0.00 ms" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
+                                <TextBlock x:Name="JitterValueText" Text="0.00 ms" FontSize="34" FontWeight="Bold" Margin="0,8,0,0" />
                                 <TextBlock Text="UDP only" Foreground="{StaticResource AccentAmber}" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
@@ -508,7 +508,7 @@
                         <Border Grid.Column="2" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="Loss" Foreground="{StaticResource TextMuted}" />
-                                <TextBlock x:Name="LossValueText" Text="0.0 %" FontSize="34" FontWeight="Bold" Margin="0,10,0,0" />
+                                <TextBlock x:Name="LossValueText" Text="0.0 %" FontSize="34" FontWeight="Bold" Margin="0,8,0,0" />
                                 <TextBlock Text="UDP only" Foreground="{StaticResource AccentGreen}" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
@@ -524,7 +524,7 @@
                             <DockPanel Grid.Row="0" LastChildFill="False">
                                 <TextBlock Text="Live Throughput"
                                            DockPanel.Dock="Left"
-                                           FontSize="18"
+                                           FontSize="11"
                                            FontWeight="SemiBold" />
                                 <TextBlock x:Name="LiveStatusText"
                                            Text="Waiting for test..."
@@ -536,8 +536,8 @@
                                     Background="#07101D"
                                     BorderBrush="{StaticResource BorderSoft}"
                                     BorderThickness="1"
-                                    CornerRadius="14"
-                                    Margin="0,16,0,0">
+                                    CornerRadius="12"
+                                    Margin="0,8,0,0">
                                 <Grid>
                                     <Canvas x:Name="ThroughputChartCanvas"
                                             ClipToBounds="True"
@@ -585,9 +585,9 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Text="Engine Output"
-                                       FontSize="18"
+                                       FontSize="11"
                                        FontWeight="SemiBold"
-                                       Margin="0,0,0,10" />
+                                       Margin="0,0,0,8" />
 
                             <TextBox x:Name="EngineOutputText"
                                      Grid.Row="1"
@@ -619,7 +619,7 @@
                 <TextBlock x:Name="EngineStatusText"
                            Text="Engine  ●  Not configured"
                            Foreground="{StaticResource TextMuted}"
-                           FontSize="12"
+                           FontSize="11"
                            VerticalAlignment="Center"
                            Cursor="Hand"
                            ToolTip="Click to configure iperf3 engine"
