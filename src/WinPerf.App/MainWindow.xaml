@@ -276,8 +276,9 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <DockPanel Grid.Row="0">
+                            <DockPanel Grid.Row="0" LastChildFill="False">
                                 <TextBlock Text="Live Throughput"
+                                           DockPanel.Dock="Left"
                                            FontSize="18"
                                            FontWeight="SemiBold" />
                                 <TextBlock Text="Waiting for test..."
