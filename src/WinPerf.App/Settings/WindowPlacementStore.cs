@@ -6,16 +6,24 @@ namespace WinPerf.App.Settings;
 
 public static class WindowPlacementStore
 {
+    private const string LayoutFileName = "window-layout.json";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
     };
 
     private static string SettingsDirectory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WinPerf");
+        Path.Combine(AppContext.BaseDirectory, "data");
 
     private static string LayoutPath =>
-        Path.Combine(SettingsDirectory, "window-layout.json");
+        Path.Combine(SettingsDirectory, LayoutFileName);
+
+    private static string LegacyLayoutPath =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "WinPerf",
+            LayoutFileName);
 
     public static void Track(Window window, string key)
     {
@@ -85,30 +93,57 @@ public static class WindowPlacementStore
 
     private static Dictionary<string, SavedWindowBounds> Load()
     {
-        if (!File.Exists(LayoutPath))
+        if (TryLoad(LayoutPath, out var layout))
         {
-            return new Dictionary<string, SavedWindowBounds>(StringComparer.Ordinal);
+            return layout;
+        }
+
+        if (!SamePath(LayoutPath, LegacyLayoutPath) && TryLoad(LegacyLayoutPath, out layout))
+        {
+            return layout;
+        }
+
+        return new Dictionary<string, SavedWindowBounds>(StringComparer.Ordinal);
+    }
+
+    private static bool TryLoad(string path, out Dictionary<string, SavedWindowBounds> layout)
+    {
+        layout = new Dictionary<string, SavedWindowBounds>(StringComparer.Ordinal);
+
+        if (!File.Exists(path))
+        {
+            return false;
         }
 
         try
         {
-            var json = File.ReadAllText(LayoutPath);
+            var json = File.ReadAllText(path);
 
-            return JsonSerializer.Deserialize<Dictionary<string, SavedWindowBounds>>(json, JsonOptions)
-                   ?? new Dictionary<string, SavedWindowBounds>(StringComparer.Ordinal);
+            layout = JsonSerializer.Deserialize<Dictionary<string, SavedWindowBounds>>(json, JsonOptions)
+                     ?? new Dictionary<string, SavedWindowBounds>(StringComparer.Ordinal);
+
+            return true;
         }
         catch (JsonException)
         {
-            return new Dictionary<string, SavedWindowBounds>(StringComparer.Ordinal);
+            return false;
         }
         catch (IOException)
         {
-            return new Dictionary<string, SavedWindowBounds>(StringComparer.Ordinal);
+            return false;
         }
         catch (UnauthorizedAccessException)
         {
-            return new Dictionary<string, SavedWindowBounds>(StringComparer.Ordinal);
+            return false;
         }
+    }
+
+    private static bool SamePath(string left, string right)
+    {
+        return string.Equals(
+            Path.GetFullPath(left),
+            Path.GetFullPath(right),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsUsable(double value)

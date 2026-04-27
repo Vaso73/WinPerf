@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private SavedIperfProfilesDocument _profilesDocument = new();
     private bool _isLoadingProfileSelection;
     private bool _isApplyingDashboardProfile;
+    private string? _activeCustomCommandArguments;
 
     private const int MaxRecentServers = 20;
     private const int MaxThroughputSamples = 60;
@@ -85,19 +86,25 @@ public partial class MainWindow : Window
 
         try
         {
-            var options = new IperfTestOptions
+            var customCommandArguments = _activeCustomCommandArguments;
+            var isCustomCommand = !string.IsNullOrWhiteSpace(customCommandArguments);
+
+            var options = isCustomCommand
+                ? BuildCustomCommandOptions(customCommandArguments!)
+                : BuildDashboardTestOptions();
+
+            var command = isCustomCommand
+                ? new IperfCommand(_engineResolution.ExecutablePath, SplitCommandLine(customCommandArguments!))
+                : IperfCommandBuilder.BuildClientCommand(_engineResolution.ExecutablePath, options);
+
+            var commandDisplayText = isCustomCommand
+                ? customCommandArguments!
+                : string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+
+            if (!isCustomCommand)
             {
-                Server = GetServerText(),
-                Port = ParsePositiveInt(PortBox, "Port"),
-                Streams = ParsePositiveInt(StreamsBox, "Streams"),
-                DurationSeconds = ParsePositiveInt(DurationBox, "Duration"),
-                Mode = GetSelectedMode(),
-                AddressFamily = IperfAddressFamily.IPv4
-            };
-
-            var command = IperfCommandBuilder.BuildClientCommand(_engineResolution.ExecutablePath, options);
-
-            SaveRecentServer(options.Server);
+                SaveRecentServer(options.Server);
+            }
 
             _currentRunCancellation = new CancellationTokenSource();
             _activeMode = options.Mode;
@@ -106,7 +113,7 @@ public partial class MainWindow : Window
 
             _engineOutput.Clear();
             AppendEngineOutput("Running command:");
-            AppendEngineOutput(command.ToDisplayString());
+            AppendEngineOutput(commandDisplayText);
             AppendEngineOutput(string.Empty);
 
             var result = await _processRunner.RunAsync(
@@ -384,9 +391,9 @@ public partial class MainWindow : Window
 
     private void OpenCustomCommandWindow()
     {
-        var initialCommand = EngineOutputText.Text.StartsWith("Command preview:", StringComparison.Ordinal)
-            ? NormalizeCustomCommandText(EngineOutputText.Text.Replace("Command preview:", string.Empty, StringComparison.Ordinal).Trim())
-            : "iperf3.exe -c 10.100.100.1 -p 5201 -t 10 -P 10 --json-stream -4";
+        var initialCommand = !string.IsNullOrWhiteSpace(_activeCustomCommandArguments)
+            ? _activeCustomCommandArguments
+            : BuildDashboardCommandArgumentsPreview();
 
         var dialog = new CustomCommandWindow(initialCommand)
         {
@@ -395,10 +402,131 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog() == true)
         {
+            _activeCustomCommandArguments = NormalizeCustomCommandText(dialog.CommandText);
+
             EngineOutputText.Text =
                 "Custom command preview:" + Environment.NewLine +
-                dialog.CommandText;
+                _activeCustomCommandArguments;
         }
+    }
+
+    private IperfTestOptions BuildDashboardTestOptions()
+    {
+        return new IperfTestOptions
+        {
+            Server = GetServerText(),
+            Port = ParsePositiveInt(PortBox, "Port"),
+            Streams = ParsePositiveInt(StreamsBox, "Streams"),
+            DurationSeconds = ParsePositiveInt(DurationBox, "Duration"),
+            Mode = GetSelectedMode(),
+            AddressFamily = IperfAddressFamily.IPv4
+        };
+    }
+
+    private string BuildDashboardCommandArgumentsPreview()
+    {
+        var command = IperfCommandBuilder.BuildClientCommand("iperf3.exe", BuildDashboardTestOptions());
+        return string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+    }
+
+    private IperfTestOptions BuildCustomCommandOptions(string commandArguments)
+    {
+        var args = SplitCommandLine(commandArguments);
+        var mode = InferCustomCommandMode(args);
+
+        return new IperfTestOptions
+        {
+            Server = TryGetArgumentValue(args, "-c") ?? GetServerText(),
+            Port = TryGetPositiveIntArgumentValue(args, "-p") ?? ParsePositiveInt(PortBox, "Port"),
+            Streams = TryGetPositiveIntArgumentValue(args, "-P") ?? ParsePositiveInt(StreamsBox, "Streams"),
+            DurationSeconds = TryGetPositiveIntArgumentValue(args, "-t") ?? ParsePositiveInt(DurationBox, "Duration"),
+            Mode = mode,
+            AddressFamily = args.Contains("-6", StringComparer.Ordinal)
+                ? IperfAddressFamily.IPv6
+                : IperfAddressFamily.IPv4,
+            UdpBandwidth = TryGetArgumentValue(args, "-b") ?? "0"
+        };
+    }
+
+    private static IperfMode InferCustomCommandMode(IReadOnlyList<string> args)
+    {
+        var isUdp = args.Contains("-u", StringComparer.Ordinal);
+        var isReverse = args.Contains("-R", StringComparer.Ordinal);
+        var isBidirectional = args.Contains("--bidir", StringComparer.Ordinal);
+
+        if (isBidirectional)
+        {
+            return IperfMode.TcpBidirectional;
+        }
+
+        if (isUdp && isReverse)
+        {
+            return IperfMode.UdpDownload;
+        }
+
+        if (isUdp)
+        {
+            return IperfMode.UdpUpload;
+        }
+
+        return isReverse ? IperfMode.TcpDownload : IperfMode.TcpUpload;
+    }
+
+    private static int? TryGetPositiveIntArgumentValue(IReadOnlyList<string> args, string name)
+    {
+        var value = TryGetArgumentValue(args, name);
+        return int.TryParse(value, out var number) && number > 0 ? number : null;
+    }
+
+    private static string? TryGetArgumentValue(IReadOnlyList<string> args, string name)
+    {
+        for (var i = 0; i < args.Count - 1; i++)
+        {
+            if (string.Equals(args[i], name, StringComparison.Ordinal))
+            {
+                return args[i + 1];
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<string> SplitCommandLine(string commandText)
+    {
+        commandText = NormalizeCustomCommandText(commandText);
+
+        var args = new List<string>();
+        var current = new StringBuilder();
+        var inQuotes = false;
+
+        foreach (var ch in commandText)
+        {
+            if (ch == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(ch) && !inQuotes)
+            {
+                if (current.Length > 0)
+                {
+                    args.Add(current.ToString());
+                    current.Clear();
+                }
+
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        if (current.Length > 0)
+        {
+            args.Add(current.ToString());
+        }
+
+        return args;
     }
 
     private static string NormalizeCustomCommandText(string commandText)
@@ -407,20 +535,23 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(commandText))
         {
-            return "iperf3.exe";
+            return string.Empty;
         }
 
         const string executableName = "iperf3.exe";
         var executableIndex = commandText.IndexOf(executableName, StringComparison.OrdinalIgnoreCase);
 
-        if (executableIndex < 0)
+        if (executableIndex >= 0)
         {
-            return commandText;
+            commandText = commandText[(executableIndex + executableName.Length)..];
         }
 
-        var normalized = executableName + commandText[(executableIndex + executableName.Length)..];
+        return commandText.Trim().TrimStart('"').Trim();
+    }
 
-        return normalized.TrimStart('"', ' ');
+    private static string QuoteIfNeeded(string value)
+    {
+        return value.Any(char.IsWhiteSpace) ? $"\"{value}\"" : value;
     }
 
     private string GetServerText()
@@ -513,6 +644,7 @@ public partial class MainWindow : Window
 
     private void ApplyProfileToDashboard(SavedIperfProfile profile)
     {
+        _activeCustomCommandArguments = null;
         if (profile.RunMode != SavedIperfRunMode.Client)
         {
             return;
@@ -568,6 +700,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        _activeCustomCommandArguments = null;
         Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
     }
 
@@ -575,6 +708,14 @@ public partial class MainWindow : Window
     {
         if (!IsLoaded || _currentRunCancellation is not null || _isApplyingDashboardProfile)
         {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_activeCustomCommandArguments))
+        {
+            EngineOutputText.Text =
+                "Custom command preview:" + Environment.NewLine +
+                _activeCustomCommandArguments;
             return;
         }
 
@@ -598,7 +739,7 @@ public partial class MainWindow : Window
 
             EngineOutputText.Text =
                 "Command preview:" + Environment.NewLine +
-                command.ToDisplayString();
+                string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException)
         {
