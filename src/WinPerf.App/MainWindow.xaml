@@ -16,7 +16,7 @@
         <shell:WindowChrome CaptionHeight="42"
                             ResizeBorderThickness="6"
                             GlassFrameThickness="0"
-                            CornerRadius="0" />
+                            CornerRadius="14" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
         <SolidColorBrush x:Key="Bg" Color="#08111F" />
@@ -78,7 +78,12 @@
         </Style>
     </Window.Resources>
 
-    <Grid Background="{StaticResource Bg}">
+            <Border Background="{StaticResource Bg}"
+            BorderBrush="#38BDF8"
+            BorderThickness="1"
+            CornerRadius="14"
+            SnapsToDevicePixels="True">
+        <Grid Background="{StaticResource Bg}">
         <Grid.RowDefinitions>
             <RowDefinition Height="42" />
             <RowDefinition Height="*" />
@@ -87,7 +92,8 @@
         <Border Grid.Row="0"
                 Background="#07101D"
                 BorderBrush="{StaticResource BorderSoft}"
-                BorderThickness="0,0,0,1">
+                BorderThickness="0,0,0,1"
+                CornerRadius="13,13,0,0">
             <Grid>
                 <StackPanel Orientation="Horizontal"
                             VerticalAlignment="Center"
@@ -409,5 +415,6 @@
             </Grid>
         </Grid>
         </Grid>
-    </Grid>
+        </Grid>
+    </Border>
 </Window>
