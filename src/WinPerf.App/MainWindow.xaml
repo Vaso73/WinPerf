@@ -620,9 +620,13 @@
                           DockPanel.Dock="Right"
                           Content="UI: Compact"
                           Style="{StaticResource SecondaryButton}"
-                          Padding="8,0"
-                          MinWidth="116"
+                          Height="24"
+                          MinWidth="128"
+                          Padding="10,0"
                           Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          HorizontalContentAlignment="Center"
+                          FontSize="11"
                           Click="UiDensityButton_Click" />
 
                 <TextBlock x:Name="EngineStatusText"
