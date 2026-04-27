@@ -458,8 +458,8 @@ public partial class MainWindow : Window
         MinHeight = isCompact ? 520 : 560;
 
         UiDensityButton.Content = isCompact
-            ? "UI: Compact"
-            : "UI: Comfortable";
+            ? "Compact UI"
+            : "Comfortable UI";
 
         UiDensityButton.ToolTip = isCompact
             ? "Click to switch to comfortable UI density."

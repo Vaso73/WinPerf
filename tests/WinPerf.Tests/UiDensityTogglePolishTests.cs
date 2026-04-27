@@ -12,9 +12,9 @@ public sealed class UiDensityTogglePolishTests
     public void UiDensityButton_FitsStatusBar()
     {
         Assert.Contains("x:Name=\"UiDensityButton\"", MainWindowXaml);
-        Assert.Contains("Height=\"24\"", MainWindowXaml);
-        Assert.Contains("MinWidth=\"128\"", MainWindowXaml);
-        Assert.Contains("VerticalAlignment=\"Center\"", MainWindowXaml);
+        Assert.Contains("Property=\"Height\" Value=\"22\"", MainWindowXaml);
+        Assert.Contains("Property=\"MinWidth\" Value=\"132\"", MainWindowXaml);
+        Assert.Contains("Property=\"VerticalAlignment\" Value=\"Center\"", MainWindowXaml);
         Assert.Contains("HorizontalContentAlignment=\"Center\"", MainWindowXaml);
     }
 
