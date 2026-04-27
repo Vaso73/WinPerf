@@ -511,7 +511,8 @@ public partial class MainWindow : Window
 
     private void ApplyUiDensityMenuItemState(MenuItem menuItem, bool isActive, string label)
     {
-        menuItem.IsChecked = isActive;
+        menuItem.IsCheckable = false;
+        menuItem.IsChecked = false;
         menuItem.Header = isActive
             ? $"✓ {label}"
             : label;
