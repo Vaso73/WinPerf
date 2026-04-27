@@ -31,16 +31,12 @@ public sealed class DashboardControlLayoutPolishTests
     }
 
     [Fact]
-    public void StatusBar_UsesCompactDensityPillButton()
+    public void StatusBar_UsesDensityDropdown()
     {
-        Assert.Contains("x:Key=\"StatusPillButton\"", MainWindowXaml);
         Assert.Contains("x:Name=\"UiDensityButton\"", MainWindowXaml);
-        Assert.Contains("Style=\"{StaticResource StatusPillButton}\"", MainWindowXaml);
-        Assert.Contains("Content=\"Compact UI\"", MainWindowXaml);
-        Assert.Contains("CornerRadius=\"8\"", MainWindowXaml);
-        Assert.Contains("Property=\"Height\" Value=\"22\"", MainWindowXaml);
-        Assert.Contains("\"Compact UI\"", MainWindowSource);
-        Assert.Contains("\"Comfortable UI\"", MainWindowSource);
+        Assert.Contains("x:Name=\"CompactUiDensityMenuItem\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"ComfortableUiDensityMenuItem\"", MainWindowXaml);
+        Assert.Contains("UpdateUiDensityMenuUx(isCompact);", MainWindowSource);
     }
 
     [Fact]
