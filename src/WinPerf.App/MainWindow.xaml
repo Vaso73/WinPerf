@@ -8,7 +8,7 @@
         Height="720"
         MinWidth="820"
         MinHeight="560"
-        Background="#08111F"
+        Background="{StaticResource Bg}"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResize">
@@ -151,7 +151,7 @@
     </Window.Resources>
 
     <Border Background="{StaticResource Bg}"
-            BorderBrush="#38BDF8"
+            BorderBrush="{StaticResource Accent}"
             BorderThickness="1"
             CornerRadius="12"
             SnapsToDevicePixels="True">
@@ -163,7 +163,7 @@
         </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
-                    Background="#07101D"
+                    Background="{StaticResource PanelDark}"
                     BorderBrush="{StaticResource BorderSoft}"
                     BorderThickness="0,0,0,1"
                     CornerRadius="11,11,0,0">
@@ -223,7 +223,7 @@
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0"
-                Background="#07101D"
+                Background="{StaticResource PanelDark}"
                 BorderBrush="{StaticResource BorderSoft}"
                 BorderThickness="0,0,1,0"
                 Padding="18">
@@ -530,7 +530,7 @@
                             </DockPanel>
 
                             <Border Grid.Row="1"
-                                    Background="#07101D"
+                                    Background="{StaticResource PanelDark}"
                                     BorderBrush="{StaticResource BorderSoft}"
                                     BorderThickness="1"
                                     CornerRadius="12"
@@ -590,7 +590,7 @@
                                      Grid.Row="1"
                                      Text="iperf3 JSON stream output will appear here."
                                      Foreground="{StaticResource TextMuted}"
-                                     Background="#07101D"
+                                     Background="{StaticResource PanelDark}"
                                      BorderBrush="{StaticResource BorderSoft}"
                                      BorderThickness="1"
                                      Padding="8"
@@ -608,7 +608,7 @@
         </Grid>
 
         <Border Grid.Row="2"
-                Background="#07101D"
+                Background="{StaticResource PanelDark}"
                 BorderBrush="{StaticResource BorderSoft}"
                 BorderThickness="0,1,0,0"
                 Padding="18,0">

@@ -8,7 +8,7 @@
         Height="540"
         MinWidth="700"
         MinHeight="500"
-        Background="#08111F"
+        Background="{StaticResource Bg}"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         ResizeMode="CanResize">
@@ -35,19 +35,19 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#08111F"
-            BorderBrush="#38BDF8"
+    <Border Background="{StaticResource Bg}"
+            BorderBrush="{StaticResource Accent}"
             BorderThickness="1"
             CornerRadius="12"
             SnapsToDevicePixels="True">
-        <Grid Background="#08111F">
+        <Grid Background="{StaticResource Bg}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="38" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
-                    Background="#07101D"
+                    Background="{StaticResource PanelDark}"
                     BorderBrush="{StaticResource BorderSoft}"
                     BorderThickness="0,0,0,1"
                     CornerRadius="11,11,0,0">
