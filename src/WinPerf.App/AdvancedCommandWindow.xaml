@@ -94,421 +94,421 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                Background="#07101D"
-                BorderBrush="{StaticResource BorderSoft}"
-                BorderThickness="0,0,0,1"
-                CornerRadius="11,11,0,0">
-            <Grid>
-                <StackPanel Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="6,0,0,0">
-                    <Image Source="Assets/WinPerf.ico"
-                           Width="16"
-                           Height="16"
-                           Margin="0,0,6,0" />
-                    <TextBlock Text="Advanced iperf3 builder"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button x:Name="MinimizeButton"
-                            Content="—"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="MinimizeButton_Click" />
-                    <Button x:Name="MaximizeRestoreButton"
-                            Content="□"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="MaximizeRestoreButton_Click" />
-                    <Button x:Name="CloseButton"
-                            Content="×"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="CloseButton_Click" />
-                </StackPanel>
-            </Grid>
-        </Border>
-
-            <Grid Grid.Row="1" Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <StackPanel Grid.Row="0" Margin="0,0,0,8">
-            <TextBlock Text="Advanced iperf3 builder"
-                       FontSize="22"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="Click parameters and WinPerf will generate clean iperf3 arguments before running them."
-                       Foreground="{StaticResource TextMuted}"
-                       FontSize="11"
-                       TextWrapping="Wrap"
-                       Margin="0,3,0,0" />
-
-            <Border Background="{StaticResource PanelSoft}"
+            <Border Grid.Row="0"
+                    Background="#07101D"
                     BorderBrush="{StaticResource BorderSoft}"
-                    BorderThickness="1"
-                    CornerRadius="12"
-                    Padding="10"
-                    Margin="0,8,0,0">
+                    BorderThickness="0,0,0,1"
+                    CornerRadius="11,11,0,0">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="8" />
-                        <ColumnDefinition Width="3*" />
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Row="0" Grid.Column="0">
-                        <TextBlock Text="Saved profile"
-                                   Foreground="{StaticResource TextMuted}"
-                                   FontSize="11" />
-                        <ComboBox x:Name="ProfileBox"
-                                  DisplayMemberPath="Name"
-                                  SelectionChanged="ProfileBox_SelectionChanged"
-                                  Margin="0,3,0,0" />
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="6,0,0,0">
+                        <Image Source="Assets/WinPerf.ico"
+                               Width="16"
+                               Height="16"
+                               Margin="0,0,6,0" />
+                        <TextBlock Text="Advanced iperf3 builder"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <StackPanel Grid.Row="0" Grid.Column="2">
-                        <TextBlock Text="Profile name"
-                                   Foreground="{StaticResource TextMuted}"
-                                   FontSize="11" />
-                        <TextBox x:Name="ProfileNameBox"
-                                 Text="LAN TCP 10s x10"
-                                 Margin="0,3,0,0" />
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="MinimizeButton"
+                                Content="—"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="MinimizeButton_Click" />
+                        <Button x:Name="MaximizeRestoreButton"
+                                Content="□"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="MaximizeRestoreButton_Click" />
+                        <Button x:Name="CloseButton"
+                                Content="×"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="CloseButton_Click" />
                     </StackPanel>
-
-                    <DockPanel Grid.Row="1"
-                               Grid.ColumnSpan="3"
-                               Margin="0,8,0,0"
-                               LastChildFill="False">
-                        <TextBlock x:Name="ProfileStatusText"
-                                   DockPanel.Dock="Left"
-                                   Text="Profiles are stored in %APPDATA%\WinPerf\profiles.json"
-                                   Foreground="{StaticResource TextMuted}"
-                                   VerticalAlignment="Center"
-                                   TextWrapping="Wrap" />
-
-                        <Button Content="Delete"
-                                DockPanel.Dock="Right"
-                                Style="{StaticResource SecondaryButton}"
-                                MinWidth="92"
-                                MinHeight="32"
-                                Padding="8,3"
-                                Margin="6,0,0,0"
-                                Click="DeleteProfileButton_Click" />
-
-                        <Button Content="Set default"
-                                DockPanel.Dock="Right"
-                                Style="{StaticResource SecondaryButton}"
-                                MinWidth="124"
-                                MinHeight="32"
-                                Padding="8,3"
-                                Margin="6,0,0,0"
-                                Click="SetDefaultProfileButton_Click" />
-
-                        <Button Content="Save as new"
-                                DockPanel.Dock="Right"
-                                Style="{StaticResource SecondaryButton}"
-                                MinWidth="132"
-                                MinHeight="32"
-                                Padding="8,3"
-                                Margin="6,0,0,0"
-                                Click="SaveProfileAsNewButton_Click" />
-
-                        <Button Content="Save"
-                                DockPanel.Dock="Right"
-                                Style="{StaticResource PrimaryButton}"
-                                MinWidth="92"
-                                MinHeight="32"
-                                Padding="8,3"
-                                Margin="6,0,0,0"
-                                Click="SaveProfileButton_Click" />
-                    </DockPanel>
                 </Grid>
             </Border>
-        </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-              <Grid>
-                  <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
-                      <ColumnDefinition Width="16" />
-                      <ColumnDefinition Width="*" />
-                  </Grid.ColumnDefinitions>
-
-                  <StackPanel Grid.Column="0">
-                      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
-                          <StackPanel>
-                              <TextBlock Text="Mode" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
-
-                              <TextBlock Text="Run mode" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                              <ComboBox x:Name="RunModeBox" SelectedIndex="0" SelectionChanged="AnyInputChanged" Margin="0,3,0,7">
-                                  <ComboBoxItem Content="Client mode" />
-                                  <ComboBoxItem Content="Server mode" />
-                              </ComboBox>
-
-                              <TextBlock Text="Protocol" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                              <ComboBox x:Name="ProtocolBox" SelectedIndex="0" SelectionChanged="AnyInputChanged" Margin="0,3,0,7">
-                                  <ComboBoxItem Content="TCP" />
-                                  <ComboBoxItem Content="UDP" />
-                              </ComboBox>
-
-                              <TextBlock Text="IP version" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                              <ComboBox x:Name="IpVersionBox" SelectedIndex="1" SelectionChanged="AnyInputChanged" Margin="0,3,0,0">
-                                  <ComboBoxItem Content="Default" />
-                                  <ComboBoxItem Content="IPv4" />
-                                  <ComboBoxItem Content="IPv6" />
-                              </ComboBox>
-                          </StackPanel>
-                      </Border>
-
-                      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
-                          <StackPanel>
-                              <TextBlock Text="Endpoint" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
-
-                              <TextBlock Text="Server address / host" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                              <TextBox x:Name="ServerAddressBox" Text="10.100.100.1" TextChanged="AnyInputChanged" Margin="0,3,0,7" />
-
-                              <TextBlock Text="Bind address, optional" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                              <TextBox x:Name="BindAddressBox" TextChanged="AnyInputChanged" Margin="0,3,0,7" />
-
-                              <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                              <TextBox x:Name="PortBox" Text="5201" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                          </StackPanel>
-                      </Border>
-
-                      <Border Style="{StaticResource SectionCard}">
-                          <StackPanel>
-                              <TextBlock Text="Output" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
-
-                              <TextBlock Text="Report format" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                              <ComboBox x:Name="FormatBox" SelectedIndex="2" SelectionChanged="AnyInputChanged" Margin="0,3,0,7">
-                                  <ComboBoxItem Content="Kbits/sec" Tag="k" />
-                                  <ComboBoxItem Content="Mbits/sec" Tag="m" />
-                                  <ComboBoxItem Content="MBytes/sec" Tag="M" />
-                                  <ComboBoxItem Content="Gbits/sec" Tag="g" />
-                              </ComboBox>
-
-                              <CheckBox x:Name="JsonStreamBox"
-                                        Content="Use --json-stream for live chart parsing"
-                                        IsChecked="True"
-                                        Checked="AnyInputChanged"
-                                        Unchecked="AnyInputChanged" />
-
-                              <CheckBox x:Name="VerboseBox"
-                                        Content="Verbose output"
-                                        Checked="AnyInputChanged"
-                                        Unchecked="AnyInputChanged"
-                                        Margin="0,0,0,8" />
-
-                              <TextBlock Text="Extra arguments, optional" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                              <TextBox x:Name="ExtraArgumentsBox"
-                                       TextChanged="AnyInputChanged"
-                                       TextWrapping="NoWrap"
-                                       AcceptsReturn="False"
-                                       ToolTip="Appended as-is after generated arguments, e.g. --connect-timeout 3000"
-                                       Margin="0,3,0,0" />
-                          </StackPanel>
-                      </Border>
-                  </StackPanel>
-
-                  <StackPanel Grid.Column="2">
-                      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
-                          <StackPanel>
-                              <TextBlock Text="Client test" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
-
-                              <Grid Margin="0,0,0,8">
-                                  <Grid.ColumnDefinitions>
-                                      <ColumnDefinition />
-                                      <ColumnDefinition Width="8" />
-                                      <ColumnDefinition />
-                                  </Grid.ColumnDefinitions>
-
-                                  <StackPanel Grid.Column="0">
-                                      <TextBlock Text="Streams" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="StreamsBox" Text="10" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-
-                                  <StackPanel Grid.Column="2">
-                                      <TextBlock Text="Duration, sec" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="DurationBox" Text="10" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-                              </Grid>
-
-                              <Grid Margin="0,0,0,8">
-                                  <Grid.ColumnDefinitions>
-                                      <ColumnDefinition />
-                                      <ColumnDefinition Width="8" />
-                                      <ColumnDefinition />
-                                  </Grid.ColumnDefinitions>
-
-                                  <StackPanel Grid.Column="0">
-                                      <TextBlock Text="Report interval, sec" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="IntervalBox" Text="1" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-
-                                  <StackPanel Grid.Column="2">
-                                      <TextBlock Text="DSCP, optional" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="DscpBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-                              </Grid>
-
-                              <Grid Margin="0,0,0,8">
-                                  <Grid.ColumnDefinitions>
-                                      <ColumnDefinition />
-                                      <ColumnDefinition Width="8" />
-                                      <ColumnDefinition />
-                                  </Grid.ColumnDefinitions>
-
-                                  <StackPanel Grid.Column="0">
-                                      <TextBlock Text="Omit first seconds (-O)" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="OmitSecondsBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-
-                                  <StackPanel Grid.Column="2">
-                                      <TextBlock Text="Client port (--cport, optional)" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="ClientPortBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-                              </Grid>
-
-                              <WrapPanel>
-                                  <CheckBox x:Name="ReverseBox" Content="Reverse (-R)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" Margin="0,0,12,6" />
-                                  <CheckBox x:Name="BidirectionalBox" Content="Bidirectional (--bidir)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" Margin="0,0,12,6" />
-                                  <CheckBox x:Name="GetServerOutputBox" Content="Get server output (--get-server-output)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" />
-                              </WrapPanel>
-                          </StackPanel>
-                      </Border>
-
-                      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
-                          <StackPanel>
-                              <TextBlock Text="Transport tuning" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
-
-                              <Grid Margin="0,0,0,8">
-                                  <Grid.ColumnDefinitions>
-                                      <ColumnDefinition />
-                                      <ColumnDefinition Width="8" />
-                                      <ColumnDefinition />
-                                  </Grid.ColumnDefinitions>
-
-                                  <StackPanel Grid.Column="0">
-                                      <TextBlock Text="UDP bandwidth" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="UdpBandwidthBox" Text="0" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-
-                                  <StackPanel Grid.Column="2">
-                                      <TextBlock Text="Buffer length" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="BufferLengthBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-                              </Grid>
-
-                              <Grid Margin="0,0,0,8">
-                                  <Grid.ColumnDefinitions>
-                                      <ColumnDefinition />
-                                      <ColumnDefinition Width="8" />
-                                      <ColumnDefinition />
-                                  </Grid.ColumnDefinitions>
-
-                                  <StackPanel Grid.Column="0">
-                                      <TextBlock Text="TCP window" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="WindowSizeBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-
-                                  <StackPanel Grid.Column="2">
-                                      <TextBlock Text="TCP MSS" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                      <TextBox x:Name="TcpMssBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
-                                  </StackPanel>
-                              </Grid>
-
-                              <WrapPanel>
-                                  <CheckBox x:Name="TcpNoDelayBox" Content="TCP no delay (-N)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" Margin="0,0,12,6" />
-                                  <CheckBox x:Name="ZeroCopyBox" Content="Zero copy (-Z, OS-dependent)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" />
-                              </WrapPanel>
-                          </StackPanel>
-                      </Border>
-
-                      <Border Style="{StaticResource SectionCard}">
-                          <StackPanel>
-                              <TextBlock Text="Server options" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
-
-                              <CheckBox x:Name="OneOffServerBox"
-                                        Content="One-off server, stop after one client (-1)"
-                                        Checked="AnyInputChanged"
-                                        Unchecked="AnyInputChanged" />
-                          </StackPanel>
-                      </Border>
-                  </StackPanel>
-              </Grid>
-          </ScrollViewer>
-
-        <Border Grid.Row="2"
-                Background="{StaticResource PanelSoft}"
-                BorderBrush="{StaticResource BorderSoft}"
-                BorderThickness="1"
-                CornerRadius="12"
-                Padding="10"
-                Margin="0,8,0,0">
-            <Grid>
+            <Grid Grid.Row="1" Margin="16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0">
-                    <TextBlock Text="Generated arguments"
+                <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="Advanced iperf3 builder"
+                               FontSize="22"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Click parameters and WinPerf will generate clean iperf3 arguments before running them."
+                               Foreground="{StaticResource TextMuted}"
                                FontSize="11"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,8" />
-                    <TextBox x:Name="PreviewBox"
-                             IsReadOnly="True"
-                             TextWrapping="Wrap"
-                             FontFamily="Cascadia Mono, Consolas"
-                             MinHeight="32" />
+                               TextWrapping="Wrap"
+                               Margin="0,3,0,0" />
+
+                    <Border Background="{StaticResource PanelSoft}"
+                            BorderBrush="{StaticResource BorderSoft}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="10"
+                            Margin="0,8,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="3*" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.Column="0">
+                                <TextBlock Text="Saved profile"
+                                           Foreground="{StaticResource TextMuted}"
+                                           FontSize="11" />
+                                <ComboBox x:Name="ProfileBox"
+                                          DisplayMemberPath="Name"
+                                          SelectionChanged="ProfileBox_SelectionChanged"
+                                          Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="2">
+                                <TextBlock Text="Profile name"
+                                           Foreground="{StaticResource TextMuted}"
+                                           FontSize="11" />
+                                <TextBox x:Name="ProfileNameBox"
+                                         Text="LAN TCP 10s x10"
+                                         Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <DockPanel Grid.Row="1"
+                                       Grid.ColumnSpan="3"
+                                       Margin="0,8,0,0"
+                                       LastChildFill="False">
+                                <TextBlock x:Name="ProfileStatusText"
+                                           DockPanel.Dock="Left"
+                                           Text="Profiles are stored in %APPDATA%\WinPerf\profiles.json"
+                                           Foreground="{StaticResource TextMuted}"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap" />
+
+                                <Button Content="Delete"
+                                        DockPanel.Dock="Right"
+                                        Style="{StaticResource SecondaryButton}"
+                                        MinWidth="92"
+                                        MinHeight="32"
+                                        Padding="8,3"
+                                        Margin="6,0,0,0"
+                                        Click="DeleteProfileButton_Click" />
+
+                                <Button Content="Set default"
+                                        DockPanel.Dock="Right"
+                                        Style="{StaticResource SecondaryButton}"
+                                        MinWidth="124"
+                                        MinHeight="32"
+                                        Padding="8,3"
+                                        Margin="6,0,0,0"
+                                        Click="SetDefaultProfileButton_Click" />
+
+                                <Button Content="Save as new"
+                                        DockPanel.Dock="Right"
+                                        Style="{StaticResource SecondaryButton}"
+                                        MinWidth="132"
+                                        MinHeight="32"
+                                        Padding="8,3"
+                                        Margin="6,0,0,0"
+                                        Click="SaveProfileAsNewButton_Click" />
+
+                                <Button Content="Save"
+                                        DockPanel.Dock="Right"
+                                        Style="{StaticResource PrimaryButton}"
+                                        MinWidth="92"
+                                        MinHeight="32"
+                                        Padding="8,3"
+                                        Margin="6,0,0,0"
+                                        Click="SaveProfileButton_Click" />
+                            </DockPanel>
+                        </Grid>
+                    </Border>
                 </StackPanel>
 
-                <DockPanel Grid.Row="1" Margin="0,8,0,0" LastChildFill="False">
-                    <TextBlock x:Name="ValidationText"
-                               DockPanel.Dock="Left"
-                               Foreground="{StaticResource TextMuted}"
-                               VerticalAlignment="Center" />
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                    <Button Content="Cancel"
-                            DockPanel.Dock="Right"
-                            Style="{StaticResource SecondaryButton}"
-                            Width="100"
-                            Margin="6,0,0,0"
-                            Click="CancelButton_Click" />
+                        <StackPanel Grid.Column="0">
+                            <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="Mode" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
 
-                    <Button Content="Use Command"
-                            DockPanel.Dock="Right"
-                            Style="{StaticResource PrimaryButton}"
-                            Width="124"
-                            Click="UseButton_Click" />
-                </DockPanel>
-            </Grid>
-        </Border>
+                                    <TextBlock Text="Run mode" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <ComboBox x:Name="RunModeBox" SelectedIndex="0" SelectionChanged="AnyInputChanged" Margin="0,3,0,7">
+                                        <ComboBoxItem Content="Client mode" />
+                                        <ComboBoxItem Content="Server mode" />
+                                    </ComboBox>
+
+                                    <TextBlock Text="Protocol" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <ComboBox x:Name="ProtocolBox" SelectedIndex="0" SelectionChanged="AnyInputChanged" Margin="0,3,0,7">
+                                        <ComboBoxItem Content="TCP" />
+                                        <ComboBoxItem Content="UDP" />
+                                    </ComboBox>
+
+                                    <TextBlock Text="IP version" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <ComboBox x:Name="IpVersionBox" SelectedIndex="1" SelectionChanged="AnyInputChanged" Margin="0,3,0,0">
+                                        <ComboBoxItem Content="Default" />
+                                        <ComboBoxItem Content="IPv4" />
+                                        <ComboBoxItem Content="IPv6" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="Endpoint" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                                    <TextBlock Text="Server address / host" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <TextBox x:Name="ServerAddressBox" Text="10.100.100.1" TextChanged="AnyInputChanged" Margin="0,3,0,7" />
+
+                                    <TextBlock Text="Bind address, optional" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <TextBox x:Name="BindAddressBox" TextChanged="AnyInputChanged" Margin="0,3,0,7" />
+
+                                    <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <TextBox x:Name="PortBox" Text="5201" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SectionCard}">
+                                <StackPanel>
+                                    <TextBlock Text="Output" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                                    <TextBlock Text="Report format" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <ComboBox x:Name="FormatBox" SelectedIndex="2" SelectionChanged="AnyInputChanged" Margin="0,3,0,7">
+                                        <ComboBoxItem Content="Kbits/sec" Tag="k" />
+                                        <ComboBoxItem Content="Mbits/sec" Tag="m" />
+                                        <ComboBoxItem Content="MBytes/sec" Tag="M" />
+                                        <ComboBoxItem Content="Gbits/sec" Tag="g" />
+                                    </ComboBox>
+
+                                    <CheckBox x:Name="JsonStreamBox"
+                                              Content="Use --json-stream for live chart parsing"
+                                              IsChecked="True"
+                                              Checked="AnyInputChanged"
+                                              Unchecked="AnyInputChanged" />
+
+                                    <CheckBox x:Name="VerboseBox"
+                                              Content="Verbose output"
+                                              Checked="AnyInputChanged"
+                                              Unchecked="AnyInputChanged"
+                                              Margin="0,0,0,8" />
+
+                                    <TextBlock Text="Extra arguments, optional" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <TextBox x:Name="ExtraArgumentsBox"
+                                             TextChanged="AnyInputChanged"
+                                             TextWrapping="NoWrap"
+                                             AcceptsReturn="False"
+                                             ToolTip="Appended as-is after generated arguments, e.g. --connect-timeout 3000"
+                                             Margin="0,3,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="Client test" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Streams" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="StreamsBox" Text="10" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Duration, sec" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="DurationBox" Text="10" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Report interval, sec" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="IntervalBox" Text="1" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="DSCP, optional" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="DscpBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Omit first seconds (-O)" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="OmitSecondsBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Client port (--cport, optional)" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="ClientPortBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <WrapPanel>
+                                        <CheckBox x:Name="ReverseBox" Content="Reverse (-R)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" Margin="0,0,12,6" />
+                                        <CheckBox x:Name="BidirectionalBox" Content="Bidirectional (--bidir)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" Margin="0,0,12,6" />
+                                        <CheckBox x:Name="GetServerOutputBox" Content="Get server output (--get-server-output)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="Transport tuning" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="UDP bandwidth" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="UdpBandwidthBox" Text="0" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Buffer length" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="BufferLengthBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="TCP window" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="WindowSizeBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="TCP MSS" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                            <TextBox x:Name="TcpMssBox" TextChanged="AnyInputChanged" Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <WrapPanel>
+                                        <CheckBox x:Name="TcpNoDelayBox" Content="TCP no delay (-N)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" Margin="0,0,12,6" />
+                                        <CheckBox x:Name="ZeroCopyBox" Content="Zero copy (-Z, OS-dependent)" Checked="AnyInputChanged" Unchecked="AnyInputChanged" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SectionCard}">
+                                <StackPanel>
+                                    <TextBlock Text="Server options" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                                    <CheckBox x:Name="OneOffServerBox"
+                                              Content="One-off server, stop after one client (-1)"
+                                              Checked="AnyInputChanged"
+                                              Unchecked="AnyInputChanged" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+
+                <Border Grid.Row="2"
+                        Background="{StaticResource PanelSoft}"
+                        BorderBrush="{StaticResource BorderSoft}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="10"
+                        Margin="0,8,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0">
+                            <TextBlock Text="Generated arguments"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8" />
+                            <TextBox x:Name="PreviewBox"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     FontFamily="Cascadia Mono, Consolas"
+                                     MinHeight="32" />
+                        </StackPanel>
+
+                        <DockPanel Grid.Row="1" Margin="0,8,0,0" LastChildFill="False">
+                            <TextBlock x:Name="ValidationText"
+                                       DockPanel.Dock="Left"
+                                       Foreground="{StaticResource TextMuted}"
+                                       VerticalAlignment="Center" />
+
+                            <Button Content="Cancel"
+                                    DockPanel.Dock="Right"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Width="100"
+                                    Margin="6,0,0,0"
+                                    Click="CancelButton_Click" />
+
+                            <Button Content="Use Command"
+                                    DockPanel.Dock="Right"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Width="124"
+                                    Click="UseButton_Click" />
+                        </DockPanel>
+                    </Grid>
+                </Border>
             </Grid>
         </Grid>
     </Border>

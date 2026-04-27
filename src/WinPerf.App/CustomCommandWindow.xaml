@@ -80,149 +80,149 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                Background="#07101D"
-                BorderBrush="{StaticResource BorderSoft}"
-                BorderThickness="0,0,0,1"
-                CornerRadius="11,11,0,0">
-            <Grid>
-                <StackPanel Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="6,0,0,0">
-                    <Image Source="Assets/WinPerf.ico"
-                           Width="16"
-                           Height="16"
-                           Margin="0,0,6,0" />
-                    <TextBlock Text="Custom iperf3 command"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button x:Name="MinimizeButton"
-                            Content="—"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="MinimizeButton_Click" />
-                    <Button x:Name="MaximizeRestoreButton"
-                            Content="□"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="MaximizeRestoreButton_Click" />
-                    <Button x:Name="CloseButton"
-                            Content="×"
-                            Width="40"
-                            Height="38"
-                            Background="Transparent"
-                            Foreground="{StaticResource TextMain}"
-                            BorderThickness="0"
-                            FontSize="11"
-                            Click="CloseButton_Click" />
-                </StackPanel>
-            </Grid>
-        </Border>
-
-            <Grid Grid.Row="1" Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <StackPanel Grid.Row="0" Margin="0,0,0,8">
-            <TextBlock Text="Custom iperf3 command"
-                       FontSize="22"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="Use this for advanced flags, public servers, server mode, UDP bitrate tuning, or manual troubleshooting."
-                       Foreground="{StaticResource TextMuted}"
-                       FontSize="11"
-                       TextWrapping="Wrap"
-                       Margin="0,3,0,0" />
-        </StackPanel>
-
-        <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="130" />
-            </Grid.RowDefinitions>
-
             <Border Grid.Row="0"
-                    Background="{StaticResource Panel}"
+                    Background="#07101D"
                     BorderBrush="{StaticResource BorderSoft}"
-                    BorderThickness="1"
-                    CornerRadius="12"
-                    Padding="10"
-                    Margin="0,0,0,8">
+                    BorderThickness="0,0,0,1"
+                    CornerRadius="11,11,0,0">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="6,0,0,0">
+                        <Image Source="Assets/WinPerf.ico"
+                               Width="16"
+                               Height="16"
+                               Margin="0,0,6,0" />
+                        <TextBlock Text="Custom iperf3 command"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
 
-                    <TextBlock Text="Command"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,8" />
-
-                    <ComboBox x:Name="CommandBox"
-                              Grid.Row="1"
-                              Height="38"
-                              MinHeight="32"
-                              IsEditable="True"
-                              IsTextSearchEnabled="False"
-                              VerticalContentAlignment="Center"
-                              Text="-c 10.100.100.1 -p 5201 -t 10 -P 10 --json-stream -4" />
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="MinimizeButton"
+                                Content="—"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="MinimizeButton_Click" />
+                        <Button x:Name="MaximizeRestoreButton"
+                                Content="□"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="MaximizeRestoreButton_Click" />
+                        <Button x:Name="CloseButton"
+                                Content="×"
+                                Width="40"
+                                Height="38"
+                                Background="Transparent"
+                                Foreground="{StaticResource TextMain}"
+                                BorderThickness="0"
+                                FontSize="11"
+                                Click="CloseButton_Click" />
+                    </StackPanel>
                 </Grid>
             </Border>
 
-            <Border Grid.Row="1"
-                    Background="{StaticResource PanelSoft}"
-                    BorderBrush="{StaticResource BorderSoft}"
-                    BorderThickness="1"
-                    CornerRadius="12"
-                    Padding="10">
-                <StackPanel>
-                    <TextBlock Text="Examples"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,8" />
-                    <TextBlock Foreground="{StaticResource TextMuted}"
-                               FontFamily="Cascadia Mono, Consolas"
+            <Grid Grid.Row="1" Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="Custom iperf3 command"
+                               FontSize="22"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Use this for advanced flags, public servers, server mode, UDP bitrate tuning, or manual troubleshooting."
+                               Foreground="{StaticResource TextMuted}"
                                FontSize="11"
-                               TextWrapping="Wrap"><Run Text="TCP upload:     -c 10.100.100.1 -P 10 -t 10 -4 --json-stream" /><LineBreak /><Run Text="TCP download:   -c 10.100.100.1 -R -P 10 -t 10 -4 --json-stream" /><LineBreak /><Run Text="UDP upload:     -c 10.100.100.1 -u -b 0 -t 10 -4 --json-stream" /><LineBreak /><Run Text="Server mode:    -s -p 5201" /></TextBlock>
+                               TextWrapping="Wrap"
+                               Margin="0,3,0,0" />
                 </StackPanel>
-            </Border>
-        </Grid>
 
-        <DockPanel Grid.Row="2" Margin="0,8,0,0" LastChildFill="False">
-            <TextBlock Text="For live charts, prefer --json-stream."
-                       DockPanel.Dock="Left"
-                       Foreground="{StaticResource TextMuted}"
-                       VerticalAlignment="Center" />
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="130" />
+                    </Grid.RowDefinitions>
 
-            <Button Content="Cancel"
-                    DockPanel.Dock="Right"
-                    Style="{StaticResource SecondaryButton}"
-                    Width="100"
-                    Margin="6,0,0,0"
-                    Click="CancelButton_Click" />
+                    <Border Grid.Row="0"
+                            Background="{StaticResource Panel}"
+                            BorderBrush="{StaticResource BorderSoft}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="10"
+                            Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-            <Button Content="Use Command"
-                    DockPanel.Dock="Right"
-                    Style="{StaticResource PrimaryButton}"
-                    Width="124"
-                    Click="UseButton_Click" />
-        </DockPanel>
+                            <TextBlock Text="Command"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8" />
+
+                            <ComboBox x:Name="CommandBox"
+                                      Grid.Row="1"
+                                      Height="38"
+                                      MinHeight="32"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="False"
+                                      VerticalContentAlignment="Center"
+                                      Text="-c 10.100.100.1 -p 5201 -t 10 -P 10 --json-stream -4" />
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="1"
+                            Background="{StaticResource PanelSoft}"
+                            BorderBrush="{StaticResource BorderSoft}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="10">
+                        <StackPanel>
+                            <TextBlock Text="Examples"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8" />
+                            <TextBlock Foreground="{StaticResource TextMuted}"
+                                       FontFamily="Cascadia Mono, Consolas"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"><Run Text="TCP upload:     -c 10.100.100.1 -P 10 -t 10 -4 --json-stream" /><LineBreak /><Run Text="TCP download:   -c 10.100.100.1 -R -P 10 -t 10 -4 --json-stream" /><LineBreak /><Run Text="UDP upload:     -c 10.100.100.1 -u -b 0 -t 10 -4 --json-stream" /><LineBreak /><Run Text="Server mode:    -s -p 5201" /></TextBlock>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <DockPanel Grid.Row="2" Margin="0,8,0,0" LastChildFill="False">
+                    <TextBlock Text="For live charts, prefer --json-stream."
+                               DockPanel.Dock="Left"
+                               Foreground="{StaticResource TextMuted}"
+                               VerticalAlignment="Center" />
+
+                    <Button Content="Cancel"
+                            DockPanel.Dock="Right"
+                            Style="{StaticResource SecondaryButton}"
+                            Width="100"
+                            Margin="6,0,0,0"
+                            Click="CancelButton_Click" />
+
+                    <Button Content="Use Command"
+                            DockPanel.Dock="Right"
+                            Style="{StaticResource PrimaryButton}"
+                            Width="124"
+                            Click="UseButton_Click" />
+                </DockPanel>
             </Grid>
         </Grid>
     </Border>
