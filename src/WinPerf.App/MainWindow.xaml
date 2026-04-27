@@ -382,6 +382,43 @@
                                         </ContextMenu>
                                     </Button.ContextMenu>
                                 </Button>
+
+                                  <Border x:Name="CommandOverridePanel"
+                                          Visibility="Collapsed"
+                                          Margin="0,10,0,0"
+                                          Padding="10,8"
+                                          CornerRadius="12"
+                                          Background="#141B24"
+                                          BorderBrush="#2B3544"
+                                          BorderThickness="1">
+                                      <Grid>
+                                          <Grid.ColumnDefinitions>
+                                              <ColumnDefinition />
+                                              <ColumnDefinition Width="8" />
+                                              <ColumnDefinition Width="Auto" />
+                                          </Grid.ColumnDefinitions>
+
+                                          <StackPanel Grid.Column="0">
+                                              <TextBlock x:Name="CommandOverrideBadgeText"
+                                                         Text="Command override active"
+                                                         FontWeight="SemiBold"
+                                                         FontSize="12" />
+                                              <TextBlock Text="Start uses these arguments instead of dashboard fields."
+                                                         Foreground="{StaticResource TextMuted}"
+                                                         FontSize="11"
+                                                         TextWrapping="Wrap"
+                                                         Margin="0,2,0,0" />
+                                          </StackPanel>
+
+                                          <Button x:Name="ClearCommandOverrideButton"
+                                                  Grid.Column="2"
+                                                  Content="Clear"
+                                                  Style="{StaticResource SecondaryButton}"
+                                                  Padding="10,0"
+                                                  MinWidth="58"
+                                                  Click="ClearCommandOverrideButton_Click" />
+                                      </Grid>
+                                  </Border>
                             </StackPanel>
                         </StackPanel>
                     </Border>

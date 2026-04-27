@@ -32,7 +32,10 @@ public partial class MainWindow : Window
     private bool _isLoadingProfileSelection;
     private bool _isApplyingDashboardProfile;
     private string? _activeCustomCommandArguments;
+    private string? _activeCommandOverrideSource;
 
+    private const string AdvancedCommandOverrideSource = "Advanced";
+    private const string CustomCommandOverrideSource = "Custom";
     private const int MaxRecentServers = 20;
     private const int MaxThroughputSamples = 60;
 
@@ -45,6 +48,7 @@ public partial class MainWindow : Window
         RefreshEngineStatus();
         PopulateRecentServers();
         ApplyDashboardLayout();
+        UpdateCommandOverrideUx();
         UpdateDashboardCommandPreview();
 
         Loaded += async (_, _) => await LoadDashboardProfilesAsync();
@@ -86,22 +90,21 @@ public partial class MainWindow : Window
 
         try
         {
-            var customCommandArguments = _activeCustomCommandArguments;
-            var isCustomCommand = !string.IsNullOrWhiteSpace(customCommandArguments);
+            var commandOverrideArguments = _activeCustomCommandArguments;
+            var hasCommandOverride = !string.IsNullOrWhiteSpace(commandOverrideArguments);
 
-            var options = isCustomCommand
-                ? BuildCustomCommandOptions(customCommandArguments!)
+            var options = hasCommandOverride
+                ? BuildCustomCommandOptions(commandOverrideArguments!)
                 : BuildDashboardTestOptions();
 
-            var command = isCustomCommand
-                ? new IperfCommand(_engineResolution.ExecutablePath, SplitCommandLine(customCommandArguments!))
+            var command = hasCommandOverride
+                ? new IperfCommand(_engineResolution.ExecutablePath, SplitCommandLine(commandOverrideArguments!))
                 : IperfCommandBuilder.BuildClientCommand(_engineResolution.ExecutablePath, options);
-
-            var commandDisplayText = isCustomCommand
-                ? customCommandArguments!
+            var commandDisplayText = hasCommandOverride
+                ? commandOverrideArguments!
                 : string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
 
-            if (!isCustomCommand)
+            if (!hasCommandOverride)
             {
                 SaveRecentServer(options.Server);
             }
@@ -383,11 +386,7 @@ public partial class MainWindow : Window
 
         if (dialogResult == true)
         {
-            _activeCustomCommandArguments = NormalizeCustomCommandText(dialog.CommandText);
-
-            EngineOutputText.Text =
-                "Advanced command preview:" + Environment.NewLine +
-                _activeCustomCommandArguments;
+            SetCommandOverride(AdvancedCommandOverrideSource, NormalizeCustomCommandText(dialog.CommandText));
         }
     }
 
@@ -404,11 +403,7 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog() == true)
         {
-            _activeCustomCommandArguments = NormalizeCustomCommandText(dialog.CommandText);
-
-            EngineOutputText.Text =
-                "Custom command preview:" + Environment.NewLine +
-                _activeCustomCommandArguments;
+            SetCommandOverride(CustomCommandOverrideSource, NormalizeCustomCommandText(dialog.CommandText));
         }
     }
 
@@ -646,7 +641,7 @@ public partial class MainWindow : Window
 
     private void ApplyProfileToDashboard(SavedIperfProfile profile)
     {
-        _activeCustomCommandArguments = null;
+        ClearCommandOverride(updatePreview: false);
         if (profile.RunMode != SavedIperfRunMode.Client)
         {
             return;
@@ -706,6 +701,70 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
     }
 
+    private void SetCommandOverride(string source, string arguments)
+    {
+        _activeCommandOverrideSource = source;
+        _activeCustomCommandArguments = arguments;
+        UpdateCommandOverrideUx();
+        UpdateDashboardCommandPreview();
+    }
+
+    private void ClearCommandOverrideButton_Click(object sender, RoutedEventArgs e)
+    {
+        ClearCommandOverride(updatePreview: true);
+    }
+
+    private void ClearCommandOverride(bool updatePreview)
+    {
+        if (string.IsNullOrWhiteSpace(_activeCustomCommandArguments) &&
+            string.IsNullOrWhiteSpace(_activeCommandOverrideSource))
+        {
+            return;
+        }
+
+        _activeCustomCommandArguments = null;
+        _activeCommandOverrideSource = null;
+        UpdateCommandOverrideUx();
+
+        if (updatePreview)
+        {
+            UpdateDashboardCommandPreview();
+        }
+    }
+
+    private void UpdateCommandOverrideUx()
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+
+        var hasCommandOverride = !string.IsNullOrWhiteSpace(_activeCustomCommandArguments);
+        CommandOverridePanel.Visibility = hasCommandOverride
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (!hasCommandOverride)
+        {
+            CommandOverrideBadgeText.Text = string.Empty;
+            return;
+        }
+
+        var source = string.IsNullOrWhiteSpace(_activeCommandOverrideSource)
+            ? "Command"
+            : _activeCommandOverrideSource;
+
+        CommandOverrideBadgeText.Text = $"{source} command override active";
+        CommandOverridePanel.ToolTip = "Start will run these generated/custom arguments instead of the dashboard fields.";
+    }
+
+    private string GetCommandOverridePreviewTitle()
+    {
+        return string.Equals(_activeCommandOverrideSource, AdvancedCommandOverrideSource, StringComparison.Ordinal)
+            ? "Advanced command preview:"
+            : "Custom command preview:";
+    }
+
     private void UpdateDashboardCommandPreview()
     {
         if (!IsLoaded || _currentRunCancellation is not null || _isApplyingDashboardProfile)
@@ -716,7 +775,7 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(_activeCustomCommandArguments))
         {
             EngineOutputText.Text =
-                "Custom command preview:" + Environment.NewLine +
+                GetCommandOverridePreviewTitle() + Environment.NewLine +
                 _activeCustomCommandArguments;
             return;
         }
