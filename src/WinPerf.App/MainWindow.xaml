@@ -206,32 +206,35 @@
                                 </StackPanel>
                             </Grid>
 
-                            <WrapPanel>
-                                <Button x:Name="StartButton"
-                                        Content="Start"
-                                        Style="{StaticResource PrimaryButton}"
-                                        Width="96"
-                                        Margin="0,0,10,10"
-                                        Click="StartButton_Click" />
-                                <Button x:Name="StopButton"
-                                        Content="Stop"
-                                        Style="{StaticResource SecondaryButton}"
-                                        Width="82"
-                                        Margin="0,0,10,10"
-                                        IsEnabled="False" />
-                                <Button x:Name="AdvancedCommandButton"
-                                        Content="Advanced"
-                                        Style="{StaticResource SecondaryButton}"
-                                        Width="104"
-                                        Margin="0,0,10,10"
-                                        Click="AdvancedCommandButton_Click" />
-                                <Button x:Name="CustomCommandButton"
-                                        Content="Custom"
-                                        Style="{StaticResource SecondaryButton}"
-                                        Width="104"
-                                        Margin="0,0,10,10"
-                                        Click="CustomCommandButton_Click" />
-                            </WrapPanel>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Button x:Name="StartButton"
+                                            Content="Start"
+                                            Style="{StaticResource PrimaryButton}"
+                                            Width="118"
+                                            Margin="0,0,10,0"
+                                            Click="StartButton_Click" />
+                                    <Button x:Name="StopButton"
+                                            Content="Stop"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Width="96"
+                                            IsEnabled="False" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="AdvancedCommandButton"
+                                            Content="Advanced"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Width="118"
+                                            Margin="0,0,10,0"
+                                            Click="AdvancedCommandButton_Click" />
+                                    <Button x:Name="CustomCommandButton"
+                                            Content="Custom"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Width="96"
+                                            Click="CustomCommandButton_Click" />
+                                </StackPanel>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
