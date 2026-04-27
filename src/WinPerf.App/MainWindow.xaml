@@ -438,7 +438,21 @@
                                     CornerRadius="14"
                                     Margin="0,16,0,0">
                                 <Grid>
-                                    <TextBlock Text="Realtime chart placeholder"
+                                    <Canvas x:Name="ThroughputChartCanvas"
+                                            ClipToBounds="True"
+                                            SizeChanged="ThroughputChartCanvas_SizeChanged">
+                                        <Canvas x:Name="ThroughputChartGridCanvas"
+                                                ClipToBounds="True" />
+                                        <Polyline x:Name="ThroughputChartLine"
+                                                  Stroke="{StaticResource Accent}"
+                                                  StrokeThickness="2"
+                                                  StrokeLineJoin="Round" />
+                                        <Canvas x:Name="ThroughputChartMarkerCanvas"
+                                                ClipToBounds="True" />
+                                    </Canvas>
+
+                                    <TextBlock x:Name="ThroughputChartPlaceholder"
+                                               Text="Waiting for throughput samples..."
                                                Foreground="{StaticResource TextMuted}"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center" />

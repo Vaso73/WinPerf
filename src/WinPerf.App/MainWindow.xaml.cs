@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using WinPerf.App.Settings;
 using WinPerf.Core.Iperf;
 
@@ -18,8 +20,10 @@ public partial class MainWindow : Window
     private IperfExecutableResolution _engineResolution = new(false, null, "NotConfigured", "iperf3.exe is not configured.");
     private CancellationTokenSource? _currentRunCancellation;
     private readonly StringBuilder _engineOutput = new();
+    private readonly List<double> _throughputSamples = new();
 
     private const int MaxRecentServers = 20;
+    private const int MaxThroughputSamples = 60;
 
     public MainWindow()
     {
@@ -349,6 +353,9 @@ public partial class MainWindow : Window
         JitterValueText.Text = "-- ms";
         LossValueText.Text = "-- %";
         LiveStatusText.Text = "Waiting for samples...";
+
+        _throughputSamples.Clear();
+        RenderThroughputChart();
     }
 
     private void UpdateLiveMetrics(IperfIntervalSample sample)
@@ -356,6 +363,7 @@ public partial class MainWindow : Window
         if (sample.MegabitsPerSecond is double megabitsPerSecond)
         {
             ThroughputValueText.Text = FormatMegabits(megabitsPerSecond);
+            AddThroughputSample(megabitsPerSecond);
         }
 
         JitterValueText.Text = sample.JitterMs is double jitterMs
@@ -369,6 +377,293 @@ public partial class MainWindow : Window
         LiveStatusText.Text = sample.Seconds is double seconds
             ? "Last sample " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
             : "Receiving samples...";
+    }
+
+    private void ThroughputChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        RenderThroughputChart();
+    }
+
+    private void AddThroughputSample(double megabitsPerSecond)
+    {
+        if (double.IsNaN(megabitsPerSecond) || double.IsInfinity(megabitsPerSecond) || megabitsPerSecond < 0)
+        {
+            return;
+        }
+
+        _throughputSamples.Add(megabitsPerSecond);
+
+        if (_throughputSamples.Count > MaxThroughputSamples)
+        {
+            _throughputSamples.RemoveRange(0, _throughputSamples.Count - MaxThroughputSamples);
+        }
+
+        RenderThroughputChart();
+    }
+
+    private void RenderThroughputChart()
+    {
+        ThroughputChartLine.Points.Clear();
+        ThroughputChartGridCanvas.Children.Clear();
+        ThroughputChartMarkerCanvas.Children.Clear();
+
+        var width = ThroughputChartCanvas.ActualWidth;
+        var height = ThroughputChartCanvas.ActualHeight;
+
+        if (width <= 80 || height <= 80)
+        {
+            ThroughputChartPlaceholder.Visibility = _throughputSamples.Count == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            return;
+        }
+
+        ThroughputChartGridCanvas.Width = width;
+        ThroughputChartGridCanvas.Height = height;
+        ThroughputChartMarkerCanvas.Width = width;
+        ThroughputChartMarkerCanvas.Height = height;
+
+        const double leftPadding = 58;
+        const double rightPadding = 18;
+        const double topPadding = 28;
+        const double bottomPadding = 38;
+
+        var plotLeft = leftPadding;
+        var plotTop = topPadding;
+        var plotWidth = Math.Max(1, width - leftPadding - rightPadding);
+        var plotHeight = Math.Max(1, height - topPadding - bottomPadding);
+        var plotBottom = plotTop + plotHeight;
+
+        var axis = CalculateThroughputAxis();
+
+        DrawThroughputChartFrame(plotLeft, plotTop, plotWidth, plotHeight, axis.Min, axis.Max, axis.Step);
+
+        if (_throughputSamples.Count == 0)
+        {
+            ThroughputChartPlaceholder.Visibility = Visibility.Visible;
+            return;
+        }
+
+        ThroughputChartPlaceholder.Visibility = Visibility.Collapsed;
+
+        var points = new PointCollection();
+        var axisRange = Math.Max(1, axis.Max - axis.Min);
+
+        for (var i = 0; i < _throughputSamples.Count; i++)
+        {
+            var x = _throughputSamples.Count == 1
+                ? plotLeft
+                : plotLeft + (plotWidth * i / (_throughputSamples.Count - 1));
+
+            var normalized = (_throughputSamples[i] - axis.Min) / axisRange;
+            normalized = Math.Clamp(normalized, 0, 1);
+
+            var y = plotBottom - (normalized * plotHeight);
+
+            points.Add(new Point(x, y));
+            DrawChartMarker(x, y);
+        }
+
+        ThroughputChartLine.Points = points;
+
+        var accentBrush = TryFindResource("Accent") as Brush ?? Brushes.DeepSkyBlue;
+
+        DrawChartText(
+            "Bandwidth",
+            plotLeft + 8,
+            5,
+            14,
+            FontWeights.SemiBold,
+            accentBrush);
+
+        DrawChartText(
+            BuildThroughputSummary(),
+            plotLeft + 118,
+            5,
+            11,
+            FontWeights.SemiBold,
+            accentBrush);
+    }
+
+    private (double Min, double Max, double Step) CalculateThroughputAxis()
+    {
+        if (_throughputSamples.Count == 0)
+        {
+            return (0, 1000, 250);
+        }
+
+        var max = Math.Max(10, _throughputSamples.Max());
+        var wantedMax = max * 1.04;
+        var step = NiceStep(wantedMax / 4);
+        var axisMax = Math.Ceiling(wantedMax / step) * step;
+
+        if (axisMax <= 0)
+        {
+            axisMax = step * 4;
+        }
+
+        return (0, axisMax, step);
+    }
+
+    private static double NiceStep(double value)
+    {
+        if (value <= 0 || double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 1;
+        }
+
+        var exponent = Math.Floor(Math.Log10(value));
+        var fraction = value / Math.Pow(10, exponent);
+
+        double niceFraction =
+            fraction <= 1 ? 1 :
+            fraction <= 2 ? 2 :
+            fraction <= 2.5 ? 2.5 :
+            fraction <= 5 ? 5 :
+            10;
+
+        return niceFraction * Math.Pow(10, exponent);
+    }
+
+    private void DrawThroughputChartFrame(
+        double plotLeft,
+        double plotTop,
+        double plotWidth,
+        double plotHeight,
+        double axisMin,
+        double axisMax,
+        double axisStep)
+    {
+        var gridBrush = TryFindResource("BorderSoft") as Brush ?? Brushes.DimGray;
+        var textBrush = TryFindResource("TextMuted") as Brush ?? Brushes.LightSlateGray;
+        var axisBrush = TryFindResource("TextMuted") as Brush ?? Brushes.LightSlateGray;
+        var axisRange = Math.Max(1, axisMax - axisMin);
+
+        for (var value = axisMin; value <= axisMax + axisStep * 0.5; value += axisStep)
+        {
+            var normalized = (value - axisMin) / axisRange;
+            var y = plotTop + plotHeight - normalized * plotHeight;
+            var isAxisLine = Math.Abs(value - axisMin) < axisStep * 0.1;
+
+            ThroughputChartGridCanvas.Children.Add(new Line
+            {
+                X1 = plotLeft,
+                Y1 = y,
+                X2 = plotLeft + plotWidth,
+                Y2 = y,
+                Stroke = gridBrush,
+                StrokeThickness = isAxisLine ? 1.2 : 1,
+                Opacity = isAxisLine ? 0.90 : 0.42
+            });
+
+            DrawChartText(
+                value.ToString("0", CultureInfo.InvariantCulture),
+                8,
+                y - 8,
+                10,
+                FontWeights.Normal,
+                textBrush);
+        }
+
+        const int verticalSteps = 10;
+
+        for (var i = 0; i <= verticalSteps; i++)
+        {
+            var x = plotLeft + plotWidth * i / verticalSteps;
+            var isAxisLine = i == 0;
+
+            ThroughputChartGridCanvas.Children.Add(new Line
+            {
+                X1 = x,
+                Y1 = plotTop,
+                X2 = x,
+                Y2 = plotTop + plotHeight,
+                Stroke = gridBrush,
+                StrokeThickness = isAxisLine ? 1.2 : 1,
+                Opacity = isAxisLine ? 0.90 : 0.36
+            });
+
+            DrawChartText(
+                i.ToString(CultureInfo.InvariantCulture),
+                x - 3,
+                plotTop + plotHeight + 8,
+                10,
+                FontWeights.Normal,
+                textBrush);
+        }
+
+        DrawChartText("Mbps", 8, plotTop - 20, 10, FontWeights.SemiBold, axisBrush);
+        DrawChartText("Time (sec)", plotLeft + plotWidth - 62, plotTop + plotHeight + 8, 10, FontWeights.SemiBold, axisBrush);
+    }
+
+    private void DrawChartMarker(double x, double y)
+    {
+        var markerBrush = TryFindResource("Accent") as Brush ?? Brushes.DeepSkyBlue;
+        var markerStroke = TryFindResource("Panel") as Brush ?? Brushes.Black;
+
+        var halo = new Ellipse
+        {
+            Width = 14,
+            Height = 14,
+            Fill = markerBrush,
+            Opacity = 0.22
+        };
+
+        Canvas.SetLeft(halo, x - 7);
+        Canvas.SetTop(halo, y - 7);
+        ThroughputChartMarkerCanvas.Children.Add(halo);
+
+        var marker = new Ellipse
+        {
+            Width = 8,
+            Height = 8,
+            Fill = markerBrush,
+            Stroke = markerStroke,
+            StrokeThickness = 1.4
+        };
+
+        Canvas.SetLeft(marker, x - 4);
+        Canvas.SetTop(marker, y - 4);
+        ThroughputChartMarkerCanvas.Children.Add(marker);
+    }
+
+    private string BuildThroughputSummary()
+    {
+        if (_throughputSamples.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var current = _throughputSamples[^1];
+        var min = _throughputSamples.Min();
+        var avg = _throughputSamples.Average();
+        var max = _throughputSamples.Max();
+
+        return FormatMegabits(current)
+            + "   min " + FormatMegabits(min)
+            + " · avg " + FormatMegabits(avg)
+            + " · max " + FormatMegabits(max);
+    }
+
+    private void DrawChartText(
+        string text,
+        double x,
+        double y,
+        double fontSize,
+        FontWeight fontWeight,
+        Brush foreground)
+    {
+        var label = new TextBlock
+        {
+            Text = text,
+            FontSize = fontSize,
+            FontWeight = fontWeight,
+            Foreground = foreground
+        };
+
+        Canvas.SetLeft(label, x);
+        Canvas.SetTop(label, y);
+        ThroughputChartGridCanvas.Children.Add(label);
     }
 
     private static string FormatMegabits(double megabitsPerSecond)
