@@ -214,32 +214,36 @@
                         <Button Content="Delete"
                                 DockPanel.Dock="Right"
                                 Style="{StaticResource SecondaryButton}"
-                                Width="86"
-                                Height="34"
+                                MinWidth="104"
+                                MinHeight="38"
+                                Padding="10,4"
                                 Margin="8,0,0,0"
                                 Click="DeleteProfileButton_Click" />
 
                         <Button Content="Set default"
                                 DockPanel.Dock="Right"
                                 Style="{StaticResource SecondaryButton}"
-                                Width="110"
-                                Height="34"
+                                MinWidth="140"
+                                MinHeight="38"
+                                Padding="10,4"
                                 Margin="8,0,0,0"
                                 Click="SetDefaultProfileButton_Click" />
 
                         <Button Content="Save as new"
                                 DockPanel.Dock="Right"
                                 Style="{StaticResource SecondaryButton}"
-                                Width="116"
-                                Height="34"
+                                MinWidth="150"
+                                MinHeight="38"
+                                Padding="10,4"
                                 Margin="8,0,0,0"
                                 Click="SaveProfileAsNewButton_Click" />
 
                         <Button Content="Save"
                                 DockPanel.Dock="Right"
                                 Style="{StaticResource PrimaryButton}"
-                                Width="86"
-                                Height="34"
+                                MinWidth="104"
+                                MinHeight="38"
+                                Padding="10,4"
                                 Margin="8,0,0,0"
                                 Click="SaveProfileButton_Click" />
                     </DockPanel>
