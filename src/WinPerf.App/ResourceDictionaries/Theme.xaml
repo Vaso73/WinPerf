@@ -10,6 +10,13 @@
     <SolidColorBrush x:Key="AccentGreen" Color="#22C55E" />
     <SolidColorBrush x:Key="AccentAmber" Color="#F59E0B" />
 
+    <Style x:Key="CardBase" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Panel}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="18" />
+    </Style>
+
     <Style x:Key="PrimaryButtonBase" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource Accent}" />
         <Setter Property="Foreground" Value="#03111F" />

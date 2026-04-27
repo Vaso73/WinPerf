@@ -20,11 +20,7 @@
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
 
-        <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource Panel}" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="18" />
+        <Style x:Key="Card" TargetType="Border" BasedOn="{StaticResource CardBase}">
             <Setter Property="Padding" Value="16" />
         </Style>
 
