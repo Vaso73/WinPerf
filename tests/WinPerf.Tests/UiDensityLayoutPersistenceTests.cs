@@ -24,9 +24,9 @@ public sealed class UiDensityLayoutPersistenceTests
     [Fact]
     public void UiDensity_PreservesSavedDashboardLayout()
     {
-        Assert.Contains("_settings.DashboardLeftRailWidth is not double savedLeftRailWidth", MainWindowSource);
+        Assert.Contains("GetSavedDashboardLeftRailWidth() is not double savedLeftRailWidth", MainWindowSource);
         Assert.Contains("Math.Clamp(savedLeftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth)", MainWindowSource);
-        Assert.Contains("_settings.DashboardEngineOutputHeight is not double savedEngineOutputHeight", MainWindowSource);
+        Assert.Contains("GetSavedDashboardEngineOutputHeight() is not double savedEngineOutputHeight", MainWindowSource);
         Assert.Contains("Math.Max(EngineOutputRow.MinHeight, savedEngineOutputHeight)", MainWindowSource);
     }
 }

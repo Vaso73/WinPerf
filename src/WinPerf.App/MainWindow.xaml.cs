@@ -216,7 +216,7 @@ public partial class MainWindow : Window
 
     private void ApplyDashboardLayout()
     {
-        if (_settings.DashboardEngineOutputHeight is double height &&
+        if (GetSavedDashboardEngineOutputHeight() is double height &&
             !double.IsNaN(height) &&
             !double.IsInfinity(height) &&
             height >= EngineOutputRow.MinHeight)
@@ -225,7 +225,7 @@ public partial class MainWindow : Window
             LiveThroughputRow.Height = new GridLength(1, GridUnitType.Star);
         }
 
-        if (_settings.DashboardLeftRailWidth is double width &&
+        if (GetSavedDashboardLeftRailWidth() is double width &&
             !double.IsNaN(width) &&
             !double.IsInfinity(width) &&
             width >= LeftRailColumn.MinWidth)
@@ -234,6 +234,42 @@ public partial class MainWindow : Window
                 Math.Min(width, LeftRailColumn.MaxWidth),
                 GridUnitType.Pixel);
         }
+    }
+
+    private double? GetSavedDashboardEngineOutputHeight()
+    {
+        return IsCompactUiDensity()
+            ? _settings.CompactDashboardEngineOutputHeight ?? _settings.DashboardEngineOutputHeight
+            : _settings.ComfortableDashboardEngineOutputHeight ?? _settings.DashboardEngineOutputHeight;
+    }
+
+    private double? GetSavedDashboardLeftRailWidth()
+    {
+        return IsCompactUiDensity()
+            ? _settings.CompactDashboardLeftRailWidth ?? _settings.DashboardLeftRailWidth
+            : _settings.ComfortableDashboardLeftRailWidth ?? _settings.DashboardLeftRailWidth;
+    }
+
+    private void SetSavedDashboardEngineOutputHeight(double height)
+    {
+        if (IsCompactUiDensity())
+        {
+            _settings.CompactDashboardEngineOutputHeight = height;
+            return;
+        }
+
+        _settings.ComfortableDashboardEngineOutputHeight = height;
+    }
+
+    private void SetSavedDashboardLeftRailWidth(double width)
+    {
+        if (IsCompactUiDensity())
+        {
+            _settings.CompactDashboardLeftRailWidth = width;
+            return;
+        }
+
+        _settings.ComfortableDashboardLeftRailWidth = width;
     }
 
     private void SaveDashboardLayout()
@@ -248,16 +284,17 @@ public partial class MainWindow : Window
 
         if (!double.IsNaN(height) && !double.IsInfinity(height) && height >= EngineOutputRow.MinHeight)
         {
-            _settings.DashboardEngineOutputHeight = Math.Round(height, 0);
+            SetSavedDashboardEngineOutputHeight(Math.Round(height, 0));
         }
 
         var width = LeftRailColumn.ActualWidth;
 
         if (!double.IsNaN(width) && !double.IsInfinity(width) && width >= LeftRailColumn.MinWidth)
         {
-            _settings.DashboardLeftRailWidth = Math.Round(
-                Math.Min(width, LeftRailColumn.MaxWidth),
-                0);
+            SetSavedDashboardLeftRailWidth(
+                Math.Round(
+                    Math.Min(width, LeftRailColumn.MaxWidth),
+                    0));
         }
 
     }
@@ -388,7 +425,7 @@ public partial class MainWindow : Window
             leftRailWidth = leftRailTarget;
         }
 
-        if (_settings.DashboardLeftRailWidth is not double savedLeftRailWidth)
+        if (GetSavedDashboardLeftRailWidth() is not double savedLeftRailWidth)
         {
             LeftRailColumn.Width = new GridLength(
                 Math.Clamp(leftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
@@ -407,7 +444,7 @@ public partial class MainWindow : Window
         LiveThroughputRow.MinHeight = isCompact ? 180 : 220;
         EngineOutputRow.MinHeight = isCompact ? 80 : 95;
 
-        if (_settings.DashboardEngineOutputHeight is not double savedEngineOutputHeight)
+        if (GetSavedDashboardEngineOutputHeight() is not double savedEngineOutputHeight)
         {
             EngineOutputRow.Height = new GridLength(isCompact ? 120 : 150);
         }
