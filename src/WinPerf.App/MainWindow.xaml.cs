@@ -5,8 +5,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using WinPerf.App.Settings;
 using WinPerf.Core.Iperf;
+using WinPerf.Core.Profiles;
 
 namespace WinPerf.App;
 
@@ -15,6 +17,7 @@ public partial class MainWindow : Window
     private readonly WinPerfSettingsStore _settingsStore = new();
     private readonly IperfExecutableResolver _executableResolver = new();
     private readonly IperfProcessRunner _processRunner = new();
+    private readonly JsonSavedIperfProfileStore _profileStore = new(JsonSavedIperfProfileStore.GetDefaultFilePath());
 
     private WinPerfSettings _settings = new();
     private IperfExecutableResolution _engineResolution = new(false, null, "NotConfigured", "iperf3.exe is not configured.");
@@ -25,6 +28,9 @@ public partial class MainWindow : Window
     private readonly List<double> _reverseThroughputSamples = new();
     private readonly List<IReadOnlyList<double>> _reverseStreamThroughputSamples = new();
     private IperfMode? _activeMode;
+    private SavedIperfProfilesDocument _profilesDocument = new();
+    private bool _isLoadingProfileSelection;
+    private bool _isApplyingDashboardProfile;
 
     private const int MaxRecentServers = 20;
     private const int MaxThroughputSamples = 60;
@@ -38,7 +44,9 @@ public partial class MainWindow : Window
         RefreshEngineStatus();
         PopulateRecentServers();
         ApplyDashboardLayout();
+        UpdateDashboardCommandPreview();
 
+        Loaded += async (_, _) => await LoadDashboardProfilesAsync();
         Closing += (_, _) => SaveDashboardLayout();
     }
 
@@ -324,14 +332,17 @@ public partial class MainWindow : Window
         EngineStatusText.ToolTip = _engineResolution.Message;
     }
 
-    private void AdvancedCommandButton_Click(object sender, RoutedEventArgs e)
+    private async void AdvancedCommandButton_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new AdvancedCommandWindow
         {
             Owner = this
         };
 
-        if (dialog.ShowDialog() == true)
+        var dialogResult = dialog.ShowDialog();
+        await LoadDashboardProfilesAsync();
+
+        if (dialogResult == true)
         {
             EngineOutputText.Text =
                 "Advanced command preview:" + Environment.NewLine +
@@ -361,6 +372,186 @@ public partial class MainWindow : Window
     private string GetServerText()
     {
         return ServerBox.Text.Trim();
+    }
+
+    private async Task LoadDashboardProfilesAsync()
+    {
+        try
+        {
+            _profilesDocument = await _profileStore.LoadAsync();
+            RefreshDashboardProfileList(
+                _profilesDocument.LastSelectedProfileId
+                ?? _profilesDocument.DefaultProfileId);
+
+            if (DashboardProfileBox.SelectedItem is SavedIperfProfile selectedProfile)
+            {
+                ApplyProfileToDashboard(selectedProfile);
+                SetDashboardProfileStatus($"Loaded profile '{selectedProfile.Name}'.");
+            }
+            else
+            {
+                SetDashboardProfileStatus("No saved profiles found.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _profilesDocument = new SavedIperfProfilesDocument();
+            RefreshDashboardProfileList(null);
+            SetDashboardProfileStatus($"Profile load failed: {ex.Message}");
+        }
+    }
+
+    private async void DashboardProfileBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoadingProfileSelection)
+        {
+            return;
+        }
+
+        if (DashboardProfileBox.SelectedItem is not SavedIperfProfile selectedProfile)
+        {
+            return;
+        }
+
+        ApplyProfileToDashboard(selectedProfile);
+
+        _profilesDocument = _profilesDocument with
+        {
+            LastSelectedProfileId = selectedProfile.Id
+        };
+
+        try
+        {
+            await _profileStore.SaveAsync(_profilesDocument);
+            SetDashboardProfileStatus($"Selected profile '{selectedProfile.Name}'.");
+        }
+        catch (Exception ex)
+        {
+            SetDashboardProfileStatus($"Profile selection was not saved: {ex.Message}");
+        }
+    }
+
+    private void RefreshDashboardProfileList(Guid? selectedProfileId)
+    {
+        _isLoadingProfileSelection = true;
+
+        try
+        {
+            var profiles = _profilesDocument.Profiles
+                .Where(profile => profile.RunMode == SavedIperfRunMode.Client)
+                .OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            DashboardProfileBox.ItemsSource = profiles;
+
+            var selected = profiles.FirstOrDefault(profile => profile.Id == selectedProfileId)
+                ?? profiles.FirstOrDefault(profile => profile.Id == _profilesDocument.LastSelectedProfileId)
+                ?? profiles.FirstOrDefault(profile => profile.Id == _profilesDocument.DefaultProfileId)
+                ?? profiles.FirstOrDefault();
+
+            DashboardProfileBox.SelectedItem = selected;
+        }
+        finally
+        {
+            _isLoadingProfileSelection = false;
+        }
+    }
+
+    private void ApplyProfileToDashboard(SavedIperfProfile profile)
+    {
+        if (profile.RunMode != SavedIperfRunMode.Client)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.Server))
+        {
+            ServerBox.Text = profile.Server.Trim();
+        }
+
+        _isApplyingDashboardProfile = true;
+
+        try
+        {
+            PortBox.Text = profile.Port.ToString();
+            StreamsBox.Text = profile.Streams.ToString();
+            DurationBox.Text = profile.DurationSeconds.ToString();
+            SelectMode(profile.ToIperfMode());
+        }
+        finally
+        {
+            _isApplyingDashboardProfile = false;
+        }
+
+        UpdateDashboardCommandPreview();
+    }
+
+    private void SelectMode(IperfMode mode)
+    {
+        var label = FormatModeLabel(mode);
+
+        for (var i = 0; i < ModeBox.Items.Count; i++)
+        {
+            if ((ModeBox.Items[i] as ComboBoxItem)?.Content?.ToString() == label)
+            {
+                ModeBox.SelectedIndex = i;
+                return;
+            }
+        }
+
+        ModeBox.SelectedIndex = 0;
+    }
+
+    private void SetDashboardProfileStatus(string message)
+    {
+        DashboardProfileStatusText.Text = message;
+    }
+
+    private void DashboardInputChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isApplyingDashboardProfile)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
+    }
+
+    private void UpdateDashboardCommandPreview()
+    {
+        if (!IsLoaded || _currentRunCancellation is not null || _isApplyingDashboardProfile)
+        {
+            return;
+        }
+
+        try
+        {
+            var executablePath = _engineResolution.IsConfigured && !string.IsNullOrWhiteSpace(_engineResolution.ExecutablePath)
+                ? _engineResolution.ExecutablePath
+                : "iperf3.exe";
+
+            var options = new IperfTestOptions
+            {
+                Server = GetServerText(),
+                Port = ParsePositiveInt(PortBox, "Port"),
+                Streams = ParsePositiveInt(StreamsBox, "Streams"),
+                DurationSeconds = ParsePositiveInt(DurationBox, "Duration"),
+                Mode = GetSelectedMode(),
+                AddressFamily = IperfAddressFamily.IPv4
+            };
+
+            var command = IperfCommandBuilder.BuildClientCommand(executablePath, options);
+
+            EngineOutputText.Text =
+                "Command preview:" + Environment.NewLine +
+                command.ToDisplayString();
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException)
+        {
+            EngineOutputText.Text =
+                "Command preview unavailable:" + Environment.NewLine +
+                ex.Message;
+        }
     }
 
     private void PopulateRecentServers()
