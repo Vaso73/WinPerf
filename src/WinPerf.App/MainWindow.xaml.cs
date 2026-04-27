@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _currentRunCancellation;
     private readonly StringBuilder _engineOutput = new();
     private readonly List<double> _throughputSamples = new();
+    private IperfMode? _activeMode;
 
     private const int MaxRecentServers = 20;
     private const int MaxThroughputSamples = 60;
@@ -88,8 +89,9 @@ public partial class MainWindow : Window
             SaveRecentServer(options.Server);
 
             _currentRunCancellation = new CancellationTokenSource();
+            _activeMode = options.Mode;
             SetRunState(isRunning: true);
-            ResetLiveMetrics();
+            ResetLiveMetrics(options.Mode);
 
             _engineOutput.Clear();
             AppendEngineOutput("Running command:");
@@ -132,6 +134,7 @@ public partial class MainWindow : Window
 
             AppendEngineOutput(string.Empty);
             AppendEngineOutput($"Process exited with code {result.ExitCode}.");
+            UpdateLastSummary(options, result.ExitCode);
         }
         catch (OperationCanceledException)
         {
@@ -217,6 +220,70 @@ public partial class MainWindow : Window
         }
 
         _settingsStore.Save(_settings);
+    }
+
+    private void UpdateLastSummary(IperfTestOptions options, int exitCode)
+    {
+        var lines = new List<string>
+        {
+            $"{FormatModeLabel(options.Mode)} · {options.Server}:{options.Port}"
+        };
+
+        if (_throughputSamples.Count > 0)
+        {
+            var current = _throughputSamples[^1];
+            var min = _throughputSamples.Min();
+            var avg = _throughputSamples.Average();
+            var max = _throughputSamples.Max();
+
+            lines.Add(
+                $"{FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+        }
+        else
+        {
+            lines.Add("No throughput samples.");
+        }
+
+        if (options.Mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
+        {
+            var udpParts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(JitterValueText.Text) &&
+                !string.Equals(JitterValueText.Text, "n/a", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(JitterValueText.Text, "-- ms", StringComparison.OrdinalIgnoreCase))
+            {
+                udpParts.Add("jitter " + JitterValueText.Text);
+            }
+
+            if (!string.IsNullOrWhiteSpace(LossValueText.Text) &&
+                !string.Equals(LossValueText.Text, "n/a", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(LossValueText.Text, "-- %", StringComparison.OrdinalIgnoreCase))
+            {
+                udpParts.Add("loss " + LossValueText.Text);
+            }
+
+            if (udpParts.Count > 0)
+            {
+                lines.Add(string.Join(" · ", udpParts));
+            }
+        }
+
+        lines.Add($"{options.DurationSeconds}s · {options.Streams} stream(s) · {(exitCode == 0 ? "OK" : $"Exit {exitCode}")}");
+
+        LastSummaryText.Text = string.Join(Environment.NewLine, lines);
+    }
+
+    private static string FormatModeLabel(IperfMode mode)
+    {
+        return mode switch
+        {
+            IperfMode.TcpUpload => "TCP Upload",
+            IperfMode.TcpDownload => "TCP Download",
+            IperfMode.TcpBidirectional => "TCP Bidirectional",
+            IperfMode.UdpUpload => "UDP Upload",
+            IperfMode.UdpDownload => "UDP Download",
+            _ => mode.ToString()
+        };
     }
 
     private void RefreshEngineStatus()
@@ -410,11 +477,21 @@ public partial class MainWindow : Window
         EngineOutputText.ScrollToEnd();
     }
 
-    private void ResetLiveMetrics()
+    private void ResetLiveMetrics(IperfMode mode)
     {
         ThroughputValueText.Text = "0 Mbps";
-        JitterValueText.Text = "-- ms";
-        LossValueText.Text = "-- %";
+
+        if (mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
+        {
+            JitterValueText.Text = "pending";
+            LossValueText.Text = "pending";
+        }
+        else
+        {
+            JitterValueText.Text = "n/a";
+            LossValueText.Text = "n/a";
+        }
+
         LiveStatusText.Text = "Waiting for samples...";
 
         _throughputSamples.Clear();
@@ -429,13 +506,23 @@ public partial class MainWindow : Window
             AddThroughputSample(megabitsPerSecond);
         }
 
-        JitterValueText.Text = sample.JitterMs is double jitterMs
-            ? jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms"
-            : "n/a";
+        if (sample.JitterMs is double jitterMs)
+        {
+            JitterValueText.Text = jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms";
+        }
+        else if (_activeMode is not (IperfMode.UdpUpload or IperfMode.UdpDownload))
+        {
+            JitterValueText.Text = "n/a";
+        }
 
-        LossValueText.Text = sample.LostPercent is double lostPercent
-            ? lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %"
-            : "n/a";
+        if (sample.LostPercent is double lostPercent)
+        {
+            LossValueText.Text = lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %";
+        }
+        else if (_activeMode is not (IperfMode.UdpUpload or IperfMode.UdpDownload))
+        {
+            LossValueText.Text = "n/a";
+        }
 
         LiveStatusText.Text = sample.Seconds is double seconds
             ? "Last sample " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
