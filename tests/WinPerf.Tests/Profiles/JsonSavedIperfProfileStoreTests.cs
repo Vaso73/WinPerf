@@ -260,11 +260,13 @@ public sealed class JsonSavedIperfProfileStoreTests
     }
 
     [Fact]
-    public void GetDefaultFilePath_UsesWinPerfProfilesJson()
+    public void GetDefaultFilePath_UsesPortableDataProfilesJson()
     {
         var path = JsonSavedIperfProfileStore.GetDefaultFilePath();
 
-        Assert.EndsWith(Path.Combine("WinPerf", "profiles.json"), path);
+        Assert.Equal(
+            Path.Combine(AppContext.BaseDirectory, "data", JsonSavedIperfProfileStore.DefaultFileName),
+            path);
     }
 
     private static SavedIperfProfile CreateProfile(

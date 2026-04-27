@@ -30,26 +30,29 @@ public sealed class JsonSavedIperfProfileStore : ISavedIperfProfileStore
 
     public static string GetDefaultFilePath()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return Path.Combine(AppContext.BaseDirectory, "data", DefaultFileName);
+    }
 
-        if (string.IsNullOrWhiteSpace(appData))
-        {
-            appData = AppContext.BaseDirectory;
-        }
-
-        return Path.Combine(appData, "WinPerf", DefaultFileName);
+    private static string GetLegacyDefaultFilePath()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "WinPerf",
+            DefaultFileName);
     }
 
     public async Task<SavedIperfProfilesDocument> LoadAsync(CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(_filePath))
+        var readPath = ResolveReadPath();
+
+        if (readPath is null)
         {
             return new SavedIperfProfilesDocument();
         }
 
         try
         {
-            await using var stream = File.OpenRead(_filePath);
+            await using var stream = File.OpenRead(readPath);
             var document = await JsonSerializer.DeserializeAsync<SavedIperfProfilesDocument>(
                 stream,
                 JsonOptions,
@@ -61,11 +64,17 @@ public sealed class JsonSavedIperfProfileStore : ISavedIperfProfileStore
             }
 
             SavedIperfProfileValidation.ThrowIfInvalid(document);
+
+            if (!SamePath(readPath, _filePath))
+            {
+                await SaveAsync(document, cancellationToken);
+            }
+
             return document;
         }
         catch (JsonException ex)
         {
-            throw new InvalidDataException($"Failed to parse saved iperf profiles from '{_filePath}'.", ex);
+            throw new InvalidDataException($"Failed to parse saved iperf profiles from '{readPath}'.", ex);
         }
     }
 
@@ -106,5 +115,35 @@ public sealed class JsonSavedIperfProfileStore : ISavedIperfProfileStore
                 File.Delete(tempPath);
             }
         }
+    }
+
+    private string? ResolveReadPath()
+    {
+        if (File.Exists(_filePath))
+        {
+            return _filePath;
+        }
+
+        var defaultPath = GetDefaultFilePath();
+
+        if (SamePath(_filePath, defaultPath))
+        {
+            var legacyPath = GetLegacyDefaultFilePath();
+
+            if (!SamePath(_filePath, legacyPath) && File.Exists(legacyPath))
+            {
+                return legacyPath;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool SamePath(string left, string right)
+    {
+        return string.Equals(
+            Path.GetFullPath(left),
+            Path.GetFullPath(right),
+            StringComparison.OrdinalIgnoreCase);
     }
 }
