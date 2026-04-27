@@ -10,6 +10,22 @@
     <SolidColorBrush x:Key="AccentGreen" Color="#22C55E" />
     <SolidColorBrush x:Key="AccentAmber" Color="#F59E0B" />
 
+    <Style x:Key="PrimaryButtonBase" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource Accent}" />
+        <Setter Property="Foreground" Value="#03111F" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style x:Key="SecondaryButtonBase" TargetType="Button" BasedOn="{StaticResource PrimaryButtonBase}">
+        <Setter Property="Background" Value="#172A44" />
+        <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
     <Style TargetType="{x:Type ScrollBar}">
         <Setter Property="Width" Value="12" />
         <Setter Property="Height" Value="12" />
