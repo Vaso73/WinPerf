@@ -10,6 +10,7 @@
     <AssemblyName>WinPerf</AssemblyName>
     <RootNamespace>WinPerf.App</RootNamespace>
     <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <ApplicationIcon>Assets\WinPerf.ico</ApplicationIcon>
   </PropertyGroup>
 
