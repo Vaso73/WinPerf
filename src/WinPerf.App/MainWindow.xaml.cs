@@ -177,6 +177,16 @@ public partial class MainWindow : Window
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
+        OpenSettingsWindow();
+    }
+
+    private void EngineStatusText_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        OpenSettingsWindow();
+    }
+
+    private void OpenSettingsWindow()
+    {
         var dialog = new SettingsWindow(_settings.IperfExecutablePath, AppContext.BaseDirectory)
         {
             Owner = this
@@ -187,6 +197,7 @@ public partial class MainWindow : Window
             _settings.IperfExecutablePath = dialog.IperfExecutablePath;
             _settingsStore.Save(_settings);
             RefreshEngineStatus();
+            UpdateDashboardCommandPreview();
         }
     }
 
@@ -332,7 +343,28 @@ public partial class MainWindow : Window
         EngineStatusText.ToolTip = _engineResolution.Message;
     }
 
-    private async void AdvancedCommandButton_Click(object sender, RoutedEventArgs e)
+    private void CommandMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (CommandMenuButton.ContextMenu is null)
+        {
+            return;
+        }
+
+        CommandMenuButton.ContextMenu.PlacementTarget = CommandMenuButton;
+        CommandMenuButton.ContextMenu.IsOpen = true;
+    }
+
+    private async void AdvancedCommandMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        await OpenAdvancedCommandWindowAsync();
+    }
+
+    private void CustomCommandMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        OpenCustomCommandWindow();
+    }
+
+    private async Task OpenAdvancedCommandWindowAsync()
     {
         var dialog = new AdvancedCommandWindow
         {
@@ -350,10 +382,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private void CustomCommandButton_Click(object sender, RoutedEventArgs e)
+    private void OpenCustomCommandWindow()
     {
         var initialCommand = EngineOutputText.Text.StartsWith("Command preview:", StringComparison.Ordinal)
-            ? EngineOutputText.Text.Replace("Command preview:", string.Empty, StringComparison.Ordinal).Trim()
+            ? NormalizeCustomCommandText(EngineOutputText.Text.Replace("Command preview:", string.Empty, StringComparison.Ordinal).Trim())
             : "iperf3.exe -c 10.100.100.1 -p 5201 -t 10 -P 10 --json-stream -4";
 
         var dialog = new CustomCommandWindow(initialCommand)
@@ -367,6 +399,28 @@ public partial class MainWindow : Window
                 "Custom command preview:" + Environment.NewLine +
                 dialog.CommandText;
         }
+    }
+
+    private static string NormalizeCustomCommandText(string commandText)
+    {
+        commandText = commandText.Trim();
+
+        if (string.IsNullOrWhiteSpace(commandText))
+        {
+            return "iperf3.exe";
+        }
+
+        const string executableName = "iperf3.exe";
+        var executableIndex = commandText.IndexOf(executableName, StringComparison.OrdinalIgnoreCase);
+
+        if (executableIndex < 0)
+        {
+            return commandText;
+        }
+
+        var normalized = executableName + commandText[(executableIndex + executableName.Length)..];
+
+        return normalized.TrimStart('"', ' ');
     }
 
     private string GetServerText()
@@ -664,8 +718,7 @@ public partial class MainWindow : Window
     {
         StartButton.IsEnabled = !isRunning;
         StopButton.IsEnabled = isRunning;
-        AdvancedCommandButton.IsEnabled = !isRunning;
-        CustomCommandButton.IsEnabled = !isRunning;
+        CommandMenuButton.IsEnabled = !isRunning;
         RemoveServerButton.IsEnabled = !isRunning;
     }
 
