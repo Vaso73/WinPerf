@@ -10,10 +10,15 @@
     <AssemblyName>WinPerf</AssemblyName>
     <RootNamespace>WinPerf.App</RootNamespace>
     <PublishSingleFile>true</PublishSingleFile>
+    <ApplicationIcon>Assets\WinPerf.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\WinPerf.Core\WinPerf.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\WinPerf.ico" />
   </ItemGroup>
 
 </Project>
