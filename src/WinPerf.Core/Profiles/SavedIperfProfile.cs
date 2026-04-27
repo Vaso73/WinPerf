@@ -30,6 +30,8 @@ public sealed record SavedIperfProfile
     public int Streams { get; init; } = 1;
     public int DurationSeconds { get; init; } = 10;
     public int? ReportIntervalSeconds { get; init; } = 1;
+    public int? OmitSeconds { get; init; }
+    public int? ClientPort { get; init; }
     public string? Dscp { get; init; }
 
     public bool Reverse { get; init; }
@@ -38,11 +40,15 @@ public sealed record SavedIperfProfile
     public string UdpBandwidth { get; init; } = "0";
     public string? BufferLength { get; init; }
     public string? TcpWindow { get; init; }
+    public string? TcpMss { get; init; }
+    public bool TcpNoDelay { get; init; }
+    public bool ZeroCopy { get; init; }
 
     public string ReportFormat { get; init; } = "M";
     public bool UseJsonStream { get; init; } = true;
     public bool Verbose { get; init; }
     public bool ServerOneOff { get; init; }
+    public bool GetServerOutput { get; init; }
 
     public string? ExtraArguments { get; init; }
 
