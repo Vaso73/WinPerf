@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Test
+        run: dotnet test tests/WinPerf.Tests/WinPerf.Tests.csproj --configuration Release
+
+      - name: Publish WinPerf
+        run: |
+          rm -rf artifacts/publish/WinPerf-win-x64 artifacts/release
+          dotnet publish src/WinPerf.App/WinPerf.App.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained false \
+            --output artifacts/publish/WinPerf-win-x64
+
+      - name: Package release ZIP
+        run: |
+          mkdir -p artifacts/release
+          test -f artifacts/publish/WinPerf-win-x64/WinPerf.exe
+          cd artifacts/publish/WinPerf-win-x64
+          zip -9 ../../release/WinPerf.zip WinPerf.exe
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            artifacts/release/WinPerf.zip \
+            --title "WinPerf ${GITHUB_REF_NAME}" \
+            --notes "WinPerf ${GITHUB_REF_NAME}"
