@@ -383,9 +383,11 @@ public partial class MainWindow : Window
 
         if (dialogResult == true)
         {
+            _activeCustomCommandArguments = NormalizeCustomCommandText(dialog.CommandText);
+
             EngineOutputText.Text =
                 "Advanced command preview:" + Environment.NewLine +
-                dialog.CommandText;
+                _activeCustomCommandArguments;
         }
     }
 

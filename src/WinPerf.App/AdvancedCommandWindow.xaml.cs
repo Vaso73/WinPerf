@@ -388,6 +388,14 @@ public partial class AdvancedCommandWindow : Window
             ? (int?)null
             : int.Parse(IntervalBox.Text.Trim());
 
+        var omitSeconds = string.IsNullOrWhiteSpace(OmitSecondsBox.Text)
+            ? (int?)null
+            : int.Parse(OmitSecondsBox.Text.Trim());
+
+        var clientPort = string.IsNullOrWhiteSpace(ClientPortBox.Text)
+            ? (int?)null
+            : int.Parse(ClientPortBox.Text.Trim());
+
         var udpBandwidth = UdpBandwidthBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(udpBandwidth))
         {
@@ -407,16 +415,23 @@ public partial class AdvancedCommandWindow : Window
             Streams = int.Parse(StreamsBox.Text.Trim()),
             DurationSeconds = int.Parse(DurationBox.Text.Trim()),
             ReportIntervalSeconds = reportInterval,
+            OmitSeconds = omitSeconds,
+            ClientPort = clientPort,
             Dscp = EmptyToNull(DscpBox.Text),
             Reverse = ReverseBox.IsChecked == true,
             Bidirectional = BidirectionalBox.IsChecked == true,
             UdpBandwidth = udpBandwidth,
             BufferLength = EmptyToNull(BufferLengthBox.Text),
             TcpWindow = EmptyToNull(WindowSizeBox.Text),
+            TcpMss = EmptyToNull(TcpMssBox.Text),
+            TcpNoDelay = TcpNoDelayBox.IsChecked == true,
+            ZeroCopy = ZeroCopyBox.IsChecked == true,
             ReportFormat = GetSelectedReportFormat(),
             UseJsonStream = JsonStreamBox.IsChecked == true,
             Verbose = VerboseBox.IsChecked == true,
             ServerOneOff = OneOffServerBox.IsChecked == true,
+            GetServerOutput = GetServerOutputBox.IsChecked == true,
+            ExtraArguments = EmptyToNull(ExtraArgumentsBox.Text),
             CreatedAtUtc = createdAtUtc.ToUniversalTime(),
             UpdatedAtUtc = now
         };
@@ -456,16 +471,23 @@ public partial class AdvancedCommandWindow : Window
             StreamsBox.Text = profile.Streams.ToString();
             DurationBox.Text = profile.DurationSeconds.ToString();
             IntervalBox.Text = profile.ReportIntervalSeconds?.ToString() ?? string.Empty;
+            OmitSecondsBox.Text = profile.OmitSeconds?.ToString() ?? string.Empty;
+            ClientPortBox.Text = profile.ClientPort?.ToString() ?? string.Empty;
             DscpBox.Text = profile.Dscp ?? string.Empty;
             ReverseBox.IsChecked = profile.Reverse;
             BidirectionalBox.IsChecked = profile.Bidirectional;
             UdpBandwidthBox.Text = profile.UdpBandwidth;
             BufferLengthBox.Text = profile.BufferLength ?? string.Empty;
             WindowSizeBox.Text = profile.TcpWindow ?? string.Empty;
+            TcpMssBox.Text = profile.TcpMss ?? string.Empty;
+            TcpNoDelayBox.IsChecked = profile.TcpNoDelay;
+            ZeroCopyBox.IsChecked = profile.ZeroCopy;
             SelectComboBoxTag(FormatBox, profile.ReportFormat, fallbackIndex: 2);
             JsonStreamBox.IsChecked = profile.UseJsonStream;
             VerboseBox.IsChecked = profile.Verbose;
             OneOffServerBox.IsChecked = profile.ServerOneOff;
+            GetServerOutputBox.IsChecked = profile.GetServerOutput;
+            ExtraArgumentsBox.Text = profile.ExtraArguments ?? string.Empty;
         }
         finally
         {
@@ -489,7 +511,7 @@ public partial class AdvancedCommandWindow : Window
 
         var args = BuildArguments();
 
-        PreviewBox.Text = string.Join(" ", new[] { "iperf3.exe" }.Concat(args.Select(QuoteIfNeeded)));
+        PreviewBox.Text = string.Join(" ", args.Select(QuoteIfNeeded));
         ValidationText.Text = "Ready";
         ValidationText.Foreground = (System.Windows.Media.Brush)FindResource("AccentGreen");
     }
@@ -519,6 +541,23 @@ public partial class AdvancedCommandWindow : Window
         if (!string.IsNullOrWhiteSpace(IntervalBox.Text) && !IsPositiveInt(IntervalBox.Text, out _))
         {
             return "Report interval must be empty or a positive number.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(OmitSecondsBox.Text)
+            && (!int.TryParse(OmitSecondsBox.Text.Trim(), out var omitSeconds) || omitSeconds < 0))
+        {
+            return "Omit seconds must be empty, zero, or a positive number.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(ClientPortBox.Text)
+            && (!int.TryParse(ClientPortBox.Text.Trim(), out var clientPort) || clientPort is < 1 or > 65535))
+        {
+            return "Client port must be empty or between 1 and 65535.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(TcpMssBox.Text) && !IsPositiveInt(TcpMssBox.Text, out _))
+        {
+            return "TCP MSS must be empty or a positive number.";
         }
 
         if (ReverseBox.IsChecked == true && BidirectionalBox.IsChecked == true)
@@ -592,6 +631,46 @@ public partial class AdvancedCommandWindow : Window
             AddPair(args, "-i", IntervalBox.Text.Trim());
         }
 
+        var dscp = DscpBox.Text.Trim();
+        if (!string.IsNullOrWhiteSpace(dscp))
+        {
+            AddPair(args, "--dscp", dscp);
+        }
+
+        var format = SelectedTag(FormatBox);
+        if (JsonStreamBox.IsChecked != true && !string.IsNullOrWhiteSpace(format))
+        {
+            AddPair(args, "-f", format);
+        }
+
+        if (VerboseBox.IsChecked == true)
+        {
+            args.Add("-V");
+        }
+
+        if (JsonStreamBox.IsChecked == true)
+        {
+            args.Add("--json-stream");
+        }
+
+        if (IsClientMode())
+        {
+            if (!string.IsNullOrWhiteSpace(OmitSecondsBox.Text))
+            {
+                AddPair(args, "-O", OmitSecondsBox.Text.Trim());
+            }
+
+            if (!string.IsNullOrWhiteSpace(ClientPortBox.Text))
+            {
+                AddPair(args, "--cport", ClientPortBox.Text.Trim());
+            }
+
+            if (GetServerOutputBox.IsChecked == true)
+            {
+                args.Add("--get-server-output");
+            }
+        }
+
         var bufferLength = BufferLengthBox.Text.Trim();
         if (!string.IsNullOrWhiteSpace(bufferLength))
         {
@@ -604,16 +683,20 @@ public partial class AdvancedCommandWindow : Window
             AddPair(args, "-w", windowSize);
         }
 
-        var dscp = DscpBox.Text.Trim();
-        if (!string.IsNullOrWhiteSpace(dscp))
+        var tcpMss = TcpMssBox.Text.Trim();
+        if (!string.IsNullOrWhiteSpace(tcpMss))
         {
-            AddPair(args, "--dscp", dscp);
+            AddPair(args, "-M", tcpMss);
         }
 
-        var format = SelectedTag(FormatBox);
-        if (!string.IsNullOrWhiteSpace(format))
+        if (TcpNoDelayBox.IsChecked == true)
         {
-            AddPair(args, "-f", format);
+            args.Add("-N");
+        }
+
+        if (ZeroCopyBox.IsChecked == true)
+        {
+            args.Add("-Z");
         }
 
         if (IsServerMode() && OneOffServerBox.IsChecked == true)
@@ -621,15 +704,7 @@ public partial class AdvancedCommandWindow : Window
             args.Add("-1");
         }
 
-        if (VerboseBox.IsChecked == true)
-        {
-            args.Add("-V");
-        }
-
-        if (JsonStreamBox.IsChecked == true)
-        {
-            args.Add("--json-stream");
-        }
+        args.AddRange(SplitExtraArguments(ExtraArgumentsBox.Text));
 
         return args;
     }
@@ -697,6 +772,47 @@ public partial class AdvancedCommandWindow : Window
     {
         args.Add(name);
         args.Add(value);
+    }
+
+    private static IReadOnlyList<string> SplitExtraArguments(string commandText)
+    {
+        if (string.IsNullOrWhiteSpace(commandText))
+        {
+            return [];
+        }
+
+        var args = new List<string>();
+        var current = new StringBuilder();
+        var inQuotes = false;
+
+        foreach (var ch in commandText.Trim())
+        {
+            if (ch == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(ch) && !inQuotes)
+            {
+                if (current.Length > 0)
+                {
+                    args.Add(current.ToString());
+                    current.Clear();
+                }
+
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        if (current.Length > 0)
+        {
+            args.Add(current.ToString());
+        }
+
+        return args;
     }
 
     private bool IsClientMode() => SelectedText(RunModeBox) == "Client mode";

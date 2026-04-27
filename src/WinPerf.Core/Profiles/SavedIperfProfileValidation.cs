@@ -58,6 +58,22 @@ public static class SavedIperfProfileValidation
             errors.Add("Report interval must be empty or a positive number.");
         }
 
+        if (profile.OmitSeconds is < 0)
+        {
+            errors.Add("Omit seconds must be empty, zero, or a positive number.");
+        }
+
+        if (profile.ClientPort is < 1 or > 65535)
+        {
+            errors.Add("Client port must be empty or between 1 and 65535.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.TcpMss)
+            && (!int.TryParse(profile.TcpMss.Trim(), out var tcpMss) || tcpMss < 1))
+        {
+            errors.Add("TCP MSS must be empty or a positive number.");
+        }
+
         if (profile.Reverse && profile.Bidirectional)
         {
             errors.Add("Reverse and bidirectional cannot be enabled together.");
