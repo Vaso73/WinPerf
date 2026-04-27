@@ -37,6 +37,26 @@ public partial class MainWindow : Window
         }
     }
 
+
+    private void CustomCommandButton_Click(object sender, RoutedEventArgs e)
+    {
+        var initialCommand = EngineOutputText.Text.StartsWith("Command preview:", StringComparison.Ordinal)
+            ? EngineOutputText.Text.Replace("Command preview:", string.Empty, StringComparison.Ordinal).Trim()
+            : "iperf3.exe -c 10.100.100.1 -p 5201 -t 10 -P 10 --json-stream -4";
+
+        var dialog = new CustomCommandWindow(initialCommand)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            EngineOutputText.Text =
+                "Custom command preview:" + Environment.NewLine +
+                dialog.CommandText;
+        }
+    }
+
     private IperfMode GetSelectedMode()
     {
         var selectedText = (ModeBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
