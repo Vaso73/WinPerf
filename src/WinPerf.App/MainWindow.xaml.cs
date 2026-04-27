@@ -378,12 +378,39 @@ public partial class MainWindow : Window
 
     private void UiDensityButton_Click(object sender, RoutedEventArgs e)
     {
+        if (UiDensityButton.ContextMenu is null)
+        {
+            return;
+        }
+
+        UiDensityButton.ContextMenu.PlacementTarget = UiDensityButton;
+        UiDensityButton.ContextMenu.IsOpen = true;
+    }
+
+    private void CompactUiDensityMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        SetUiDensity(UiDensityCompact);
+    }
+
+    private void ComfortableUiDensityMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        SetUiDensity(UiDensityComfortable);
+    }
+
+    private void SetUiDensity(string density)
+    {
+        density = NormalizeUiDensity(density);
+
+        if (string.Equals(NormalizeUiDensity(_settings.UiDensity), density, StringComparison.Ordinal))
+        {
+            UpdateUiDensityMenuUx(
+                string.Equals(density, UiDensityCompact, StringComparison.Ordinal));
+            return;
+        }
+
         CaptureDashboardLayout();
 
-        _settings.UiDensity = IsCompactUiDensity()
-            ? UiDensityComfortable
-            : UiDensityCompact;
-
+        _settings.UiDensity = density;
         ApplyUiDensity(resizeWindow: false);
         _settingsStore.Save(_settings);
     }
@@ -457,13 +484,7 @@ public partial class MainWindow : Window
         MinWidth = isCompact ? 760 : 820;
         MinHeight = isCompact ? 520 : 560;
 
-        UiDensityButton.Content = isCompact
-            ? "Compact UI"
-            : "Comfortable UI";
-
-        UiDensityButton.ToolTip = isCompact
-            ? "Click to switch to comfortable UI density."
-            : "Click to switch to compact UI density.";
+        UpdateUiDensityMenuUx(isCompact);
 
         if (resizeWindow && WindowState == WindowState.Normal)
         {
@@ -472,6 +493,20 @@ public partial class MainWindow : Window
         }
 
         RenderThroughputChart();
+    }
+
+    private void UpdateUiDensityMenuUx(bool isCompact)
+    {
+        UiDensityButton.Content = isCompact
+            ? "UI: Compact ▾"
+            : "UI: Comfortable ▾";
+
+        UiDensityButton.ToolTip = isCompact
+            ? "Active UI density: Compact. Click to choose UI density."
+            : "Active UI density: Comfortable. Click to choose UI density.";
+
+        CompactUiDensityMenuItem.IsChecked = isCompact;
+        ComfortableUiDensityMenuItem.IsChecked = !isCompact;
     }
 
     private static string NormalizeUiDensity(string? value)
