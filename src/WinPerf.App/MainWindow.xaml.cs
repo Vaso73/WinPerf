@@ -50,7 +50,7 @@ public partial class MainWindow : Window
         RefreshEngineStatus();
         PopulateRecentServers();
         ApplyDashboardLayout();
-        ApplyUiDensity(resizeWindow: true);
+        ApplyUiDensity(resizeWindow: false);
         UpdateCommandOverrideUx();
         UpdateDashboardCommandPreview();
 
@@ -340,7 +340,7 @@ public partial class MainWindow : Window
             ? UiDensityComfortable
             : UiDensityCompact;
 
-        ApplyUiDensity(resizeWindow: true);
+        ApplyUiDensity(resizeWindow: false);
         _settingsStore.Save(_settings);
     }
 
@@ -381,8 +381,16 @@ public partial class MainWindow : Window
             leftRailWidth = leftRailTarget;
         }
 
-        LeftRailColumn.Width = new GridLength(
-            Math.Clamp(leftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
+        if (_settings.DashboardLeftRailWidth is not double savedLeftRailWidth)
+        {
+            LeftRailColumn.Width = new GridLength(
+                Math.Clamp(leftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
+        }
+        else
+        {
+            LeftRailColumn.Width = new GridLength(
+                Math.Clamp(savedLeftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
+        }
 
         DashboardContentPanel.Margin = isCompact
             ? new Thickness(18)
@@ -390,8 +398,17 @@ public partial class MainWindow : Window
 
         MetricsRow.Height = new GridLength(isCompact ? 150 : 170);
         LiveThroughputRow.MinHeight = isCompact ? 180 : 220;
-        EngineOutputRow.Height = new GridLength(isCompact ? 120 : 150);
         EngineOutputRow.MinHeight = isCompact ? 80 : 95;
+
+        if (_settings.DashboardEngineOutputHeight is not double savedEngineOutputHeight)
+        {
+            EngineOutputRow.Height = new GridLength(isCompact ? 120 : 150);
+        }
+        else
+        {
+            EngineOutputRow.Height = new GridLength(
+                Math.Max(EngineOutputRow.MinHeight, savedEngineOutputHeight));
+        }
 
         MinWidth = isCompact ? 760 : 820;
         MinHeight = isCompact ? 520 : 560;
@@ -406,8 +423,8 @@ public partial class MainWindow : Window
 
         if (resizeWindow && WindowState == WindowState.Normal)
         {
-            Width = Math.Clamp(Width, MinWidth, isCompact ? 1080 : 1220);
-            Height = Math.Clamp(Height, MinHeight, isCompact ? 720 : 800);
+            Width = Math.Max(Width, MinWidth);
+            Height = Math.Max(Height, MinHeight);
         }
 
         RenderThroughputChart();
