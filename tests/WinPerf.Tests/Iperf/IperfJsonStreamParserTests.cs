@@ -33,6 +33,37 @@ public sealed class IperfJsonStreamParserTests
     }
 
     [Fact]
+    public void TryParseIntervalSample_ParsesPerStreamThroughput()
+    {
+        const string json = """
+        {
+          "event": "interval",
+          "data": {
+            "streams": [
+              { "socket": 5, "seconds": 1, "bits_per_second": 100000000 },
+              { "socket": 7, "seconds": 1, "bits_per_second": 200000000 }
+            ],
+            "sum": {
+              "seconds": 1,
+              "bits_per_second": 300000000
+            }
+          }
+        }
+        """;
+
+        var ok = IperfJsonStreamParser.TryParseIntervalSample(json, out var sample);
+
+        Assert.True(ok);
+        Assert.Equal(300, sample.MegabitsPerSecond);
+        Assert.NotNull(sample.StreamBitsPerSecond);
+        Assert.Equal(2, sample.StreamBitsPerSecond!.Count);
+        Assert.Equal(100000000, sample.StreamBitsPerSecond[0]);
+        Assert.Equal(200000000, sample.StreamBitsPerSecond[1]);
+        Assert.Equal(100, sample.StreamMegabitsPerSecond[0]);
+        Assert.Equal(200, sample.StreamMegabitsPerSecond[1]);
+    }
+
+    [Fact]
     public void TryParseIntervalSample_ParsesUdpInterval()
     {
         const string json = """
@@ -136,4 +167,52 @@ public sealed class IperfJsonStreamParserTests
 
         Assert.False(ok);
     }
+
+    [Fact]
+    public void ParsesBidirectionalIntervalSummaryAndStreams()
+    {
+        const string json = """
+        {
+          "event": "interval",
+          "data": {
+            "streams": [
+              {
+                "socket": 5,
+                "seconds": 1.0,
+                "bits_per_second": 900400000,
+                "sender": true
+              },
+              {
+                "socket": 7,
+                "seconds": 1.0,
+                "bits_per_second": 486700000,
+                "sender": false
+              }
+            ],
+            "sum": {
+              "seconds": 1.0,
+              "bits_per_second": 900400000,
+              "sender": true
+            },
+            "sum_bidir_reverse": {
+              "seconds": 1.0,
+              "bits_per_second": 486700000,
+              "sender": false
+            }
+          }
+        }
+        """;
+
+        Assert.True(IperfJsonStreamParser.TryParseIntervalSample(json, out var sample));
+
+        Assert.Equal(900400000, sample.BitsPerSecond);
+        Assert.Equal(486700000, sample.ReverseBitsPerSecond);
+
+        Assert.Single(sample.StreamBitsPerSecond!);
+        Assert.Single(sample.ReverseStreamBitsPerSecond!);
+
+        Assert.Equal(900400000, sample.StreamBitsPerSecond![0]);
+        Assert.Equal(486700000, sample.ReverseStreamBitsPerSecond![0]);
+    }
+
 }

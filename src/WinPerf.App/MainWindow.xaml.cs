@@ -21,6 +21,9 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _currentRunCancellation;
     private readonly StringBuilder _engineOutput = new();
     private readonly List<double> _throughputSamples = new();
+    private readonly List<IReadOnlyList<double>> _streamThroughputSamples = new();
+    private readonly List<double> _reverseThroughputSamples = new();
+    private readonly List<IReadOnlyList<double>> _reverseStreamThroughputSamples = new();
     private IperfMode? _activeMode;
 
     private const int MaxRecentServers = 20;
@@ -236,8 +239,21 @@ public partial class MainWindow : Window
             var avg = _throughputSamples.Average();
             var max = _throughputSamples.Max();
 
-            lines.Add(
-                $"{FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+            if (options.Mode == IperfMode.TcpBidirectional && _reverseThroughputSamples.Count > 0)
+            {
+                var reverseCurrent = _reverseThroughputSamples[^1];
+                var reverseMin = _reverseThroughputSamples.Min();
+                var reverseAvg = _reverseThroughputSamples.Average();
+                var reverseMax = _reverseThroughputSamples.Max();
+
+                lines.Add($"Upload {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+                lines.Add($"Download {FormatMegabits(reverseCurrent)} · min {FormatMegabits(reverseMin)} · avg {FormatMegabits(reverseAvg)} · max {FormatMegabits(reverseMax)}");
+            }
+            else
+            {
+                lines.Add(
+                    $"{FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+            }
         }
         else
         {
@@ -495,6 +511,9 @@ public partial class MainWindow : Window
         LiveStatusText.Text = "Waiting for samples...";
 
         _throughputSamples.Clear();
+        _streamThroughputSamples.Clear();
+        _reverseThroughputSamples.Clear();
+        _reverseStreamThroughputSamples.Clear();
         RenderThroughputChart();
     }
 
@@ -502,8 +521,16 @@ public partial class MainWindow : Window
     {
         if (sample.MegabitsPerSecond is double megabitsPerSecond)
         {
-            ThroughputValueText.Text = FormatMegabits(megabitsPerSecond);
-            AddThroughputSample(megabitsPerSecond);
+            ThroughputValueText.Text = _activeMode == IperfMode.TcpBidirectional &&
+                                       sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecond
+                ? FormatBidirectionalMegabits(megabitsPerSecond, reverseMegabitsPerSecond)
+                : FormatMegabits(megabitsPerSecond);
+
+            AddThroughputSample(
+                megabitsPerSecond,
+                sample.StreamMegabitsPerSecond,
+                sample.ReverseMegabitsPerSecond,
+                sample.ReverseStreamMegabitsPerSecond);
         }
 
         if (sample.JitterMs is double jitterMs)
@@ -534,7 +561,11 @@ public partial class MainWindow : Window
         RenderThroughputChart();
     }
 
-    private void AddThroughputSample(double megabitsPerSecond)
+    private void AddThroughputSample(
+        double megabitsPerSecond,
+        IReadOnlyList<double> streamMegabitsPerSecond,
+        double? reverseMegabitsPerSecond,
+        IReadOnlyList<double> reverseStreamMegabitsPerSecond)
     {
         if (double.IsNaN(megabitsPerSecond) || double.IsInfinity(megabitsPerSecond) || megabitsPerSecond < 0)
         {
@@ -542,10 +573,35 @@ public partial class MainWindow : Window
         }
 
         _throughputSamples.Add(megabitsPerSecond);
+        _streamThroughputSamples.Add(
+            streamMegabitsPerSecond
+                .Where(value => !double.IsNaN(value) && !double.IsInfinity(value) && value >= 0)
+                .ToList());
+
+        if (reverseMegabitsPerSecond is double reverseValue &&
+            !double.IsNaN(reverseValue) &&
+            !double.IsInfinity(reverseValue) &&
+            reverseValue >= 0)
+        {
+            _reverseThroughputSamples.Add(reverseValue);
+            _reverseStreamThroughputSamples.Add(
+                reverseStreamMegabitsPerSecond
+                    .Where(value => !double.IsNaN(value) && !double.IsInfinity(value) && value >= 0)
+                    .ToList());
+        }
 
         if (_throughputSamples.Count > MaxThroughputSamples)
         {
-            _throughputSamples.RemoveRange(0, _throughputSamples.Count - MaxThroughputSamples);
+            var removeCount = _throughputSamples.Count - MaxThroughputSamples;
+            _throughputSamples.RemoveRange(0, removeCount);
+            _streamThroughputSamples.RemoveRange(0, Math.Min(removeCount, _streamThroughputSamples.Count));
+        }
+
+        if (_reverseThroughputSamples.Count > MaxThroughputSamples)
+        {
+            var removeCount = _reverseThroughputSamples.Count - MaxThroughputSamples;
+            _reverseThroughputSamples.RemoveRange(0, removeCount);
+            _reverseStreamThroughputSamples.RemoveRange(0, Math.Min(removeCount, _reverseStreamThroughputSamples.Count));
         }
 
         RenderThroughputChart();
@@ -555,6 +611,7 @@ public partial class MainWindow : Window
     {
         ThroughputChartLine.Points.Clear();
         ThroughputChartGridCanvas.Children.Clear();
+        ThroughputChartStreamCanvas.Children.Clear();
         ThroughputChartMarkerCanvas.Children.Clear();
 
         var width = ThroughputChartCanvas.ActualWidth;
@@ -570,6 +627,8 @@ public partial class MainWindow : Window
 
         ThroughputChartGridCanvas.Width = width;
         ThroughputChartGridCanvas.Height = height;
+        ThroughputChartStreamCanvas.Width = width;
+        ThroughputChartStreamCanvas.Height = height;
         ThroughputChartMarkerCanvas.Width = width;
         ThroughputChartMarkerCanvas.Height = height;
 
@@ -596,8 +655,12 @@ public partial class MainWindow : Window
 
         ThroughputChartPlaceholder.Visibility = Visibility.Collapsed;
 
-        var points = new PointCollection();
         var axisRange = Math.Max(1, axis.Max - axis.Min);
+
+        DrawStreamThroughputLines(plotLeft, plotBottom, plotWidth, plotHeight, axis.Min, axisRange);
+        DrawReverseThroughputLine(plotLeft, plotBottom, plotWidth, plotHeight, axis.Min, axisRange);
+
+        var points = new PointCollection();
 
         for (var i = 0; i < _throughputSamples.Count; i++)
         {
@@ -642,7 +705,11 @@ public partial class MainWindow : Window
             return (0, 1000, 250);
         }
 
-        var max = Math.Max(10, _throughputSamples.Max());
+        var max = Math.Max(
+            10,
+            Math.Max(
+                _throughputSamples.DefaultIfEmpty(0).Max(),
+                _reverseThroughputSamples.DefaultIfEmpty(0).Max()));
         var wantedMax = max * 1.04;
         var step = NiceStep(wantedMax / 4);
         var axisMax = Math.Ceiling(wantedMax / step) * step;
@@ -746,6 +813,198 @@ public partial class MainWindow : Window
         DrawChartText("Time (sec)", plotLeft + plotWidth - 62, plotTop + plotHeight + 8, 10, FontWeights.SemiBold, axisBrush);
     }
 
+    private void DrawReverseThroughputLine(
+        double plotLeft,
+        double plotBottom,
+        double plotWidth,
+        double plotHeight,
+        double axisMin,
+        double axisRange)
+    {
+        if (_reverseThroughputSamples.Count < 2)
+        {
+            return;
+        }
+
+        var points = new PointCollection();
+
+        for (var i = 0; i < _reverseThroughputSamples.Count; i++)
+        {
+            var x = _reverseThroughputSamples.Count == 1
+                ? plotLeft
+                : plotLeft + (plotWidth * i / (_reverseThroughputSamples.Count - 1));
+
+            var normalized = (_reverseThroughputSamples[i] - axisMin) / axisRange;
+            normalized = Math.Clamp(normalized, 0, 1);
+
+            var y = plotBottom - normalized * plotHeight;
+            points.Add(new Point(x, y));
+        }
+
+        var reverseBrush = TryFindResource("AccentAmber") as Brush ?? Brushes.Orange;
+
+        ThroughputChartStreamCanvas.Children.Add(new Polyline
+        {
+            Points = points,
+            Stroke = reverseBrush,
+            StrokeThickness = 2,
+            StrokeLineJoin = PenLineJoin.Round,
+            Opacity = 0.92
+        });
+
+        DrawChartText(
+            "Download",
+            plotLeft + 8,
+            20,
+            11,
+            FontWeights.SemiBold,
+            reverseBrush);
+    }
+
+    private void DrawStreamThroughputLines(
+        double plotLeft,
+        double plotBottom,
+        double plotWidth,
+        double plotHeight,
+        double axisMin,
+        double axisRange)
+    {
+        var streamCount = Math.Max(
+            _streamThroughputSamples
+                .Select(sample => sample.Count)
+                .DefaultIfEmpty(0)
+                .Max(),
+            _reverseStreamThroughputSamples
+                .Select(sample => sample.Count)
+                .DefaultIfEmpty(0)
+                .Max());
+
+        if (streamCount <= 1 || _streamThroughputSamples.Count <= 1)
+        {
+            return;
+        }
+
+        var streamMax = Math.Max(
+            _streamThroughputSamples
+                .SelectMany(sample => sample)
+                .DefaultIfEmpty(0)
+                .Max(),
+            _reverseStreamThroughputSamples
+                .SelectMany(sample => sample)
+                .DefaultIfEmpty(0)
+                .Max());
+
+        if (streamMax <= 0 || double.IsNaN(streamMax) || double.IsInfinity(streamMax))
+        {
+            return;
+        }
+
+        var streamAxisMax = NiceStep(streamMax * 1.15);
+        var streamBandHeight = Math.Max(42, plotHeight * 0.28);
+        var streamBandTop = plotBottom - streamBandHeight;
+        var streamBandBottom = plotBottom;
+
+        var gridBrush = TryFindResource("BorderSoft") as Brush ?? Brushes.DimGray;
+        var textBrush = TryFindResource("TextMuted") as Brush ?? Brushes.LightSlateGray;
+
+        ThroughputChartStreamCanvas.Children.Add(new Line
+        {
+            X1 = plotLeft,
+            Y1 = streamBandTop,
+            X2 = plotLeft + plotWidth,
+            Y2 = streamBandTop,
+            Stroke = gridBrush,
+            StrokeThickness = 1,
+            Opacity = 0.70
+        });
+
+        DrawChartText(
+            "Streams scale 0-" + FormatMegabits(streamAxisMax),
+            plotLeft + 8,
+            streamBandTop + 4,
+            10,
+            FontWeights.SemiBold,
+            textBrush);
+
+        DrawStreamSet(_streamThroughputSamples, streamCount, plotLeft, plotWidth, streamBandBottom, streamBandHeight, streamAxisMax, dashed: false);
+        DrawStreamSet(_reverseStreamThroughputSamples, streamCount, plotLeft, plotWidth, streamBandBottom, streamBandHeight, streamAxisMax, dashed: true);
+    }
+
+    private void DrawStreamSet(
+        IReadOnlyList<IReadOnlyList<double>> samples,
+        int streamCount,
+        double plotLeft,
+        double plotWidth,
+        double streamBandBottom,
+        double streamBandHeight,
+        double streamAxisMax,
+        bool dashed)
+    {
+        if (samples.Count <= 1)
+        {
+            return;
+        }
+
+        for (var streamIndex = 0; streamIndex < streamCount; streamIndex++)
+        {
+            var points = new PointCollection();
+
+            for (var sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
+            {
+                var streams = samples[sampleIndex];
+
+                if (streamIndex >= streams.Count)
+                {
+                    continue;
+                }
+
+                var x = samples.Count == 1
+                    ? plotLeft
+                    : plotLeft + (plotWidth * sampleIndex / (samples.Count - 1));
+
+                var normalized = streams[streamIndex] / streamAxisMax;
+                normalized = Math.Clamp(normalized, 0, 1);
+
+                var y = streamBandBottom - normalized * (streamBandHeight - 16);
+                points.Add(new Point(x, y));
+            }
+
+            if (points.Count < 2)
+            {
+                continue;
+            }
+
+            ThroughputChartStreamCanvas.Children.Add(new Polyline
+            {
+                Points = points,
+                Stroke = CreateStreamBrush(streamIndex + (dashed ? 5 : 0)),
+                StrokeThickness = dashed ? 1.05 : 1.25,
+                StrokeDashArray = dashed ? new DoubleCollection { 4, 3 } : null,
+                StrokeLineJoin = PenLineJoin.Round,
+                Opacity = dashed ? 0.66 : 0.82
+            });
+        }
+    }
+
+    private static Brush CreateStreamBrush(int streamIndex)
+    {
+        var palette = new[]
+        {
+            Color.FromRgb(125, 211, 252),
+            Color.FromRgb(167, 139, 250),
+            Color.FromRgb(52, 211, 153),
+            Color.FromRgb(251, 191, 36),
+            Color.FromRgb(248, 113, 113),
+            Color.FromRgb(45, 212, 191),
+            Color.FromRgb(244, 114, 182),
+            Color.FromRgb(129, 140, 248),
+            Color.FromRgb(190, 242, 100),
+            Color.FromRgb(251, 146, 60)
+        };
+
+        return new SolidColorBrush(palette[streamIndex % palette.Length]);
+    }
+
     private void DrawChartMarker(double x, double y)
     {
         var markerBrush = TryFindResource("Accent") as Brush ?? Brushes.DeepSkyBlue;
@@ -789,6 +1048,17 @@ public partial class MainWindow : Window
         var avg = _throughputSamples.Average();
         var max = _throughputSamples.Max();
 
+        if (_activeMode == IperfMode.TcpBidirectional && _reverseThroughputSamples.Count > 0)
+        {
+            var reverseCurrent = _reverseThroughputSamples[^1];
+            var reverseAvg = _reverseThroughputSamples.Average();
+
+            return "↑ " + FormatMegabits(current)
+                + " · ↓ " + FormatMegabits(reverseCurrent)
+                + "   ↑ avg " + FormatMegabits(avg)
+                + " · ↓ avg " + FormatMegabits(reverseAvg);
+        }
+
         return FormatMegabits(current)
             + "   min " + FormatMegabits(min)
             + " · avg " + FormatMegabits(avg)
@@ -816,6 +1086,23 @@ public partial class MainWindow : Window
         ThroughputChartGridCanvas.Children.Add(label);
     }
 
+    private static string FormatBidirectionalMegabits(double uploadMegabitsPerSecond, double downloadMegabitsPerSecond)
+    {
+        return "↑ " + FormatMegabitsNumber(uploadMegabitsPerSecond) +
+               " / ↓ " + FormatMegabitsNumber(downloadMegabitsPerSecond) +
+               " Mbps";
+    }
+
+
+    private static string FormatMegabitsNumber(double megabitsPerSecond)
+    {
+        var format = megabitsPerSecond >= 100
+            ? "0"
+            : "0.0";
+
+        return megabitsPerSecond.ToString(format, CultureInfo.InvariantCulture);
+    }
+
     private static string FormatMegabits(double megabitsPerSecond)
     {
         var format = megabitsPerSecond >= 100
@@ -825,13 +1112,34 @@ public partial class MainWindow : Window
         return megabitsPerSecond.ToString(format, CultureInfo.InvariantCulture) + " Mbps";
     }
 
-    private static string FormatEndSummarySample(IperfIntervalSample sample)
+    private string FormatEndSummarySample(IperfIntervalSample sample)
     {
         var parts = new List<string> { "Test completed" };
 
-        if (sample.MegabitsPerSecond is double megabitsPerSecond)
+        var uploadMegabitsPerSecond = sample.MegabitsPerSecond;
+        var downloadMegabitsPerSecond = sample.ReverseMegabitsPerSecond;
+
+        if (_activeMode == IperfMode.TcpBidirectional &&
+            !downloadMegabitsPerSecond.HasValue &&
+            _reverseThroughputSamples.Count > 0)
+        {
+            downloadMegabitsPerSecond = _reverseThroughputSamples[^1];
+        }
+
+        if (_activeMode == IperfMode.TcpBidirectional &&
+            uploadMegabitsPerSecond is double upload &&
+            downloadMegabitsPerSecond is double download)
+        {
+            parts.Add("upload " + FormatMegabits(upload));
+            parts.Add("download " + FormatMegabits(download));
+        }
+        else if (uploadMegabitsPerSecond is double megabitsPerSecond)
         {
             parts.Add(FormatMegabits(megabitsPerSecond));
+        }
+        else if (downloadMegabitsPerSecond is double reverseMegabitsPerSecond)
+        {
+            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecond));
         }
 
         if (sample.JitterMs is double jitterMs)
@@ -847,6 +1155,7 @@ public partial class MainWindow : Window
         return string.Join(" · ", parts) + ".";
     }
 
+
     private static string FormatIntervalSample(IperfIntervalSample sample)
     {
         var parts = new List<string>();
@@ -855,9 +1164,19 @@ public partial class MainWindow : Window
             ? "Interval " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
             : "Interval");
 
-        if (sample.MegabitsPerSecond is double megabitsPerSecond)
+        if (sample.MegabitsPerSecond is double megabitsPerSecond &&
+            sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecond)
         {
-            parts.Add(FormatMegabits(megabitsPerSecond));
+            parts.Add("upload " + FormatMegabits(megabitsPerSecond));
+            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecond));
+        }
+        else if (sample.MegabitsPerSecond is double megabitsPerSecondOnly)
+        {
+            parts.Add(FormatMegabits(megabitsPerSecondOnly));
+        }
+        else if (sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecondOnly)
+        {
+            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecondOnly));
         }
 
         if (sample.JitterMs is double jitterMs)

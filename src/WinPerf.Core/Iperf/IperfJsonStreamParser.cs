@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json;
 
 namespace WinPerf.Core.Iperf;
@@ -29,7 +30,8 @@ public static class IperfJsonStreamParser
                 return false;
             }
 
-            var sum = TryGetObject(data, "sum") ?? TryGetObject(data, "sum_sent") ?? TryGetObject(data, "sum_received");
+            var reverseSummary = TryGetObject(data, "sum_bidir_reverse");
+            var sum = SelectPrimarySummary(data);
 
             if (sum is null)
             {
@@ -40,6 +42,17 @@ public static class IperfJsonStreamParser
             var bitsPerSecond = TryGetDouble(sum.Value, "bits_per_second");
             var jitterMs = TryGetDouble(sum.Value, "jitter_ms");
             var lostPercent = TryGetDouble(sum.Value, "lost_percent");
+            var streamBitsPerSecond = reverseSummary is null
+                ? GetStreamBitsPerSecond(data)
+                : GetStreamBitsPerSecond(data, sender: true);
+
+            var reverseBitsPerSecond = reverseSummary is null
+                ? null
+                : TryGetDouble(reverseSummary.Value, "bits_per_second");
+
+            var reverseStreamBitsPerSecond = reverseSummary is null
+                ? null
+                : GetStreamBitsPerSecond(data, sender: false);
 
             if (!jitterMs.HasValue || !lostPercent.HasValue)
             {
@@ -52,8 +65,21 @@ public static class IperfJsonStreamParser
                 }
             }
 
-            sample = new IperfIntervalSample(seconds, bitsPerSecond, jitterMs, lostPercent);
-            return bitsPerSecond.HasValue || jitterMs.HasValue || lostPercent.HasValue;
+            sample = new IperfIntervalSample(
+                seconds,
+                bitsPerSecond,
+                jitterMs,
+                lostPercent,
+                streamBitsPerSecond,
+                reverseBitsPerSecond,
+                reverseStreamBitsPerSecond);
+
+            return bitsPerSecond.HasValue ||
+                   jitterMs.HasValue ||
+                   lostPercent.HasValue ||
+                   streamBitsPerSecond.Count > 0 ||
+                   reverseBitsPerSecond.HasValue ||
+                   (reverseStreamBitsPerSecond?.Count ?? 0) > 0;
         }
         catch (JsonException)
         {
@@ -86,11 +112,8 @@ public static class IperfJsonStreamParser
                 return false;
             }
 
-            var summary =
-                TryGetObject(data, "sum_received") ??
-                TryGetObject(data, "sum") ??
-                TryGetObject(data, "sum_sent") ??
-                TryGetFirstUdpStream(data);
+            var reverseSummary = TryGetObject(data, "sum_bidir_reverse");
+            var summary = SelectPrimarySummary(data);
 
             if (summary is null)
             {
@@ -101,14 +124,97 @@ public static class IperfJsonStreamParser
             var bitsPerSecond = TryGetDouble(summary.Value, "bits_per_second");
             var jitterMs = TryGetDouble(summary.Value, "jitter_ms");
             var lostPercent = TryGetDouble(summary.Value, "lost_percent");
+            var streamBitsPerSecond = reverseSummary is null
+                ? GetStreamBitsPerSecond(data)
+                : GetStreamBitsPerSecond(data, sender: true);
 
-            sample = new IperfIntervalSample(seconds, bitsPerSecond, jitterMs, lostPercent);
-            return bitsPerSecond.HasValue || jitterMs.HasValue || lostPercent.HasValue;
+            var reverseBitsPerSecond = reverseSummary is null
+                ? null
+                : TryGetDouble(reverseSummary.Value, "bits_per_second");
+
+            var reverseStreamBitsPerSecond = reverseSummary is null
+                ? null
+                : GetStreamBitsPerSecond(data, sender: false);
+
+            sample = new IperfIntervalSample(
+                seconds,
+                bitsPerSecond,
+                jitterMs,
+                lostPercent,
+                streamBitsPerSecond,
+                reverseBitsPerSecond,
+                reverseStreamBitsPerSecond);
+
+            return bitsPerSecond.HasValue ||
+                   jitterMs.HasValue ||
+                   lostPercent.HasValue ||
+                   streamBitsPerSecond.Count > 0 ||
+                   reverseBitsPerSecond.HasValue ||
+                   (reverseStreamBitsPerSecond?.Count ?? 0) > 0;
         }
         catch (JsonException)
         {
             return false;
         }
+    }
+
+    private static JsonElement? SelectPrimarySummary(JsonElement data)
+    {
+        if (TryGetObject(data, "sum_bidir_reverse") is not null)
+        {
+            return TryGetObject(data, "sum") ??
+                   TryGetObject(data, "sum_sent") ??
+                   TryGetObject(data, "sum_received") ??
+                   TryGetFirstUdpStream(data);
+        }
+
+        return TryGetObject(data, "sum") ??
+               TryGetObject(data, "sum_received") ??
+               TryGetObject(data, "sum_sent") ??
+               TryGetFirstUdpStream(data);
+    }
+
+    private static IReadOnlyList<double> GetStreamBitsPerSecond(JsonElement data, bool? sender = null)
+    {
+        var values = new List<double>();
+
+        if (!data.TryGetProperty("streams", out var streams) ||
+            streams.ValueKind != JsonValueKind.Array)
+        {
+            return values;
+        }
+
+        foreach (var stream in streams.EnumerateArray())
+        {
+            var udp = TryGetObject(stream, "udp");
+
+            if (sender is bool expectedSender)
+            {
+                var streamSender = TryGetBool(stream, "sender") ??
+                                   (udp is null ? null : TryGetBool(udp.Value, "sender"));
+
+                if (streamSender != expectedSender)
+                {
+                    continue;
+                }
+            }
+
+            var bitsPerSecond = TryGetDouble(stream, "bits_per_second");
+
+            if (!bitsPerSecond.HasValue)
+            {
+                bitsPerSecond = udp is null
+                    ? null
+                    : TryGetDouble(udp.Value, "bits_per_second");
+            }
+
+            if (bitsPerSecond is double value)
+            {
+                values.Add(value);
+            }
+        }
+
+        return values;
     }
 
     private static JsonElement? TryGetFirstUdpStream(JsonElement data)
@@ -155,5 +261,19 @@ public static class IperfJsonStreamParser
         }
 
         return null;
+    }
+
+    private static bool? TryGetBool(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind == JsonValueKind.True
+            ? true
+            : value.ValueKind == JsonValueKind.False
+                ? false
+                : null;
     }
 }

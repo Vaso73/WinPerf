@@ -430,6 +430,8 @@
                                             SizeChanged="ThroughputChartCanvas_SizeChanged">
                                         <Canvas x:Name="ThroughputChartGridCanvas"
                                                 ClipToBounds="True" />
+                                        <Canvas x:Name="ThroughputChartStreamCanvas"
+                                                ClipToBounds="True" />
                                         <Polyline x:Name="ThroughputChartLine"
                                                   Stroke="{StaticResource Accent}"
                                                   StrokeThickness="2"
