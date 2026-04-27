@@ -36,6 +36,8 @@ public partial class MainWindow : Window
 
     private const string AdvancedCommandOverrideSource = "Advanced";
     private const string CustomCommandOverrideSource = "Custom";
+    private const string UiDensityComfortable = "Comfortable";
+    private const string UiDensityCompact = "Compact";
     private const int MaxRecentServers = 20;
     private const int MaxThroughputSamples = 60;
 
@@ -48,6 +50,7 @@ public partial class MainWindow : Window
         RefreshEngineStatus();
         PopulateRecentServers();
         ApplyDashboardLayout();
+        ApplyUiDensity(resizeWindow: true);
         UpdateCommandOverrideUx();
         UpdateDashboardCommandPreview();
 
@@ -329,6 +332,92 @@ public partial class MainWindow : Window
             IperfMode.UdpDownload => "UDP Download",
             _ => mode.ToString()
         };
+    }
+
+    private void UiDensityButton_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.UiDensity = IsCompactUiDensity()
+            ? UiDensityComfortable
+            : UiDensityCompact;
+
+        ApplyUiDensity(resizeWindow: true);
+        _settingsStore.Save(_settings);
+    }
+
+    private bool IsCompactUiDensity()
+    {
+        return string.Equals(
+            NormalizeUiDensity(_settings.UiDensity),
+            UiDensityCompact,
+            StringComparison.Ordinal);
+    }
+
+    private void ApplyUiDensity(bool resizeWindow)
+    {
+        var density = NormalizeUiDensity(_settings.UiDensity);
+        _settings.UiDensity = density;
+
+        var isCompact = string.Equals(density, UiDensityCompact, StringComparison.Ordinal);
+        var scale = isCompact ? 0.92 : 1.0;
+
+        DashboardBodyGrid.LayoutTransform = isCompact
+            ? new ScaleTransform(scale, scale)
+            : null;
+
+        LeftRailColumn.MinWidth = isCompact ? 280 : 320;
+        LeftRailColumn.MaxWidth = isCompact ? 500 : 560;
+
+        var leftRailTarget = isCompact ? 360 : 410;
+        var leftRailWidth = LeftRailColumn.Width.IsAbsolute
+            ? LeftRailColumn.Width.Value
+            : leftRailTarget;
+
+        if (isCompact)
+        {
+            leftRailWidth = Math.Min(leftRailWidth, leftRailTarget);
+        }
+        else if (leftRailWidth < 380)
+        {
+            leftRailWidth = leftRailTarget;
+        }
+
+        LeftRailColumn.Width = new GridLength(
+            Math.Clamp(leftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
+
+        DashboardContentPanel.Margin = isCompact
+            ? new Thickness(18)
+            : new Thickness(26);
+
+        MetricsRow.Height = new GridLength(isCompact ? 150 : 170);
+        LiveThroughputRow.MinHeight = isCompact ? 180 : 220;
+        EngineOutputRow.Height = new GridLength(isCompact ? 120 : 150);
+        EngineOutputRow.MinHeight = isCompact ? 80 : 95;
+
+        MinWidth = isCompact ? 760 : 820;
+        MinHeight = isCompact ? 520 : 560;
+
+        UiDensityButton.Content = isCompact
+            ? "UI: Compact"
+            : "UI: Comfortable";
+
+        UiDensityButton.ToolTip = isCompact
+            ? "Click to switch to comfortable UI density."
+            : "Click to switch to compact UI density.";
+
+        if (resizeWindow && WindowState == WindowState.Normal)
+        {
+            Width = Math.Clamp(Width, MinWidth, isCompact ? 1080 : 1220);
+            Height = Math.Clamp(Height, MinHeight, isCompact ? 720 : 800);
+        }
+
+        RenderThroughputChart();
+    }
+
+    private static string NormalizeUiDensity(string? value)
+    {
+        return string.Equals(value, UiDensityComfortable, StringComparison.OrdinalIgnoreCase)
+            ? UiDensityComfortable
+            : UiDensityCompact;
     }
 
     private void RefreshEngineStatus()
