@@ -161,6 +161,49 @@
             </Setter>
         </Style>
 
+          <Style x:Key="StatusPillButton" TargetType="Button">
+              <Setter Property="Background" Value="{StaticResource PanelSoft}" />
+              <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+              <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
+              <Setter Property="BorderThickness" Value="1" />
+              <Setter Property="FontSize" Value="11" />
+              <Setter Property="FontWeight" Value="SemiBold" />
+              <Setter Property="Padding" Value="10,0" />
+              <Setter Property="Height" Value="22" />
+              <Setter Property="MinWidth" Value="132" />
+              <Setter Property="VerticalAlignment" Value="Center" />
+              <Setter Property="HorizontalContentAlignment" Value="Center" />
+              <Setter Property="VerticalContentAlignment" Value="Center" />
+              <Setter Property="Template">
+                  <Setter.Value>
+                      <ControlTemplate TargetType="{x:Type Button}">
+                          <Border x:Name="PillBorder"
+                                  Background="{TemplateBinding Background}"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  CornerRadius="8"
+                                  Padding="{TemplateBinding Padding}"
+                                  SnapsToDevicePixels="True">
+                              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                RecognizesAccessKey="True" />
+                          </Border>
+                          <ControlTemplate.Triggers>
+                              <Trigger Property="IsMouseOver" Value="True">
+                                  <Setter TargetName="PillBorder" Property="Background" Value="#18304F" />
+                              </Trigger>
+                              <Trigger Property="IsPressed" Value="True">
+                                  <Setter TargetName="PillBorder" Property="Background" Value="#0EA5E9" />
+                              </Trigger>
+                              <Trigger Property="IsEnabled" Value="False">
+                                  <Setter Property="Opacity" Value="0.55" />
+                              </Trigger>
+                          </ControlTemplate.Triggers>
+                      </ControlTemplate>
+                  </Setter.Value>
+              </Setter>
+          </Style>
+
     </Window.Resources>
 
             <Border Background="{StaticResource Bg}"
@@ -239,7 +282,7 @@
                 Background="#07101D"
                 BorderBrush="{StaticResource BorderSoft}"
                 BorderThickness="0,0,1,0"
-                Padding="22">
+                Padding="18">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Top">
                     <TextBlock Text="WinPerf"
@@ -287,7 +330,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition />
                                     <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="82" />
+                                    <ColumnDefinition Width="76" />
                                 </Grid.ColumnDefinitions>
 
                                 <ComboBox x:Name="ServerBox"
@@ -297,11 +340,13 @@
                                           Text="10.100.100.1" />
 
                                 <Button x:Name="RemoveServerButton"
-                                        Grid.Column="2"
-                                        Content="Remove"
-                                        Style="{StaticResource SecondaryButton}"
-                                        Padding="6,0"
-                                        Click="RemoveServerButton_Click" />
+                                          Grid.Column="2"
+                                          Content="Remove"
+                                          Style="{StaticResource SecondaryButton}"
+                                          Padding="6,0"
+                                          MinHeight="34"
+                                          FontSize="11"
+                                          Click="RemoveServerButton_Click" />
                             </Grid>
 
                             <Grid Margin="0,0,0,8">
@@ -353,25 +398,33 @@
                             </Grid>
 
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                    <Button x:Name="StartButton"
-                                            Content="Start"
-                                            Style="{StaticResource PrimaryButton}"
-                                            Width="104"
-                                            Margin="0,0,6,0"
-                                            Click="StartButton_Click" />
-                                    <Button x:Name="StopButton"
-                                            Content="Stop"
-                                            Style="{StaticResource SecondaryButton}"
-                                            Width="84"
-                                            IsEnabled="False"
-                                            Click="StopButton_Click" />
-                                </StackPanel>
+                                  <Grid x:Name="RunButtonGrid" Margin="0,0,0,8">
+                                      <Grid.ColumnDefinitions>
+                                          <ColumnDefinition />
+                                          <ColumnDefinition Width="8" />
+                                          <ColumnDefinition />
+                                      </Grid.ColumnDefinitions>
+
+                                      <Button x:Name="StartButton"
+                                              Grid.Column="0"
+                                              Content="Start"
+                                              Style="{StaticResource PrimaryButton}"
+                                              MinHeight="36"
+                                              Click="StartButton_Click" />
+                                      <Button x:Name="StopButton"
+                                              Grid.Column="2"
+                                              Content="Stop"
+                                              Style="{StaticResource SecondaryButton}"
+                                              MinHeight="36"
+                                              IsEnabled="False"
+                                              Click="StopButton_Click" />
+                                  </Grid>
 
                                 <Button x:Name="CommandMenuButton"
                                         Content="Command ▾"
                                         Style="{StaticResource SecondaryButton}"
-                                        HorizontalContentAlignment="Center"
+                                                                                  MinHeight="36"
+HorizontalContentAlignment="Center"
                                         Click="CommandMenuButton_Click">
                                     <Button.ContextMenu>
                                         <ContextMenu>
@@ -442,12 +495,12 @@
         </Border>
 
         <GridSplitter Grid.Column="1"
-                      Width="6"
+                      Width="4"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Stretch"
-                      Background="{StaticResource BorderSoft}"
+                      Background="#10243C"
                       Cursor="SizeWE"
-                      Opacity="0.75"
+                      Opacity="0.55"
                       ResizeDirection="Columns"
                       ResizeBehavior="PreviousAndNext"
                       ShowsPreview="True"
@@ -565,13 +618,13 @@
                     </Border>
 
                     <GridSplitter Grid.Row="2"
-                                  Height="6"
-                                  Margin="0,4"
+                                  Height="4"
+                                  Margin="0,6"
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Center"
-                                  Background="{StaticResource BorderSoft}"
+                                  Background="#10243C"
                                   Cursor="SizeNS"
-                                  Opacity="0.75"
+                                  Opacity="0.55"
                                   ResizeDirection="Rows"
                                   ResizeBehavior="PreviousAndNext"
                                   ShowsPreview="True"
@@ -618,15 +671,9 @@
             <DockPanel LastChildFill="False">
                   <Button x:Name="UiDensityButton"
                           DockPanel.Dock="Right"
-                          Content="UI: Compact"
-                          Style="{StaticResource SecondaryButton}"
-                          Height="24"
-                          MinWidth="128"
-                          Padding="10,0"
+                          Content="Compact UI"
+                          Style="{StaticResource StatusPillButton}"
                           Margin="12,0,0,0"
-                          VerticalAlignment="Center"
-                          HorizontalContentAlignment="Center"
-                          FontSize="11"
                           Click="UiDensityButton_Click" />
 
                 <TextBlock x:Name="EngineStatusText"

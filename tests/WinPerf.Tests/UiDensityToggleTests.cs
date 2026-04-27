@@ -21,7 +21,7 @@ public sealed class UiDensityToggleTests
     public void MainWindow_ExposesRuntimeUiDensityToggle()
     {
         Assert.Contains("UiDensityButton", MainWindowXaml);
-        Assert.Contains("UI: Compact", MainWindowXaml);
+        Assert.Contains("Compact UI", MainWindowXaml);
         Assert.Contains("UiDensityButton_Click", MainWindowXaml);
         Assert.Contains("DashboardBodyGrid", MainWindowXaml);
         Assert.Contains("DashboardContentPanel", MainWindowXaml);
