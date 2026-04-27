@@ -18,6 +18,7 @@ public partial class SettingsWindow : Window
         _appDirectory = appDirectory;
         IperfPathBox.Text = currentIperfPath ?? string.Empty;
         DataDirectoryText.Text = DataDirectory;
+        PortableEngineDirectoryText.Text = PortableEngineDirectory;
         IperfPathBox.Focus();
     }
 
@@ -108,6 +109,26 @@ public partial class SettingsWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             ValidationText.Text = "Portable import failed: " + ex.Message;
+        }
+    }
+
+    private void OpenPortableEngineDirectoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(PortableEngineDirectory);
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = PortableEngineDirectory,
+                UseShellExecute = true
+            });
+
+            ValidationText.Text = $"Opened portable engine folder: {PortableEngineDirectory}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            ValidationText.Text = "Could not open portable engine folder: " + ex.Message;
         }
     }
 
