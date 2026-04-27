@@ -1,3 +1,4 @@
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using WinPerf.App.Settings;
@@ -9,9 +10,12 @@ public partial class MainWindow : Window
 {
     private readonly WinPerfSettingsStore _settingsStore = new();
     private readonly IperfExecutableResolver _executableResolver = new();
+    private readonly IperfProcessRunner _processRunner = new();
 
     private WinPerfSettings _settings = new();
     private IperfExecutableResolution _engineResolution = new(false, null, "NotConfigured", "iperf3.exe is not configured.");
+    private CancellationTokenSource? _currentRunCancellation;
+    private readonly StringBuilder _engineOutput = new();
 
     public MainWindow()
     {
@@ -21,8 +25,21 @@ public partial class MainWindow : Window
         RefreshEngineStatus();
     }
 
-    private void StartButton_Click(object sender, RoutedEventArgs e)
+    private async void StartButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_currentRunCancellation is not null)
+        {
+            return;
+        }
+
+        RefreshEngineStatus();
+
+        if (!_engineResolution.IsConfigured || string.IsNullOrWhiteSpace(_engineResolution.ExecutablePath))
+        {
+            EngineOutputText.Text = "iperf3.exe is not configured. Open Settings and select iperf3.exe first.";
+            return;
+        }
+
         try
         {
             var options = new IperfTestOptions
@@ -35,20 +52,57 @@ public partial class MainWindow : Window
                 AddressFamily = IperfAddressFamily.IPv4
             };
 
-            var command = IperfCommandBuilder.BuildClientCommand(GetExecutablePathForPreview(), options);
+            var command = IperfCommandBuilder.BuildClientCommand(_engineResolution.ExecutablePath, options);
 
-            EngineOutputText.Text =
-                "Command preview:" + Environment.NewLine +
-                command.ToDisplayString();
+            _currentRunCancellation = new CancellationTokenSource();
+            SetRunState(isRunning: true);
+
+            _engineOutput.Clear();
+            AppendEngineOutput("Running command:");
+            AppendEngineOutput(command.ToDisplayString());
+            AppendEngineOutput(string.Empty);
+
+            var result = await _processRunner.RunAsync(
+                command,
+                async (line, cancellationToken) =>
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        AppendEngineOutput(line.Text);
+                    });
+                },
+                _currentRunCancellation.Token);
+
+            AppendEngineOutput(string.Empty);
+            AppendEngineOutput($"Process exited with code {result.ExitCode}.");
+        }
+        catch (OperationCanceledException)
+        {
+            AppendEngineOutput(string.Empty);
+            AppendEngineOutput("Test stopped by user.");
         }
         catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException)
         {
             EngineOutputText.Text = "Invalid test configuration:" + Environment.NewLine + ex.Message;
         }
+        catch (Exception ex)
+        {
+            AppendEngineOutput(string.Empty);
+            AppendEngineOutput("Failed to run iperf3:");
+            AppendEngineOutput(ex.Message);
+        }
+        finally
+        {
+            _currentRunCancellation?.Dispose();
+            _currentRunCancellation = null;
+            SetRunState(isRunning: false);
+        }
     }
 
-
-
+    private void StopButton_Click(object sender, RoutedEventArgs e)
+    {
+        _currentRunCancellation?.Cancel();
+    }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
@@ -75,11 +129,6 @@ public partial class MainWindow : Window
         EngineStatusText.Text = _engineResolution.IsConfigured
             ? $"{_engineResolution.Source}: {_engineResolution.ExecutablePath}"
             : _engineResolution.Message;
-    }
-
-    private string GetExecutablePathForPreview()
-    {
-        return _engineResolution.ExecutablePath ?? "iperf3.exe";
     }
 
     private void AdvancedCommandButton_Click(object sender, RoutedEventArgs e)
@@ -139,5 +188,27 @@ public partial class MainWindow : Window
         }
 
         return value;
+    }
+
+    private void SetRunState(bool isRunning)
+    {
+        StartButton.IsEnabled = !isRunning;
+        StopButton.IsEnabled = isRunning;
+        AdvancedCommandButton.IsEnabled = !isRunning;
+        CustomCommandButton.IsEnabled = !isRunning;
+    }
+
+    private void AppendEngineOutput(string text)
+    {
+        _engineOutput.AppendLine(text);
+
+        const int maxChars = 12000;
+
+        if (_engineOutput.Length > maxChars)
+        {
+            _engineOutput.Remove(0, _engineOutput.Length - maxChars);
+        }
+
+        EngineOutputText.Text = _engineOutput.ToString();
     }
 }

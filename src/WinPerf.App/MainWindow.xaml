@@ -220,7 +220,8 @@
                                             Content="Stop"
                                             Style="{StaticResource SecondaryButton}"
                                             Width="96"
-                                            IsEnabled="False" />
+                                            IsEnabled="False"
+                                            Click="StopButton_Click" />
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal">
