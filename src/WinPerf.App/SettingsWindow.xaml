@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="WinPerf Settings"
         Width="760"
-        Height="430"
+        Height="560"
         MinWidth="680"
-        MinHeight="380"
+        MinHeight="500"
         Background="#08111F"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
@@ -130,24 +130,34 @@
             </StackPanel>
         </Border>
 
-        <DockPanel Grid.Row="2" Margin="0,18,0,0" LastChildFill="False">
+        <Grid Grid.Row="2" Margin="0,18,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="240" />
+            </Grid.ColumnDefinitions>
+
             <TextBlock x:Name="ValidationText"
-                       DockPanel.Dock="Left"
+                       Grid.Column="0"
                        Foreground="{StaticResource TextMuted}"
-                       VerticalAlignment="Center" />
+                       VerticalAlignment="Center"
+                       TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis"
+                       Margin="0,0,16,0" />
 
-            <Button Content="Cancel"
-                    DockPanel.Dock="Right"
-                    Style="{StaticResource SecondaryButton}"
-                    Width="110"
-                    Margin="10,0,0,0"
-                    Click="CancelButton_Click" />
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button Content="Save"
+                        Style="{StaticResource PrimaryButton}"
+                        Width="110"
+                        Margin="0,0,10,0"
+                        Click="SaveButton_Click" />
 
-            <Button Content="Save"
-                    DockPanel.Dock="Right"
-                    Style="{StaticResource PrimaryButton}"
-                    Width="110"
-                    Click="SaveButton_Click" />
-        </DockPanel>
+                <Button Content="Cancel"
+                        Style="{StaticResource SecondaryButton}"
+                        Width="110"
+                        Click="CancelButton_Click" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
