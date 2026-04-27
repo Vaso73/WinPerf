@@ -7,6 +7,7 @@ namespace WinPerf.App.Settings;
 public static class WindowPlacementStore
 {
     private const string LayoutFileName = "window-layout.json";
+    private const int CurrentLayoutDensityVersion = 2;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -44,14 +45,26 @@ public static class WindowPlacementStore
             return;
         }
 
+        var isCurrentDensityLayout = bounds.LayoutDensityVersion >= CurrentLayoutDensityVersion;
+
         if (IsUsable(bounds.Width))
         {
-            window.Width = Math.Max(window.MinWidth, bounds.Width);
+            window.Width = ClampRestoredDimension(
+                bounds.Width,
+                window.MinWidth,
+                window.Width,
+                SystemParameters.WorkArea.Width,
+                isCurrentDensityLayout);
         }
 
         if (IsUsable(bounds.Height))
         {
-            window.Height = Math.Max(window.MinHeight, bounds.Height);
+            window.Height = ClampRestoredDimension(
+                bounds.Height,
+                window.MinHeight,
+                window.Height,
+                SystemParameters.WorkArea.Height,
+                isCurrentDensityLayout);
         }
 
         if (bounds.IsMaximized)
@@ -80,9 +93,10 @@ public static class WindowPlacementStore
 
         layout[key] = new SavedWindowBounds
         {
-            Width = Math.Max(window.MinWidth, width),
-            Height = Math.Max(window.MinHeight, height),
-            IsMaximized = window.WindowState == WindowState.Maximized
+            Width = ClampSavedDimension(width, window.MinWidth, SystemParameters.WorkArea.Width),
+            Height = ClampSavedDimension(height, window.MinHeight, SystemParameters.WorkArea.Height),
+            IsMaximized = window.WindowState == WindowState.Maximized,
+            LayoutDensityVersion = CurrentLayoutDensityVersion
         };
 
         Directory.CreateDirectory(SettingsDirectory);
@@ -138,6 +152,41 @@ public static class WindowPlacementStore
         }
     }
 
+    private static double ClampRestoredDimension(
+        double savedValue,
+        double minimumValue,
+        double defaultValue,
+        double workAreaMaximum,
+        bool isCurrentDensityLayout)
+    {
+        var lowerBound = IsUsable(minimumValue)
+            ? minimumValue
+            : 1;
+
+        var defaultMaximum = IsUsable(defaultValue)
+            ? Math.Max(lowerBound, defaultValue)
+            : lowerBound;
+
+        var upperBound = isCurrentDensityLayout && IsUsable(workAreaMaximum)
+            ? Math.Max(defaultMaximum, workAreaMaximum)
+            : defaultMaximum;
+
+        return Math.Clamp(savedValue, lowerBound, upperBound);
+    }
+
+    private static double ClampSavedDimension(double value, double minimumValue, double workAreaMaximum)
+    {
+        var lowerBound = IsUsable(minimumValue)
+            ? minimumValue
+            : 1;
+
+        var upperBound = IsUsable(workAreaMaximum)
+            ? Math.Max(lowerBound, workAreaMaximum)
+            : Math.Max(lowerBound, value);
+
+        return Math.Clamp(value, lowerBound, upperBound);
+    }
+
     private static bool SamePath(string left, string right)
     {
         return string.Equals(
@@ -156,5 +205,6 @@ public static class WindowPlacementStore
         public double Width { get; set; }
         public double Height { get; set; }
         public bool IsMaximized { get; set; }
+        public int LayoutDensityVersion { get; set; }
     }
 }
