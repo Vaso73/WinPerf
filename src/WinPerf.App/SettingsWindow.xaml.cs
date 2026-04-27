@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using Microsoft.Win32;
@@ -16,6 +17,7 @@ public partial class SettingsWindow : Window
 
         _appDirectory = appDirectory;
         IperfPathBox.Text = currentIperfPath ?? string.Empty;
+        DataDirectoryText.Text = DataDirectory;
         IperfPathBox.Focus();
     }
 
@@ -33,6 +35,9 @@ public partial class SettingsWindow : Window
 
     private string PortableExecutablePath =>
         Path.Combine(PortableEngineDirectory, "iperf3.exe");
+
+    private string DataDirectory =>
+        Path.Combine(_appDirectory, "data");
 
     private void BrowseButton_Click(object sender, RoutedEventArgs e)
     {
@@ -103,6 +108,26 @@ public partial class SettingsWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             ValidationText.Text = "Portable import failed: " + ex.Message;
+        }
+    }
+
+    private void OpenDataDirectoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(DataDirectory);
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = DataDirectory,
+                UseShellExecute = true
+            });
+
+            ValidationText.Text = $"Opened data folder: {DataDirectory}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            ValidationText.Text = "Could not open data folder: " + ex.Message;
         }
     }
 

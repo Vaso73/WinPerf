@@ -178,6 +178,37 @@
                                            TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
+
+                        <Border Background="{StaticResource PanelSoft}"
+                                BorderBrush="{StaticResource BorderSoft}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="10"
+                                Margin="0,10,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="150" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Portable data folder"
+                                               FontWeight="SemiBold"
+                                               Margin="0,0,0,6" />
+                                    <TextBlock x:Name="DataDirectoryText"
+                                               Foreground="{StaticResource TextMuted}"
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <Button x:Name="OpenDataDirectoryButton"
+                                        Grid.Column="2"
+                                        Content="Open data folder"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="OpenDataDirectoryButton_Click" />
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
 
