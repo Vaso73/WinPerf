@@ -29,6 +29,29 @@
         <SolidColorBrush x:Key="AccentGreen" Color="#22C55E" />
         <SolidColorBrush x:Key="AccentAmber" Color="#F59E0B" />
 
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="Background" Value="#07101D" />
+            <Setter Property="Foreground" Value="#38BDF8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid Background="#07101D">
+                            <Track x:Name="PART_Track"
+                                   IsDirectionReversed="True">
+                                <Track.Thumb>
+                                    <Thumb Background="#203554"
+                                           BorderBrush="#38BDF8"
+                                           BorderThickness="1" />
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource Panel}" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
