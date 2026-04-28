@@ -12,10 +12,10 @@ public sealed class VersionMetadataTests
 
         Assert.Contains("<Product>WinPerf</Product>", props);
         Assert.Contains("<Authors>Vaso73</Authors>", props);
-        Assert.Contains("<VersionPrefix>0.1.3</VersionPrefix>", props);
+        Assert.Contains("<VersionPrefix>0.1.4</VersionPrefix>", props);
         Assert.Contains("<Version>$(VersionPrefix)</Version>", props);
-        Assert.Contains("<AssemblyVersion>0.1.3.0</AssemblyVersion>", props);
-        Assert.Contains("<FileVersion>0.1.3.0</FileVersion>", props);
+        Assert.Contains("<AssemblyVersion>0.1.4.0</AssemblyVersion>", props);
+        Assert.Contains("<FileVersion>0.1.4.0</FileVersion>", props);
         Assert.Contains("<InformationalVersion>$(Version)</InformationalVersion>", props);
     }
 
