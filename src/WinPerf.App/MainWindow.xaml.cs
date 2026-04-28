@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     private readonly List<double> _reverseThroughputSamples = new();
     private readonly List<IReadOnlyList<double>> _reverseStreamThroughputSamples = new();
     private IperfMode? _activeMode;
+    private IperfEngine _activeEngine = IperfEngine.Iperf3;
     private int _activeChartDurationSeconds = 10;
     private int _activeOmitSeconds;
     private int _omittedWarmupIntervalsReceived;
@@ -92,7 +93,7 @@ public partial class MainWindow : Window
 
         if (!_engineResolution.IsConfigured || string.IsNullOrWhiteSpace(_engineResolution.ExecutablePath))
         {
-            EngineOutputText.Text = "iperf3.exe is not configured. Open Settings and select iperf3.exe first.";
+            EngineOutputText.Text = $"{GetEngineExecutableDisplayName(GetSelectedEngine())} is not configured. Open Settings and select the executable first.";
             return;
         }
 
@@ -119,6 +120,7 @@ public partial class MainWindow : Window
 
             _currentRunCancellation = new CancellationTokenSource();
             _activeMode = options.Mode;
+            _activeEngine = options.Engine;
             _activeChartDurationSeconds = Math.Max(1, options.DurationSeconds);
             _activeOmitSeconds = Math.Max(0, options.OmitSeconds);
             _omittedWarmupIntervalsReceived = 0;
@@ -149,29 +151,8 @@ public partial class MainWindow : Window
                     {
                         if (line.Stream == IperfOutputStream.StandardOutput)
                         {
-                            if (IperfJsonStreamParser.TryParseIntervalSample(line.Text, out var sample))
+                            if (TryHandleStructuredIperfOutput(options.Engine, line.Text))
                             {
-                                if (sample.Omitted)
-                                {
-                                    HandleOmittedWarmupSample(sample);
-                                    return;
-                                }
-
-                                UpdateLiveMetrics(sample);
-                                AppendEngineOutput(FormatIntervalSample(sample));
-                                return;
-                            }
-
-                            if (IperfJsonStreamParser.TryParseEndSummarySample(line.Text, out var endSample))
-                            {
-                                UpdateLiveMetrics(endSample);
-                                AppendEngineOutput(FormatEndSummarySample(endSample));
-                                return;
-                            }
-
-                            if (TryFormatJsonStreamEvent(line.Text, out var eventMessage))
-                            {
-                                AppendEngineOutput(eventMessage);
                                 return;
                             }
                         }
@@ -197,7 +178,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             AppendEngineOutput(string.Empty);
-            AppendEngineOutput("Failed to run iperf3:");
+            AppendEngineOutput($"Failed to run {GetEngineDisplayName(GetSelectedEngine())}:");
             AppendEngineOutput(ex.Message);
         }
         finally
@@ -225,7 +206,7 @@ public partial class MainWindow : Window
 
     private void OpenSettingsWindow()
     {
-        var dialog = new SettingsWindow(_settings.IperfExecutablePath, AppContext.BaseDirectory)
+        var dialog = new SettingsWindow(_settings.IperfExecutablePath, _settings.Iperf2ExecutablePath, AppContext.BaseDirectory)
         {
             Owner = this
         };
@@ -233,6 +214,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() == true)
         {
             _settings.IperfExecutablePath = dialog.IperfExecutablePath;
+            _settings.Iperf2ExecutablePath = dialog.Iperf2ExecutablePath;
             _settingsStore.Save(_settings);
             RefreshEngineStatus();
             UpdateDashboardCommandPreview();
@@ -328,7 +310,7 @@ public partial class MainWindow : Window
     {
         var lines = new List<string>
         {
-            $"{FormatModeLabel(options.Mode)} · {options.Server}:{options.Port}"
+            $"{GetEngineDisplayName(options.Engine)} · {FormatModeLabel(options.Mode)} · {options.Server}:{options.Port}"
         };
 
         if (_throughputSamples.Count > 0)
@@ -571,11 +553,23 @@ public partial class MainWindow : Window
         return $"WinPerf v{version}";
     }
 
+    private static IperfEngine ParseStoredEngine(string? value)
+    {
+        return string.Equals(value, "iperf2", StringComparison.OrdinalIgnoreCase)
+            ? IperfEngine.Iperf2
+            : IperfEngine.Iperf3;
+    }
+
     private void RefreshEngineStatus()
     {
+        var selectedEngine = GetSelectedEngine();
+
         _engineResolution = _executableResolver.Resolve(AppContext.BaseDirectory, new IperfEngineSettings
         {
-            ExecutablePath = _settings.IperfExecutablePath
+            Engine = selectedEngine,
+            ExecutablePath = _settings.IperfExecutablePath,
+            Iperf3ExecutablePath = _settings.IperfExecutablePath,
+            Iperf2ExecutablePath = _settings.Iperf2ExecutablePath
         });
 
         if (_engineResolution.IsConfigured)
@@ -584,12 +578,12 @@ public partial class MainWindow : Window
                 ? "Configured"
                 : _engineResolution.Source;
 
-            EngineStatusText.Text = $"Engine  ●  Ready  ●  {source}";
+            EngineStatusText.Text = $"Engine  ●  {GetEngineDisplayName(selectedEngine)}  ●  Ready  ●  {source}";
             EngineStatusText.ToolTip = _engineResolution.ExecutablePath;
             return;
         }
 
-        EngineStatusText.Text = "Engine  ●  Not configured";
+        EngineStatusText.Text = $"Engine  ●  {GetEngineDisplayName(selectedEngine)}  ●  Not configured";
         EngineStatusText.ToolTip = _engineResolution.Message;
     }
 
@@ -651,6 +645,7 @@ public partial class MainWindow : Window
     {
         return new IperfTestOptions
         {
+            Engine = GetSelectedEngine(),
             Server = GetServerText(),
             Port = ParsePositiveInt(PortBox, "Port"),
             Streams = ParsePositiveInt(StreamsBox, "Streams"),
@@ -663,7 +658,8 @@ public partial class MainWindow : Window
 
     private string BuildDashboardCommandArgumentsPreview()
     {
-        var command = IperfCommandBuilder.BuildClientCommand("iperf3.exe", BuildDashboardTestOptions());
+        var options = BuildDashboardTestOptions();
+        var command = IperfCommandBuilder.BuildClientCommand(GetEngineExecutableDisplayName(options.Engine), options);
         return string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
     }
 
@@ -674,6 +670,7 @@ public partial class MainWindow : Window
 
         return new IperfTestOptions
         {
+            Engine = GetSelectedEngine(),
             Server = TryGetArgumentValue(args, "-c") ?? GetServerText(),
             Port = TryGetPositiveIntArgumentValue(args, "-p") ?? ParsePositiveInt(PortBox, "Port"),
             Streams = TryGetPositiveIntArgumentValue(args, "-P") ?? ParsePositiveInt(StreamsBox, "Streams"),
@@ -1031,9 +1028,10 @@ public partial class MainWindow : Window
 
         try
         {
+            var selectedEngine = GetSelectedEngine();
             var executablePath = _engineResolution.IsConfigured && !string.IsNullOrWhiteSpace(_engineResolution.ExecutablePath)
                 ? _engineResolution.ExecutablePath
-                : "iperf3.exe";
+                : GetEngineExecutableDisplayName(selectedEngine);
 
             var command = IperfCommandBuilder.BuildClientCommand(executablePath, BuildDashboardTestOptions());
 
@@ -1130,6 +1128,79 @@ public partial class MainWindow : Window
             ?? "10.100.100.1";
     }
 
+    private IperfEngine GetSelectedEngine()
+    {
+        var selectedText = (EngineBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+
+        return selectedText switch
+        {
+            "iperf2" => IperfEngine.Iperf2,
+            _ => IperfEngine.Iperf3
+        };
+    }
+
+    private void SelectEngine(IperfEngine engine)
+    {
+        var label = GetEngineDisplayName(engine);
+
+        for (var i = 0; i < EngineBox.Items.Count; i++)
+        {
+            if ((EngineBox.Items[i] as ComboBoxItem)?.Content?.ToString() == label)
+            {
+                EngineBox.SelectedIndex = i;
+                return;
+            }
+        }
+
+        EngineBox.SelectedIndex = 0;
+    }
+
+    private void EngineSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (EngineBox is null || PortBox is null)
+        {
+            return;
+        }
+
+        var selectedEngine = GetSelectedEngine();
+
+        if (selectedEngine == IperfEngine.Iperf2 &&
+            string.Equals(PortBox.Text.Trim(), "5201", StringComparison.Ordinal))
+        {
+            PortBox.Text = "5001";
+        }
+        else if (selectedEngine == IperfEngine.Iperf3 &&
+                 string.Equals(PortBox.Text.Trim(), "5001", StringComparison.Ordinal))
+        {
+            PortBox.Text = "5201";
+        }
+
+        _settings.SelectedEngine = GetEngineDisplayName(selectedEngine);
+        _settingsStore.Save(_settings);
+
+        ClearCommandOverride(updatePreview: false);
+        RefreshEngineStatus();
+        Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
+    }
+
+    private static string GetEngineDisplayName(IperfEngine engine)
+    {
+        return engine switch
+        {
+            IperfEngine.Iperf2 => "iperf2",
+            _ => "iperf3"
+        };
+    }
+
+    private static string GetEngineExecutableDisplayName(IperfEngine engine)
+    {
+        return engine switch
+        {
+            IperfEngine.Iperf2 => "iperf.exe",
+            _ => "iperf3.exe"
+        };
+    }
+
     private IperfMode GetSelectedMode()
     {
         var selectedText = (ModeBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
@@ -1169,8 +1240,52 @@ public partial class MainWindow : Window
     {
         StartButton.IsEnabled = !isRunning;
         StopButton.IsEnabled = isRunning;
+        EngineBox.IsEnabled = !isRunning;
         CommandMenuButton.IsEnabled = !isRunning;
         RemoveServerButton.IsEnabled = !isRunning;
+    }
+
+    private bool TryHandleStructuredIperfOutput(IperfEngine engine, string text)
+    {
+        if (engine == IperfEngine.Iperf2)
+        {
+            if (Iperf2TextParser.TryParseIntervalSample(text, out var iperf2Sample))
+            {
+                UpdateLiveMetrics(iperf2Sample);
+                AppendEngineOutput(FormatIntervalSample(iperf2Sample));
+                return true;
+            }
+
+            return false;
+        }
+
+        if (IperfJsonStreamParser.TryParseIntervalSample(text, out var sample))
+        {
+            if (sample.Omitted)
+            {
+                HandleOmittedWarmupSample(sample);
+                return true;
+            }
+
+            UpdateLiveMetrics(sample);
+            AppendEngineOutput(FormatIntervalSample(sample));
+            return true;
+        }
+
+        if (IperfJsonStreamParser.TryParseEndSummarySample(text, out var endSample))
+        {
+            UpdateLiveMetrics(endSample);
+            AppendEngineOutput(FormatEndSummarySample(endSample));
+            return true;
+        }
+
+        if (TryFormatJsonStreamEvent(text, out var eventMessage))
+        {
+            AppendEngineOutput(eventMessage);
+            return true;
+        }
+
+        return false;
     }
 
     private void AppendEngineOutput(string text)

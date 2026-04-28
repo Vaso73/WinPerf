@@ -110,7 +110,7 @@
                     <TextBlock Text="Settings"
                                FontSize="22"
                                FontWeight="SemiBold" />
-                    <TextBlock Text="Configure the iperf3 engine used by WinPerf. Auto-download/update will be added later."
+                    <TextBlock Text="Configure the iperf3 and iperf2 engines used by WinPerf. Auto-download/update will be added later."
                                Foreground="{StaticResource TextMuted}"
                                FontSize="11"
                                TextWrapping="Wrap"
@@ -172,10 +172,65 @@
                                     CornerRadius="12"
                                     Padding="10">
                                 <StackPanel>
-                                    <TextBlock Text="Fallback path"
+                                    <TextBlock Text="iperf3 fallback path"
                                                FontWeight="SemiBold"
                                                Margin="0,0,0,6" />
-                                    <TextBlock Text="If no manual path is configured, WinPerf tries tools\iperf3\iperf3.exe next to WinPerf.exe. Use Import portable to copy the selected iperf3 folder there."
+                                    <TextBlock Text="If no manual iperf3 path is configured, WinPerf tries tools\iperf3\iperf3.exe next to WinPerf.exe. Use Import portable to copy the selected iperf3 folder there."
+                                               Foreground="{StaticResource TextMuted}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="iperf2 executable"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Margin="0,14,0,8" />
+
+                            <TextBlock Text="Path to iperf.exe or iperf2.exe"
+                                       Foreground="{StaticResource TextMuted}"
+                                       FontSize="11" />
+
+                            <Grid Margin="0,5,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="105" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="80" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox x:Name="Iperf2PathBox"
+                                         Grid.Column="0"
+                                         VerticalContentAlignment="Center" />
+
+                                <Button Grid.Column="2"
+                                        Content="Browse"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="BrowseIperf2Button_Click" />
+
+                                <Button Grid.Column="4"
+                                        Content="Import portable"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="ImportPortableIperf2Button_Click" />
+
+                                <Button Grid.Column="6"
+                                        Content="Clear"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="ClearIperf2Button_Click" />
+                            </Grid>
+
+                            <Border Background="{StaticResource PanelSoft}"
+                                    BorderBrush="{StaticResource BorderSoft}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="10">
+                                <StackPanel>
+                                    <TextBlock Text="iperf2 fallback path"
+                                               FontWeight="SemiBold"
+                                               Margin="0,0,0,6" />
+                                    <TextBlock Text="If no manual iperf2 path is configured, WinPerf tries tools\iperf2\iperf.exe and tools\iperf2\iperf2.exe next to WinPerf.exe. First iperf2 integration supports TCP Upload and UDP Upload."
                                                Foreground="{StaticResource TextMuted}"
                                                TextWrapping="Wrap" />
                                 </StackPanel>
@@ -226,10 +281,10 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Portable engine folder"
+                                        <TextBlock Text="Portable iperf3 engine folder"
                                                    FontWeight="SemiBold"
                                                    Margin="0,0,0,6" />
-                                        <TextBlock x:Name="PortableEngineDirectoryText"
+                                        <TextBlock x:Name="PortableIperf3EngineDirectoryText"
                                                    Foreground="{StaticResource TextMuted}"
                                                    TextWrapping="NoWrap"
                                                    TextTrimming="CharacterEllipsis" />
@@ -237,9 +292,40 @@
 
                                     <Button x:Name="OpenPortableEngineDirectoryButton"
                                             Grid.Column="2"
-                                            Content="Open engine folder"
+                                            Content="Open iperf3 folder"
                                             Style="{StaticResource SecondaryButton}"
                                             Click="OpenPortableEngineDirectoryButton_Click" />
+                                </Grid>
+                            </Border>
+
+                            <Border Background="{StaticResource PanelSoft}"
+                                    BorderBrush="{StaticResource BorderSoft}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="10"
+                                    Margin="0,10,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="180" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Portable iperf2 engine folder"
+                                                   FontWeight="SemiBold"
+                                                   Margin="0,0,0,6" />
+                                        <TextBlock x:Name="PortableIperf2EngineDirectoryText"
+                                                   Foreground="{StaticResource TextMuted}"
+                                                   TextWrapping="NoWrap"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+
+                                    <Button x:Name="OpenPortableIperf2EngineDirectoryButton"
+                                            Grid.Column="2"
+                                            Content="Open iperf2 folder"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Click="OpenPortableIperf2EngineDirectoryButton_Click" />
                                 </Grid>
                             </Border>
                         </StackPanel>

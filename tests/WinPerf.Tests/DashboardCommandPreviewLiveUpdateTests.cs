@@ -10,6 +10,12 @@ public sealed class DashboardCommandPreviewLiveUpdateTests
         return File.ReadAllText(Path.Combine(root, "src", "WinPerf.App", "MainWindow.xaml"));
     }
 
+    private static string ReadMainWindowCode()
+    {
+        var root = FindRepositoryRoot();
+        return File.ReadAllText(Path.Combine(root, "src", "WinPerf.App", "MainWindow.xaml.cs"));
+    }
+
     [Fact]
     public void ServerInput_UpdatesCommandPreviewWhileTyping()
     {
@@ -46,6 +52,27 @@ public sealed class DashboardCommandPreviewLiveUpdateTests
         var modeBox = ExtractControl(xaml, "ComboBox", "ModeBox");
 
         Assert.Contains("SelectionChanged=\"DashboardInputChanged\"", modeBox);
+    }
+
+    [Fact]
+    public void EngineSelectionChanged_GuardsDuringXamlInitialization()
+    {
+        var code = ReadMainWindowCode();
+
+        Assert.Contains("if (EngineBox is null || PortBox is null)", code);
+    }
+
+    [Fact]
+    public void EngineSelection_UpdatesCommandPreviewAndEngineStatusImmediately()
+    {
+        var xaml = ReadMainWindowXaml();
+
+        var engineBox = ExtractControl(xaml, "ComboBox", "EngineBox");
+
+        Assert.Contains("SelectionChanged=\"EngineSelectionChanged\"", engineBox);
+        Assert.Contains("x:Name=\"EngineBox\"", xaml);
+        Assert.Contains("<ComboBoxItem Content=\"iperf3\" />", xaml);
+        Assert.Contains("<ComboBoxItem Content=\"iperf2\" />", xaml);
     }
 
     private static string ExtractControl(string xaml, string controlName, string xName)

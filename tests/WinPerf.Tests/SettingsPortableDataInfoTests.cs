@@ -28,7 +28,8 @@ public sealed class SettingsPortableDataInfoTests
         Assert.Contains("DataDirectoryText.Text = DataDirectory;", code);
         Assert.Contains("Path.Combine(_appDirectory, \"data\")", code);
         Assert.Contains("private void OpenDataDirectoryButton_Click", code);
-        Assert.Contains("Directory.CreateDirectory(DataDirectory);", code);
+        Assert.Contains("OpenDirectory(DataDirectory, \"data folder\");", code);
+        Assert.Contains("Directory.CreateDirectory(directory);", code);
         Assert.Contains("UseShellExecute = true", code);
     }
 }

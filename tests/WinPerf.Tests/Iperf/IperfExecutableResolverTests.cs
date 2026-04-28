@@ -46,6 +46,40 @@ public sealed class IperfExecutableResolverTests
         Assert.Equal("Bundled", result.Source);
     }
 
+
+    [Fact]
+    public void Resolve_UsesIperf2ConfiguredPathWhenSelected()
+    {
+        var resolver = new IperfExecutableResolver(path => path == @"C:\Tools\iperf.exe");
+
+        var result = resolver.Resolve(
+            @"C:\Apps\WinPerf",
+            new IperfEngineSettings
+            {
+                Engine = IperfEngine.Iperf2,
+                Iperf2ExecutablePath = @"C:\Tools\iperf.exe"
+            });
+
+        Assert.True(result.IsConfigured);
+        Assert.Equal(@"C:\Tools\iperf.exe", result.ExecutablePath);
+        Assert.Equal("Configured", result.Source);
+        Assert.Contains("iperf2", result.Message);
+    }
+
+    [Fact]
+    public void Resolve_UsesIperf2BundledFallbackWhenSelected()
+    {
+        var resolver = new IperfExecutableResolver(path => NormalizePath(path).EndsWith("tools/iperf2/iperf.exe", StringComparison.OrdinalIgnoreCase));
+
+        var result = resolver.Resolve(
+            @"C:\Apps\WinPerf",
+            new IperfEngineSettings { Engine = IperfEngine.Iperf2 });
+
+        Assert.True(result.IsConfigured);
+        Assert.EndsWith("tools/iperf2/iperf.exe", NormalizePath(result.ExecutablePath));
+        Assert.Equal("Bundled", result.Source);
+    }
+
     [Fact]
     public void Resolve_ReturnsNotConfiguredWhenNothingExists()
     {

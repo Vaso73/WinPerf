@@ -22,7 +22,7 @@ public sealed class AppVersionFooterTests
 
         Assert.Contains("DockPanel.Dock=\"Left\"", xaml);
         Assert.Contains("x:Name=\"EngineStatusText\"", xaml);
-        Assert.Contains("ToolTip=\"Click to configure iperf3 engine\"", xaml);
+        Assert.Contains("ToolTip=\"Click to configure iperf engines\"", xaml);
         Assert.Contains("MouseLeftButtonUp=\"EngineStatusText_MouseLeftButtonUp\"", xaml);
 
         var versionIndex = xaml.IndexOf("x:Name=\"AppVersionText\"", StringComparison.Ordinal);
