@@ -281,7 +281,11 @@
                                           Grid.Column="0"
                                           IsEditable="True"
                                           IsTextSearchEnabled="True"
-                                          Text="10.100.100.1" />
+                                          Text="10.100.100.1"
+                                          TextBoxBase.TextChanged="DashboardInputChanged"
+                                          SelectionChanged="DashboardInputChanged"
+                                          KeyUp="DashboardInputChanged"
+                                          LostFocus="DashboardInputChanged" />
 
                                 <Button x:Name="RemoveServerButton"
                                           Grid.Column="2"
@@ -301,7 +305,10 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="Mode" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                    <ComboBox x:Name="ModeBox" SelectedIndex="0" Margin="0,3,0,0">
+                                    <ComboBox x:Name="ModeBox"
+                                              SelectedIndex="0"
+                                              Margin="0,3,0,0"
+                                              SelectionChanged="DashboardInputChanged">
                                         <ComboBoxItem Content="TCP Upload" />
                                         <ComboBoxItem Content="TCP Download" />
                                         <ComboBoxItem Content="TCP Bidirectional" />
@@ -311,7 +318,12 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                    <TextBox x:Name="PortBox" Text="5201" Margin="0,3,0,0" />
+                                    <TextBox x:Name="PortBox"
+                                             Text="5201"
+                                             Margin="0,3,0,0"
+                                             TextChanged="DashboardInputChanged"
+                                             KeyUp="DashboardInputChanged"
+                                             LostFocus="DashboardInputChanged" />
                                 </StackPanel>
                             </Grid>
 
