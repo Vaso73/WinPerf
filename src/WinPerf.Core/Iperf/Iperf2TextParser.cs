@@ -5,11 +5,22 @@ namespace WinPerf.Core.Iperf;
 
 public static partial class Iperf2TextParser
 {
-    public static bool TryParseIntervalSample(string line, out IperfIntervalSample sample)
+    public static bool TryParseIntervalSample(
+        string line,
+        out IperfIntervalSample sample,
+        bool preferSum = false,
+        double? maxEndSeconds = null)
     {
         sample = new IperfIntervalSample(null, null, null, null);
 
         if (string.IsNullOrWhiteSpace(line))
+        {
+            return false;
+        }
+
+        var isSumLine = IsSumLine(line);
+
+        if (preferSum && !isSumLine)
         {
             return false;
         }
@@ -28,7 +39,12 @@ public static partial class Iperf2TextParser
             return false;
         }
 
-        if (IsAggregateSummaryLine(start, end))
+        if (preferSum && isSumLine && maxEndSeconds is double maxEnd && end > maxEnd + 0.5d)
+        {
+            return false;
+        }
+
+        if (!preferSum && IsAggregateSummaryLine(start, end))
         {
             return false;
         }
@@ -40,7 +56,9 @@ public static partial class Iperf2TextParser
             return false;
         }
 
-        var seconds = Math.Max(0, end - start);
+        var seconds = preferSum && isSumLine
+            ? end
+            : Math.Max(0, end - start);
 
         sample = new IperfIntervalSample(
             seconds,
@@ -54,6 +72,11 @@ public static partial class Iperf2TextParser
     private static bool IsAggregateSummaryLine(double start, double end)
     {
         return start == 0d && end > 1.5d;
+    }
+
+    private static bool IsSumLine(string line)
+    {
+        return line.TrimStart().StartsWith("[SUM]", StringComparison.Ordinal);
     }
 
     private static double? ToBitsPerSecond(double value, string unit)

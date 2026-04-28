@@ -151,7 +151,7 @@ public partial class MainWindow : Window
                     {
                         if (line.Stream == IperfOutputStream.StandardOutput)
                         {
-                            if (TryHandleStructuredIperfOutput(options.Engine, line.Text))
+                            if (TryHandleStructuredIperfOutput(options, line.Text))
                             {
                                 return;
                             }
@@ -171,7 +171,7 @@ public partial class MainWindow : Window
             AppendEngineOutput(string.Empty);
             AppendEngineOutput("Test stopped by user.");
         }
-        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException)
+        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or NotSupportedException)
         {
             EngineOutputText.Text = "Invalid test configuration:" + Environment.NewLine + ex.Message;
         }
@@ -943,6 +943,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (NormalizeUnsupportedDashboardModeForSelectedEngine())
+        {
+            _activeCustomCommandArguments = null;
+            Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
+            return;
+        }
+
         _activeCustomCommandArguments = null;
         Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
     }
@@ -1039,7 +1046,7 @@ public partial class MainWindow : Window
                 "Command preview:" + Environment.NewLine +
                 string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
         }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException)
+        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
         {
             EngineOutputText.Text =
                 "Command preview unavailable:" + Environment.NewLine +
@@ -1164,6 +1171,8 @@ public partial class MainWindow : Window
 
         var selectedEngine = GetSelectedEngine();
 
+        NormalizeUnsupportedDashboardModeForSelectedEngine();
+
         if (selectedEngine == IperfEngine.Iperf2 &&
             string.Equals(PortBox.Text.Trim(), "5201", StringComparison.Ordinal))
         {
@@ -1181,6 +1190,23 @@ public partial class MainWindow : Window
         ClearCommandOverride(updatePreview: false);
         RefreshEngineStatus();
         Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
+    }
+
+    private bool NormalizeUnsupportedDashboardModeForSelectedEngine()
+    {
+        if (GetSelectedEngine() == IperfEngine.Iperf2 &&
+            !IsSupportedIperf2DashboardMode(GetSelectedMode()))
+        {
+            SelectMode(IperfMode.TcpUpload);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsSupportedIperf2DashboardMode(IperfMode mode)
+    {
+        return mode is IperfMode.TcpUpload or IperfMode.UdpUpload;
     }
 
     private static string GetEngineDisplayName(IperfEngine engine)
@@ -1245,11 +1271,12 @@ public partial class MainWindow : Window
         RemoveServerButton.IsEnabled = !isRunning;
     }
 
-    private bool TryHandleStructuredIperfOutput(IperfEngine engine, string text)
+    private bool TryHandleStructuredIperfOutput(IperfTestOptions options, string text)
     {
-        if (engine == IperfEngine.Iperf2)
+        if (options.Engine == IperfEngine.Iperf2)
         {
-            if (Iperf2TextParser.TryParseIntervalSample(text, out var iperf2Sample))
+            var preferIperf2SumLine = options.Streams > 1;
+            if (Iperf2TextParser.TryParseIntervalSample(text, out var iperf2Sample, preferIperf2SumLine, options.DurationSeconds))
             {
                 UpdateLiveMetrics(iperf2Sample);
                 AppendEngineOutput(FormatIntervalSample(iperf2Sample));
