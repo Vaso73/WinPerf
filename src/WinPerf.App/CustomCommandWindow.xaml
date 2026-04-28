@@ -155,7 +155,7 @@
                                       IsEditable="True"
                                       IsTextSearchEnabled="False"
                                       VerticalContentAlignment="Center"
-                                      Text="-c 10.100.100.1 -p 5201 -t 10 -P 10 --json-stream -4" />
+                                      Text="-c 10.100.100.1 -p 5201 -4 -t 10 -P 10 --json-stream" />
                         </Grid>
                     </Border>
 
@@ -172,7 +172,7 @@
                             <TextBlock Foreground="{StaticResource TextMuted}"
                                        FontFamily="Cascadia Mono, Consolas"
                                        FontSize="11"
-                                       TextWrapping="Wrap"><Run Text="TCP upload:     -c 10.100.100.1 -P 10 -t 10 -4 --json-stream" /><LineBreak /><Run Text="TCP download:   -c 10.100.100.1 -R -P 10 -t 10 -4 --json-stream" /><LineBreak /><Run Text="UDP upload:     -c 10.100.100.1 -u -b 0 -t 10 -4 --json-stream" /><LineBreak /><Run Text="Server mode:    -s -p 5201" /></TextBlock>
+                                       TextWrapping="Wrap"><Run Text="TCP upload:     -c 10.100.100.1 -p 5201 -4 -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="TCP download:   -c 10.100.100.1 -p 5201 -4 -R -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="UDP upload:     -c 10.100.100.1 -p 5201 -4 -u -b 0 -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="Server mode:    -s -p 5201" /></TextBlock>
                         </StackPanel>
                     </Border>
                 </Grid>

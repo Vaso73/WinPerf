@@ -297,7 +297,7 @@
                                              TextChanged="AnyInputChanged"
                                              TextWrapping="NoWrap"
                                              AcceptsReturn="False"
-                                             ToolTip="Appended as-is after generated arguments, e.g. --connect-timeout 3000"
+                                             ToolTip="Appended after generated arguments. When JSON stream is enabled, --json-stream remains last."
                                              Margin="0,3,0,0" />
                                 </StackPanel>
                             </Border>

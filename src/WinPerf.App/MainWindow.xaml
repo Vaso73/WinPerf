@@ -332,6 +332,8 @@
                                     <ColumnDefinition />
                                     <ColumnDefinition Width="8" />
                                     <ColumnDefinition />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="Streams" Foreground="{StaticResource TextMuted}" FontSize="11" />
@@ -347,6 +349,16 @@
                                     <TextBox x:Name="DurationBox"
                                                Text="10"
                                                Margin="0,3,0,0"
+                                               TextChanged="DashboardInputChanged"
+                                               KeyUp="DashboardInputChanged"
+                                               LostFocus="DashboardInputChanged" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="4">
+                                    <TextBlock Text="Omit" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <TextBox x:Name="OmitSecondsBox"
+                                               Text="0"
+                                               Margin="0,3,0,0"
+                                               ToolTip="Warm-up seconds to ignore. Use 10–15 for routed, VLAN, VPN, or public server download tests."
                                                TextChanged="DashboardInputChanged"
                                                KeyUp="DashboardInputChanged"
                                                LostFocus="DashboardInputChanged" />
@@ -565,6 +577,9 @@
 
                                     <TextBlock x:Name="ThroughputChartPlaceholder"
                                                Text="Waiting for throughput samples..."
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               LineHeight="18"
                                                Foreground="{StaticResource TextMuted}"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center" />

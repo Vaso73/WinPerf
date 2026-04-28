@@ -612,9 +612,6 @@ public partial class AdvancedCommandWindow : Window
 
         if (IsClientMode())
         {
-            AddPair(args, "-P", StreamsBox.Text.Trim());
-            AddPair(args, "-t", DurationBox.Text.Trim());
-
             if (ReverseBox.IsChecked == true)
             {
                 args.Add("-R");
@@ -623,6 +620,24 @@ public partial class AdvancedCommandWindow : Window
             if (BidirectionalBox.IsChecked == true)
             {
                 args.Add("--bidir");
+            }
+
+            AddPair(args, "-t", DurationBox.Text.Trim());
+            AddPair(args, "-P", StreamsBox.Text.Trim());
+
+            if (!string.IsNullOrWhiteSpace(OmitSecondsBox.Text))
+            {
+                AddPair(args, "-O", OmitSecondsBox.Text.Trim());
+            }
+
+            if (!string.IsNullOrWhiteSpace(ClientPortBox.Text))
+            {
+                AddPair(args, "--cport", ClientPortBox.Text.Trim());
+            }
+
+            if (GetServerOutputBox.IsChecked == true)
+            {
+                args.Add("--get-server-output");
             }
         }
 
@@ -646,29 +661,6 @@ public partial class AdvancedCommandWindow : Window
         if (VerboseBox.IsChecked == true)
         {
             args.Add("-V");
-        }
-
-        if (JsonStreamBox.IsChecked == true)
-        {
-            args.Add("--json-stream");
-        }
-
-        if (IsClientMode())
-        {
-            if (!string.IsNullOrWhiteSpace(OmitSecondsBox.Text))
-            {
-                AddPair(args, "-O", OmitSecondsBox.Text.Trim());
-            }
-
-            if (!string.IsNullOrWhiteSpace(ClientPortBox.Text))
-            {
-                AddPair(args, "--cport", ClientPortBox.Text.Trim());
-            }
-
-            if (GetServerOutputBox.IsChecked == true)
-            {
-                args.Add("--get-server-output");
-            }
         }
 
         var bufferLength = BufferLengthBox.Text.Trim();
@@ -705,6 +697,11 @@ public partial class AdvancedCommandWindow : Window
         }
 
         args.AddRange(SplitExtraArguments(ExtraArgumentsBox.Text));
+
+        if (JsonStreamBox.IsChecked == true)
+        {
+            args.Add("--json-stream");
+        }
 
         return args;
     }
