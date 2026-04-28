@@ -215,4 +215,31 @@ public sealed class IperfJsonStreamParserTests
         Assert.Equal(486700000, sample.ReverseStreamBitsPerSecond![0]);
     }
 
+
+    [Fact]
+    public void TryParseIntervalSample_ParsesOmittedWarmupFlag()
+    {
+        const string json = """
+        {
+          "event": "interval",
+          "data": {
+            "sum": {
+              "start": 0,
+              "end": 1,
+              "seconds": 1,
+              "bits_per_second": 930000000,
+              "omitted": true,
+              "sender": false
+            }
+          }
+        }
+        """;
+
+        var ok = IperfJsonStreamParser.TryParseIntervalSample(json, out var sample);
+
+        Assert.True(ok);
+        Assert.True(sample.Omitted);
+        Assert.Equal(930, sample.MegabitsPerSecond);
+    }
+
 }

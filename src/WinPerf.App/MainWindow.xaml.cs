@@ -28,6 +28,9 @@ public partial class MainWindow : Window
     private readonly List<double> _reverseThroughputSamples = new();
     private readonly List<IReadOnlyList<double>> _reverseStreamThroughputSamples = new();
     private IperfMode? _activeMode;
+    private int _activeChartDurationSeconds = 10;
+    private int _activeOmitSeconds;
+    private int _omittedWarmupIntervalsReceived;
     private SavedIperfProfilesDocument _profilesDocument = new();
     private bool _isLoadingProfileSelection;
     private bool _isApplyingDashboardProfile;
@@ -114,6 +117,9 @@ public partial class MainWindow : Window
 
             _currentRunCancellation = new CancellationTokenSource();
             _activeMode = options.Mode;
+            _activeChartDurationSeconds = Math.Max(1, options.DurationSeconds);
+            _activeOmitSeconds = Math.Max(0, options.OmitSeconds);
+            _omittedWarmupIntervalsReceived = 0;
             SetRunState(isRunning: true);
             ResetLiveMetrics(options.Mode);
 
@@ -121,6 +127,17 @@ public partial class MainWindow : Window
             AppendEngineOutput("Running command:");
             AppendEngineOutput(commandDisplayText);
             AppendEngineOutput(string.Empty);
+
+            if (_activeOmitSeconds > 0)
+            {
+                AppendEngineOutput($"Warm-up: omitting first {_activeOmitSeconds}s before live metrics.");
+                LiveStatusText.Text = $"Warm-up: omitting first {_activeOmitSeconds}s...";
+                ShowWarmupChartPlaceholder(0, _activeOmitSeconds, null);
+            }
+            else
+            {
+                ShowWaitingChartPlaceholder();
+            }
 
             var result = await _processRunner.RunAsync(
                 command,
@@ -132,6 +149,12 @@ public partial class MainWindow : Window
                         {
                             if (IperfJsonStreamParser.TryParseIntervalSample(line.Text, out var sample))
                             {
+                                if (sample.Omitted)
+                                {
+                                    HandleOmittedWarmupSample(sample);
+                                    return;
+                                }
+
                                 UpdateLiveMetrics(sample);
                                 AppendEngineOutput(FormatIntervalSample(sample));
                                 return;
@@ -613,6 +636,7 @@ public partial class MainWindow : Window
             Port = ParsePositiveInt(PortBox, "Port"),
             Streams = ParsePositiveInt(StreamsBox, "Streams"),
             DurationSeconds = ParsePositiveInt(DurationBox, "Duration"),
+            OmitSeconds = ParseNonNegativeInt(OmitSecondsBox, "Omit"),
             Mode = GetSelectedMode(),
             AddressFamily = IperfAddressFamily.IPv4
         };
@@ -635,6 +659,7 @@ public partial class MainWindow : Window
             Port = TryGetPositiveIntArgumentValue(args, "-p") ?? ParsePositiveInt(PortBox, "Port"),
             Streams = TryGetPositiveIntArgumentValue(args, "-P") ?? ParsePositiveInt(StreamsBox, "Streams"),
             DurationSeconds = TryGetPositiveIntArgumentValue(args, "-t") ?? ParsePositiveInt(DurationBox, "Duration"),
+            OmitSeconds = TryGetNonNegativeIntArgumentValue(args, "-O") ?? ParseNonNegativeInt(OmitSecondsBox, "Omit"),
             Mode = mode,
             AddressFamily = args.Contains("-6", StringComparer.Ordinal)
                 ? IperfAddressFamily.IPv6
@@ -671,6 +696,12 @@ public partial class MainWindow : Window
     {
         var value = TryGetArgumentValue(args, name);
         return int.TryParse(value, out var number) && number > 0 ? number : null;
+    }
+
+    private static int? TryGetNonNegativeIntArgumentValue(IReadOnlyList<string> args, string name)
+    {
+        var value = TryGetArgumentValue(args, name);
+        return int.TryParse(value, out var number) && number >= 0 ? number : null;
     }
 
     private static string? TryGetArgumentValue(IReadOnlyList<string> args, string name)
@@ -857,6 +888,7 @@ public partial class MainWindow : Window
             PortBox.Text = profile.Port.ToString();
             StreamsBox.Text = profile.Streams.ToString();
             DurationBox.Text = profile.DurationSeconds.ToString();
+            OmitSecondsBox.Text = profile.OmitSeconds?.ToString() ?? "0";
             SelectMode(profile.ToIperfMode());
         }
         finally
@@ -984,17 +1016,7 @@ public partial class MainWindow : Window
                 ? _engineResolution.ExecutablePath
                 : "iperf3.exe";
 
-            var options = new IperfTestOptions
-            {
-                Server = GetServerText(),
-                Port = ParsePositiveInt(PortBox, "Port"),
-                Streams = ParsePositiveInt(StreamsBox, "Streams"),
-                DurationSeconds = ParsePositiveInt(DurationBox, "Duration"),
-                Mode = GetSelectedMode(),
-                AddressFamily = IperfAddressFamily.IPv4
-            };
-
-            var command = IperfCommandBuilder.BuildClientCommand(executablePath, options);
+            var command = IperfCommandBuilder.BuildClientCommand(executablePath, BuildDashboardTestOptions());
 
             EngineOutputText.Text =
                 "Command preview:" + Environment.NewLine +
@@ -1114,6 +1136,16 @@ public partial class MainWindow : Window
         return value;
     }
 
+    private static int ParseNonNegativeInt(TextBox box, string fieldName)
+    {
+        if (!int.TryParse(box.Text.Trim(), out var value) || value < 0)
+        {
+            throw new FormatException($"{fieldName} must be zero or a positive number.");
+        }
+
+        return value;
+    }
+
     private void SetRunState(bool isRunning)
     {
         StartButton.IsEnabled = !isRunning;
@@ -1153,6 +1185,7 @@ public partial class MainWindow : Window
         }
 
         LiveStatusText.Text = "Waiting for samples...";
+        ShowWaitingChartPlaceholder();
 
         _throughputSamples.Clear();
         _streamThroughputSamples.Clear();
@@ -1200,9 +1233,62 @@ public partial class MainWindow : Window
             : "Receiving samples...";
     }
 
+    private void HandleOmittedWarmupSample(IperfIntervalSample sample)
+    {
+        _omittedWarmupIntervalsReceived++;
+
+        var elapsed = _activeOmitSeconds > 0
+            ? Math.Min(_activeOmitSeconds, _omittedWarmupIntervalsReceived)
+            : _omittedWarmupIntervalsReceived;
+
+        var throughputSuffix = sample.MegabitsPerSecond is double megabitsPerSecond
+            ? " · " + FormatMegabits(megabitsPerSecond) + " ignored"
+            : string.Empty;
+
+        LiveStatusText.Text = _activeOmitSeconds > 0
+            ? $"Warm-up {elapsed}/{_activeOmitSeconds}s omitted{throughputSuffix}"
+            : $"Warm-up sample omitted{throughputSuffix}";
+
+        if (_activeOmitSeconds > 0)
+        {
+            ShowWarmupChartPlaceholder(elapsed, _activeOmitSeconds, sample.MegabitsPerSecond);
+        }
+
+        if (_activeOmitSeconds > 0 &&
+            (_omittedWarmupIntervalsReceived == 1 ||
+             _omittedWarmupIntervalsReceived % 5 == 0 ||
+             elapsed >= _activeOmitSeconds))
+        {
+            AppendEngineOutput($"Warm-up {elapsed}/{_activeOmitSeconds}s omitted{throughputSuffix}.");
+        }
+    }
+
     private void ThroughputChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         RenderThroughputChart();
+    }
+
+    private void ShowWaitingChartPlaceholder()
+    {
+        ThroughputChartPlaceholder.Text = "Waiting for throughput samples...";
+        ThroughputChartPlaceholder.Foreground = TryFindResource("TextMuted") as Brush ?? Brushes.LightSlateGray;
+        ThroughputChartPlaceholder.Visibility = Visibility.Visible;
+    }
+
+    private void ShowWarmupChartPlaceholder(int elapsedSeconds, int totalSeconds, double? ignoredMegabitsPerSecond)
+    {
+        var throughputText = ignoredMegabitsPerSecond is double mbps
+            ? Environment.NewLine + FormatMegabits(mbps) + " ignored"
+            : string.Empty;
+
+        ThroughputChartPlaceholder.Text =
+            $"Warm-up {elapsedSeconds}/{totalSeconds}s" +
+            Environment.NewLine +
+            "Ignoring warm-up samples. Live chart starts after warm-up." +
+            throughputText;
+
+        ThroughputChartPlaceholder.Foreground = TryFindResource("AccentAmber") as Brush ?? Brushes.Orange;
+        ThroughputChartPlaceholder.Visibility = Visibility.Visible;
     }
 
     private void AddThroughputSample(
@@ -1288,8 +1374,9 @@ public partial class MainWindow : Window
         var plotBottom = plotTop + plotHeight;
 
         var axis = CalculateThroughputAxis();
+        var timeAxisMaxSeconds = Math.Max(1, _activeChartDurationSeconds);
 
-        DrawThroughputChartFrame(plotLeft, plotTop, plotWidth, plotHeight, axis.Min, axis.Max, axis.Step);
+        DrawThroughputChartFrame(plotLeft, plotTop, plotWidth, plotHeight, axis.Min, axis.Max, axis.Step, timeAxisMaxSeconds);
 
         if (_throughputSamples.Count == 0)
         {
@@ -1301,16 +1388,14 @@ public partial class MainWindow : Window
 
         var axisRange = Math.Max(1, axis.Max - axis.Min);
 
-        DrawStreamThroughputLines(plotLeft, plotBottom, plotWidth, plotHeight, axis.Min, axisRange);
-        DrawReverseThroughputLine(plotLeft, plotBottom, plotWidth, plotHeight, axis.Min, axisRange);
+        DrawStreamThroughputLines(plotLeft, plotBottom, plotWidth, plotHeight, axis.Min, axisRange, timeAxisMaxSeconds);
+        DrawReverseThroughputLine(plotLeft, plotBottom, plotWidth, plotHeight, axis.Min, axisRange, timeAxisMaxSeconds);
 
         var points = new PointCollection();
 
         for (var i = 0; i < _throughputSamples.Count; i++)
         {
-            var x = _throughputSamples.Count == 1
-                ? plotLeft
-                : plotLeft + (plotWidth * i / (_throughputSamples.Count - 1));
+            var x = CalculateSampleX(plotLeft, plotWidth, i, _throughputSamples.Count, timeAxisMaxSeconds);
 
             var normalized = (_throughputSamples[i] - axis.Min) / axisRange;
             normalized = Math.Clamp(normalized, 0, 1);
@@ -1386,6 +1471,40 @@ public partial class MainWindow : Window
         return niceFraction * Math.Pow(10, exponent);
     }
 
+    private static IReadOnlyList<int> BuildTimeAxisTicks(int timeAxisMaxSeconds)
+    {
+        timeAxisMaxSeconds = Math.Max(1, timeAxisMaxSeconds);
+
+        var step = Math.Max(1, (int)NiceStep(timeAxisMaxSeconds / 5.0));
+        var ticks = new List<int>();
+
+        for (var seconds = 0; seconds < timeAxisMaxSeconds; seconds += step)
+        {
+            ticks.Add(seconds);
+        }
+
+        if (ticks.Count == 0 || ticks[^1] != timeAxisMaxSeconds)
+        {
+            ticks.Add(timeAxisMaxSeconds);
+        }
+
+        return ticks;
+    }
+
+    private static double CalculateSampleX(
+        double plotLeft,
+        double plotWidth,
+        int sampleIndex,
+        int sampleCount,
+        int timeAxisMaxSeconds)
+    {
+        timeAxisMaxSeconds = Math.Max(1, timeAxisMaxSeconds);
+        sampleCount = Math.Max(1, sampleCount);
+
+        var elapsedSeconds = Math.Min(timeAxisMaxSeconds, sampleIndex + 1);
+        return plotLeft + plotWidth * elapsedSeconds / timeAxisMaxSeconds;
+    }
+
     private void DrawThroughputChartFrame(
         double plotLeft,
         double plotTop,
@@ -1393,7 +1512,8 @@ public partial class MainWindow : Window
         double plotHeight,
         double axisMin,
         double axisMax,
-        double axisStep)
+        double axisStep,
+        int timeAxisMaxSeconds)
     {
         var gridBrush = TryFindResource("BorderSoft") as Brush ?? Brushes.DimGray;
         var textBrush = TryFindResource("TextMuted") as Brush ?? Brushes.LightSlateGray;
@@ -1426,12 +1546,10 @@ public partial class MainWindow : Window
                 textBrush);
         }
 
-        const int verticalSteps = 10;
-
-        for (var i = 0; i <= verticalSteps; i++)
+        foreach (var seconds in BuildTimeAxisTicks(timeAxisMaxSeconds))
         {
-            var x = plotLeft + plotWidth * i / verticalSteps;
-            var isAxisLine = i == 0;
+            var x = plotLeft + plotWidth * seconds / timeAxisMaxSeconds;
+            var isAxisLine = seconds == 0;
 
             ThroughputChartGridCanvas.Children.Add(new Line
             {
@@ -1445,8 +1563,8 @@ public partial class MainWindow : Window
             });
 
             DrawChartText(
-                i.ToString(CultureInfo.InvariantCulture),
-                x - 3,
+                seconds.ToString(CultureInfo.InvariantCulture),
+                x - 6,
                 plotTop + plotHeight + 8,
                 10,
                 FontWeights.Normal,
@@ -1463,7 +1581,8 @@ public partial class MainWindow : Window
         double plotWidth,
         double plotHeight,
         double axisMin,
-        double axisRange)
+        double axisRange,
+        int timeAxisMaxSeconds)
     {
         if (_reverseThroughputSamples.Count < 2)
         {
@@ -1474,9 +1593,7 @@ public partial class MainWindow : Window
 
         for (var i = 0; i < _reverseThroughputSamples.Count; i++)
         {
-            var x = _reverseThroughputSamples.Count == 1
-                ? plotLeft
-                : plotLeft + (plotWidth * i / (_reverseThroughputSamples.Count - 1));
+            var x = CalculateSampleX(plotLeft, plotWidth, i, _reverseThroughputSamples.Count, timeAxisMaxSeconds);
 
             var normalized = (_reverseThroughputSamples[i] - axisMin) / axisRange;
             normalized = Math.Clamp(normalized, 0, 1);
@@ -1511,7 +1628,8 @@ public partial class MainWindow : Window
         double plotWidth,
         double plotHeight,
         double axisMin,
-        double axisRange)
+        double axisRange,
+        int timeAxisMaxSeconds)
     {
         var streamCount = Math.Max(
             _streamThroughputSamples
@@ -1570,8 +1688,8 @@ public partial class MainWindow : Window
             FontWeights.SemiBold,
             textBrush);
 
-        DrawStreamSet(_streamThroughputSamples, streamCount, plotLeft, plotWidth, streamBandBottom, streamBandHeight, streamAxisMax, dashed: false);
-        DrawStreamSet(_reverseStreamThroughputSamples, streamCount, plotLeft, plotWidth, streamBandBottom, streamBandHeight, streamAxisMax, dashed: true);
+        DrawStreamSet(_streamThroughputSamples, streamCount, plotLeft, plotWidth, streamBandBottom, streamBandHeight, streamAxisMax, timeAxisMaxSeconds, dashed: false);
+        DrawStreamSet(_reverseStreamThroughputSamples, streamCount, plotLeft, plotWidth, streamBandBottom, streamBandHeight, streamAxisMax, timeAxisMaxSeconds, dashed: true);
     }
 
     private void DrawStreamSet(
@@ -1582,6 +1700,7 @@ public partial class MainWindow : Window
         double streamBandBottom,
         double streamBandHeight,
         double streamAxisMax,
+        int timeAxisMaxSeconds,
         bool dashed)
     {
         if (samples.Count <= 1)
@@ -1602,9 +1721,7 @@ public partial class MainWindow : Window
                     continue;
                 }
 
-                var x = samples.Count == 1
-                    ? plotLeft
-                    : plotLeft + (plotWidth * sampleIndex / (samples.Count - 1));
+                var x = CalculateSampleX(plotLeft, plotWidth, sampleIndex, samples.Count, timeAxisMaxSeconds);
 
                 var normalized = streams[streamIndex] / streamAxisMax;
                 normalized = Math.Clamp(normalized, 0, 1);

@@ -7,6 +7,7 @@ public sealed record IperfTestOptions
     public IperfMode Mode { get; init; } = IperfMode.TcpUpload;
     public int Streams { get; init; } = 1;
     public int DurationSeconds { get; init; } = 10;
+    public int OmitSeconds { get; init; }
     public IperfAddressFamily AddressFamily { get; init; } = IperfAddressFamily.IPv4;
     public string UdpBandwidth { get; init; } = "0";
 }

@@ -42,6 +42,8 @@ public static class IperfJsonStreamParser
             var bitsPerSecond = TryGetDouble(sum.Value, "bits_per_second");
             var jitterMs = TryGetDouble(sum.Value, "jitter_ms");
             var lostPercent = TryGetDouble(sum.Value, "lost_percent");
+            var omitted = TryGetBool(sum.Value, "omitted") ?? false;
+
             var streamBitsPerSecond = reverseSummary is null
                 ? GetStreamBitsPerSecond(data)
                 : GetStreamBitsPerSecond(data, sender: true);
@@ -72,7 +74,8 @@ public static class IperfJsonStreamParser
                 lostPercent,
                 streamBitsPerSecond,
                 reverseBitsPerSecond,
-                reverseStreamBitsPerSecond);
+                reverseStreamBitsPerSecond,
+                omitted);
 
             return bitsPerSecond.HasValue ||
                    jitterMs.HasValue ||
@@ -124,6 +127,8 @@ public static class IperfJsonStreamParser
             var bitsPerSecond = TryGetDouble(summary.Value, "bits_per_second");
             var jitterMs = TryGetDouble(summary.Value, "jitter_ms");
             var lostPercent = TryGetDouble(summary.Value, "lost_percent");
+            var omitted = TryGetBool(summary.Value, "omitted") ?? false;
+
             var streamBitsPerSecond = reverseSummary is null
                 ? GetStreamBitsPerSecond(data)
                 : GetStreamBitsPerSecond(data, sender: true);
@@ -143,7 +148,8 @@ public static class IperfJsonStreamParser
                 lostPercent,
                 streamBitsPerSecond,
                 reverseBitsPerSecond,
-                reverseStreamBitsPerSecond);
+                reverseStreamBitsPerSecond,
+                omitted);
 
             return bitsPerSecond.HasValue ||
                    jitterMs.HasValue ||

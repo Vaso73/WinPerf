@@ -10,7 +10,8 @@ public sealed record IperfIntervalSample(
     double? LostPercent,
     IReadOnlyList<double>? StreamBitsPerSecond = null,
     double? ReverseBitsPerSecond = null,
-    IReadOnlyList<double>? ReverseStreamBitsPerSecond = null)
+    IReadOnlyList<double>? ReverseStreamBitsPerSecond = null,
+    bool Omitted = false)
 {
     public double? MegabitsPerSecond =>
         BitsPerSecond.HasValue ? BitsPerSecond.Value / 1_000_000d : null;
