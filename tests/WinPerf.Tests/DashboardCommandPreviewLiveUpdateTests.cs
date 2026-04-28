@@ -55,6 +55,34 @@ public sealed class DashboardCommandPreviewLiveUpdateTests
     }
 
     [Fact]
+    public void DashboardInputChanged_NormalizesUnsupportedIperf2ModeSelection()
+    {
+        var code = ReadMainWindowCode();
+
+        Assert.Contains("private bool NormalizeUnsupportedDashboardModeForSelectedEngine()", code);
+        Assert.Contains("if (NormalizeUnsupportedDashboardModeForSelectedEngine())", code);
+        Assert.Contains("SelectMode(IperfMode.TcpUpload);", code);
+    }
+
+    [Fact]
+    public void EngineSelectionChanged_ResetsUnsupportedIperf2ModeToTcpUpload()
+    {
+        var code = ReadMainWindowCode();
+
+        Assert.Contains("!IsSupportedIperf2DashboardMode(GetSelectedMode())", code);
+        Assert.Contains("SelectMode(IperfMode.TcpUpload);", code);
+    }
+
+    [Fact]
+    public void DashboardPreview_CatchesUnsupportedIperf2Modes()
+    {
+        var code = ReadMainWindowCode();
+
+        Assert.Contains("NotSupportedException", code);
+        Assert.Contains("Command preview unavailable:", code);
+    }
+
+    [Fact]
     public void EngineSelectionChanged_GuardsDuringXamlInitialization()
     {
         var code = ReadMainWindowCode();
@@ -101,4 +129,15 @@ public sealed class DashboardCommandPreviewLiveUpdateTests
 
         throw new DirectoryNotFoundException("Could not locate repository root.");
     }
+
+    [Fact]
+    public void Iperf2MultiStreamParsingPrefersSumLines()
+    {
+        var code = ReadMainWindowCode();
+
+        Assert.Contains("private bool TryHandleStructuredIperfOutput(IperfTestOptions options, string text)", code);
+        Assert.Contains("var preferIperf2SumLine = options.Streams > 1;", code);
+        Assert.Contains("Iperf2TextParser.TryParseIntervalSample(text, out var iperf2Sample, preferIperf2SumLine, options.DurationSeconds)", code);
+    }
+
 }
