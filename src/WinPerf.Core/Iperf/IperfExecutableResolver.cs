@@ -14,7 +14,8 @@ public sealed class IperfExecutableResolver
         ArgumentException.ThrowIfNullOrWhiteSpace(appDirectory);
         ArgumentNullException.ThrowIfNull(settings);
 
-        var configuredPath = settings.ExecutablePath?.Trim();
+        var configuredPath = GetConfiguredExecutablePath(settings)?.Trim();
+        var engineName = GetEngineDisplayName(settings.Engine);
 
         if (!string.IsNullOrWhiteSpace(configuredPath))
         {
@@ -24,31 +25,78 @@ public sealed class IperfExecutableResolver
                     true,
                     configuredPath,
                     "Configured",
-                    "Using configured iperf3 executable.");
+                    $"Using configured {engineName} executable.");
             }
 
             return new IperfExecutableResolution(
                 false,
                 configuredPath,
                 "ConfiguredMissing",
-                "Configured iperf3 executable was not found.");
+                $"Configured {engineName} executable was not found.");
         }
 
-        var bundledPath = Path.Combine(appDirectory, "tools", "iperf3", "iperf3.exe");
-
-        if (_fileExists(bundledPath))
+        foreach (var bundledPath in GetBundledExecutableCandidates(appDirectory, settings.Engine))
         {
-            return new IperfExecutableResolution(
-                true,
-                bundledPath,
-                "Bundled",
-                "Using bundled iperf3 executable.");
+            if (_fileExists(bundledPath))
+            {
+                return new IperfExecutableResolution(
+                    true,
+                    bundledPath,
+                    "Bundled",
+                    $"Using bundled {engineName} executable.");
+            }
         }
 
         return new IperfExecutableResolution(
             false,
             null,
             "NotConfigured",
-            "iperf3.exe is not configured. Set the executable path in Settings or install it through WinPerf later.");
+            $"{GetDefaultExecutableName(settings.Engine)} is not configured. Set the executable path in Settings or install it through WinPerf later.");
+    }
+
+    private static string? GetConfiguredExecutablePath(IperfEngineSettings settings)
+    {
+        return settings.Engine == IperfEngine.Iperf2
+            ? settings.Iperf2ExecutablePath
+            : settings.Iperf3ExecutablePath ?? settings.ExecutablePath;
+    }
+
+    private static IEnumerable<string> GetBundledExecutableCandidates(string appDirectory, IperfEngine engine)
+    {
+        return engine switch
+        {
+            IperfEngine.Iperf3 =>
+            [
+                Path.Combine(appDirectory, "tools", "iperf3", "iperf3.exe")
+            ],
+
+            IperfEngine.Iperf2 =>
+            [
+                Path.Combine(appDirectory, "tools", "iperf2", "iperf.exe"),
+                Path.Combine(appDirectory, "tools", "iperf2", "iperf2.exe")
+            ],
+
+            _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, "Unsupported iperf engine.")
+        };
+    }
+
+    private static string GetEngineDisplayName(IperfEngine engine)
+    {
+        return engine switch
+        {
+            IperfEngine.Iperf3 => "iperf3",
+            IperfEngine.Iperf2 => "iperf2",
+            _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, "Unsupported iperf engine.")
+        };
+    }
+
+    private static string GetDefaultExecutableName(IperfEngine engine)
+    {
+        return engine switch
+        {
+            IperfEngine.Iperf3 => "iperf3.exe",
+            IperfEngine.Iperf2 => "iperf.exe",
+            _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, "Unsupported iperf engine.")
+        };
     }
 }

@@ -299,11 +299,23 @@
 
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="96" />
+                                    <ColumnDefinition Width="8" />
                                     <ColumnDefinition />
                                     <ColumnDefinition Width="8" />
                                     <ColumnDefinition Width="100" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Engine" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                    <ComboBox x:Name="EngineBox"
+                                              SelectedIndex="0"
+                                              Margin="0,3,0,0"
+                                              SelectionChanged="EngineSelectionChanged">
+                                        <ComboBoxItem Content="iperf3" />
+                                        <ComboBoxItem Content="iperf2" />
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
                                     <TextBlock Text="Mode" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <ComboBox x:Name="ModeBox"
                                               SelectedIndex="0"
@@ -316,7 +328,7 @@
                                         <ComboBoxItem Content="UDP Download" />
                                     </ComboBox>
                                 </StackPanel>
-                                <StackPanel Grid.Column="2">
+                                <StackPanel Grid.Column="4">
                                     <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <TextBox x:Name="PortBox"
                                              Text="5201"
@@ -485,7 +497,7 @@
                     <TextBlock Text="Dashboard"
                                FontSize="28"
                                FontWeight="SemiBold" />
-                    <TextBlock Text="Run iperf3 throughput tests with live visualization and saved results."
+                    <TextBlock Text="Run iperf3 and iperf2 throughput tests with live visualization and saved results."
                                Foreground="{StaticResource TextMuted}"
                                FontSize="11"
                                Margin="0,3,0,0" />
@@ -615,7 +627,7 @@
 
                             <TextBox x:Name="EngineOutputText"
                                      Grid.Row="1"
-                                     Text="iperf3 JSON stream output will appear here."
+                                     Text="iperf output will appear here."
                                      Foreground="{StaticResource TextMuted}"
                                      Background="{StaticResource PanelDark}"
                                      BorderBrush="{StaticResource BorderSoft}"
@@ -723,7 +735,7 @@
                                FontSize="11"
                                VerticalAlignment="Center"
                                Cursor="Hand"
-                               ToolTip="Click to configure iperf3 engine"
+                               ToolTip="Click to configure iperf engines"
                                MouseLeftButtonUp="EngineStatusText_MouseLeftButtonUp" />
                 </StackPanel>
             </DockPanel>

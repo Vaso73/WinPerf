@@ -51,9 +51,11 @@ public sealed class SettingsDiscoverabilityTests
         var xaml = File.ReadAllText(SettingsWindowXamlPath);
 
         Assert.Contains("<ColumnDefinition Width=\"180\" />", SliceAround(xaml, "Portable data folder"));
-        Assert.Contains("<ColumnDefinition Width=\"180\" />", SliceAround(xaml, "Portable engine folder"));
+        Assert.Contains("<ColumnDefinition Width=\"180\" />", SliceAround(xaml, "Portable iperf3 engine folder"));
+        Assert.Contains("<ColumnDefinition Width=\"180\" />", SliceAround(xaml, "Portable iperf2 engine folder"));
         Assert.Contains("Content=\"Open data folder\"", xaml);
-        Assert.Contains("Content=\"Open engine folder\"", xaml);
+        Assert.Contains("Content=\"Open iperf3 folder\"", xaml);
+        Assert.Contains("Content=\"Open iperf2 folder\"", xaml);
     }
 
     private static string SliceAround(string text, string marker)

@@ -128,6 +128,78 @@ public sealed class IperfCommandBuilderTests
         Assert.Equal(1, command.Arguments.Count(argument => argument == "--json-stream"));
     }
 
+
+    [Fact]
+    public void BuildClientCommand_BuildsIperf2TcpUploadCommand()
+    {
+        var command = IperfCommandBuilder.BuildClientCommand(
+            "iperf.exe",
+            new IperfTestOptions
+            {
+                Engine = IperfEngine.Iperf2,
+                Server = "10.100.100.1",
+                Port = 5001,
+                Mode = IperfMode.TcpUpload,
+                Streams = 2,
+                DurationSeconds = 15,
+                OmitSeconds = 3,
+                AddressFamily = IperfAddressFamily.IPv4
+            });
+
+        Assert.Equal("iperf.exe", command.ExecutablePath);
+        Assert.Equal(
+            ["-c", "10.100.100.1", "-p", "5001", "-t", "15", "-P", "2", "--omit", "3", "-i", "1", "-f", "m"],
+            command.Arguments);
+    }
+
+    [Fact]
+    public void BuildClientCommand_BuildsIperf2UdpUploadCommand()
+    {
+        var command = IperfCommandBuilder.BuildClientCommand(
+            "iperf.exe",
+            new IperfTestOptions
+            {
+                Engine = IperfEngine.Iperf2,
+                Server = "10.100.100.1",
+                Port = 5001,
+                Mode = IperfMode.UdpUpload,
+                UdpBandwidth = "100M"
+            });
+
+        Assert.Equal(
+            ["-c", "10.100.100.1", "-p", "5001", "-u", "-b", "100M", "-t", "10", "-P", "1", "-i", "1", "-f", "m"],
+            command.Arguments);
+    }
+
+    [Fact]
+    public void BuildClientCommand_RejectsIperf2Ipv6ForNow()
+    {
+        Assert.Throws<NotSupportedException>(() =>
+            IperfCommandBuilder.BuildClientCommand(
+                "iperf.exe",
+                new IperfTestOptions
+                {
+                    Engine = IperfEngine.Iperf2,
+                    Server = "::1",
+                    Port = 5001,
+                    AddressFamily = IperfAddressFamily.IPv6
+                }));
+    }
+
+    [Fact]
+    public void BuildClientCommand_RejectsUnsupportedIperf2DownloadMode()
+    {
+        Assert.Throws<NotSupportedException>(() =>
+            IperfCommandBuilder.BuildClientCommand(
+                "iperf.exe",
+                new IperfTestOptions
+                {
+                    Engine = IperfEngine.Iperf2,
+                    Server = "10.0.0.1",
+                    Mode = IperfMode.TcpDownload
+                }));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
