@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AppVersionText.Text = ResolveAppVersionText();
         WindowPlacementStore.Track(this, "MainWindow");
 
         _settings = _settingsStore.Load();
@@ -550,6 +552,23 @@ public partial class MainWindow : Window
         return string.Equals(value, UiDensityComfortable, StringComparison.OrdinalIgnoreCase)
             ? UiDensityComfortable
             : UiDensityCompact;
+    }
+
+    private static string ResolveAppVersionText()
+    {
+        var version =
+            Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ??
+            typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ??
+            typeof(MainWindow).Assembly.GetName().Version?.ToString() ??
+            "unknown";
+
+        var metadataIndex = version.IndexOf('+', StringComparison.Ordinal);
+        if (metadataIndex >= 0)
+        {
+            version = version[..metadataIndex];
+        }
+
+        return $"WinPerf v{version}";
     }
 
     private void RefreshEngineStatus()
