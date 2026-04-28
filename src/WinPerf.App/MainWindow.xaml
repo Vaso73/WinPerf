@@ -707,16 +707,25 @@
                         Margin="12,0,0,0"
                         ToolTip="Open Settings"
                         Click="SettingsButton_Click" />
-
-                <TextBlock x:Name="EngineStatusText"
-                           DockPanel.Dock="Left"
-                           Text="Engine  ●  Not configured"
-                           Foreground="{StaticResource TextMuted}"
-                           FontSize="11"
-                           VerticalAlignment="Center"
-                           Cursor="Hand"
-                           ToolTip="Click to configure iperf3 engine"
-                           MouseLeftButtonUp="EngineStatusText_MouseLeftButtonUp" />
+                <StackPanel DockPanel.Dock="Left"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock x:Name="AppVersionText"
+                               Text="WinPerf"
+                               Foreground="{StaticResource TextMuted}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"
+                               ToolTip="Application version from the running executable." />
+                    <TextBlock x:Name="EngineStatusText"
+                               Text="Engine  ●  Not configured"
+                               Foreground="{StaticResource TextMuted}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               Cursor="Hand"
+                               ToolTip="Click to configure iperf3 engine"
+                               MouseLeftButtonUp="EngineStatusText_MouseLeftButtonUp" />
+                </StackPanel>
             </DockPanel>
         </Border>
         </Grid>
