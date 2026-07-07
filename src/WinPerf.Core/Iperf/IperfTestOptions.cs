@@ -10,5 +10,5 @@ public sealed record IperfTestOptions
     public int DurationSeconds { get; init; } = 10;
     public int OmitSeconds { get; init; }
     public IperfAddressFamily AddressFamily { get; init; } = IperfAddressFamily.IPv4;
-    public string UdpBandwidth { get; init; } = "0";
+    public string UdpBandwidth { get; init; } = "10M";
 }

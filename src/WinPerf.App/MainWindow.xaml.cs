@@ -57,6 +57,7 @@ public partial class MainWindow : Window
         PopulateRecentServers();
         ApplyDashboardLayout();
         ApplyUiDensity(resizeWindow: false);
+        UpdateUdpBandwidthVisibility();
         UpdateCommandOverrideUx();
         UpdateDashboardCommandPreview();
 
@@ -684,7 +685,8 @@ public partial class MainWindow : Window
             DurationSeconds = ParsePositiveInt(DurationBox, "Duration"),
             OmitSeconds = ParseNonNegativeInt(OmitSecondsBox, "Omit"),
             Mode = GetSelectedMode(),
-            AddressFamily = IperfAddressFamily.IPv4
+            AddressFamily = IperfAddressFamily.IPv4,
+            UdpBandwidth = NormalizeUdpBandwidth(UdpBandwidthBox.Text)
         };
     }
 
@@ -937,6 +939,7 @@ public partial class MainWindow : Window
             StreamsBox.Text = profile.Streams.ToString();
             DurationBox.Text = profile.DurationSeconds.ToString();
             OmitSecondsBox.Text = profile.OmitSeconds?.ToString() ?? "0";
+            UdpBandwidthBox.Text = NormalizeUdpBandwidth(profile.UdpBandwidth);
             SelectMode(profile.ToIperfMode());
         }
         finally
@@ -944,6 +947,7 @@ public partial class MainWindow : Window
             _isApplyingDashboardProfile = false;
         }
 
+        UpdateUdpBandwidthVisibility();
         UpdateDashboardCommandPreview();
     }
 
@@ -975,8 +979,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        UpdateUdpBandwidthVisibility();
+
         if (NormalizeUnsupportedDashboardModeForSelectedEngine())
         {
+            UpdateUdpBandwidthVisibility();
             _activeCustomCommandArguments = null;
             Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
             return;
@@ -984,6 +991,43 @@ public partial class MainWindow : Window
 
         _activeCustomCommandArguments = null;
         Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
+    }
+
+    private void UpdateUdpBandwidthVisibility()
+    {
+        if (UdpBandwidthPanel is null ||
+            UdpBandwidthBox is null ||
+            ModeBox is null)
+        {
+            return;
+        }
+
+        var isUdp = GetSelectedMode() is
+            IperfMode.UdpUpload or
+            IperfMode.UdpDownload;
+
+        UdpBandwidthPanel.Visibility = isUdp
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (isUdp)
+        {
+            UdpBandwidthBox.Text =
+                NormalizeUdpBandwidth(UdpBandwidthBox.Text);
+        }
+    }
+
+    private static string NormalizeUdpBandwidth(string? value)
+    {
+        var normalized = value?.Trim();
+
+        return string.IsNullOrWhiteSpace(normalized) ||
+               string.Equals(
+                   normalized,
+                   "0",
+                   StringComparison.OrdinalIgnoreCase)
+            ? "10M"
+            : normalized;
     }
 
     private void SetCommandOverride(string source, string arguments)

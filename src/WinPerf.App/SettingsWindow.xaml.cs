@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using WinPerf.App.Settings;
+using WinPerf.Core.Iperf;
 
 namespace WinPerf.App;
 
@@ -54,9 +55,6 @@ public partial class SettingsWindow : Window
 
     private string PortableIperf2ExecutablePath =>
         Path.Combine(PortableIperf2EngineDirectory, "iperf.exe");
-
-    private string PortableIperf2AlternateExecutablePath =>
-        Path.Combine(PortableIperf2EngineDirectory, "iperf2.exe");
 
     private string DataDirectory =>
         Path.Combine(_appDirectory, "data");
@@ -110,8 +108,7 @@ public partial class SettingsWindow : Window
     {
         ImportPortableEngine(
             IperfPathBox,
-            PortableIperf3EngineDirectory,
-            [PortableIperf3ExecutablePath],
+            PortableIperf3ExecutablePath,
             "iperf3.exe");
     }
 
@@ -119,59 +116,42 @@ public partial class SettingsWindow : Window
     {
         ImportPortableEngine(
             Iperf2PathBox,
-            PortableIperf2EngineDirectory,
-            [PortableIperf2ExecutablePath, PortableIperf2AlternateExecutablePath],
-            "iperf.exe / iperf2.exe");
+            PortableIperf2ExecutablePath,
+            "iperf2 executable");
     }
 
     private void ImportPortableEngine(
         TextBox pathBox,
-        string portableEngineDirectory,
-        IReadOnlyList<string> expectedPortableExecutables,
+        string portableExecutablePath,
         string engineLabel)
     {
         var executablePath = pathBox.Text.Trim();
 
-        if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
+        if (string.IsNullOrWhiteSpace(executablePath) ||
+            !File.Exists(executablePath))
         {
-            ValidationText.Text = $"Select an existing {engineLabel} first.";
-            return;
-        }
-
-        var sourceExe = Path.GetFullPath(executablePath);
-        var sourceDirectory = Path.GetDirectoryName(sourceExe);
-
-        if (string.IsNullOrWhiteSpace(sourceDirectory) || !Directory.Exists(sourceDirectory))
-        {
-            ValidationText.Text = $"Selected {engineLabel} directory was not found.";
-            return;
-        }
-
-        var destinationDirectory = Path.GetFullPath(portableEngineDirectory);
-
-        if (SameDirectory(sourceDirectory, destinationDirectory))
-        {
-            pathBox.Text = string.Empty;
-            ValidationText.Text = $"Already portable: {destinationDirectory}";
+            ValidationText.Text =
+                $"Select an existing {engineLabel} first.";
             return;
         }
 
         try
         {
-            CopyDirectory(sourceDirectory, destinationDirectory);
-
-            if (!expectedPortableExecutables.Any(File.Exists))
-            {
-                ValidationText.Text = $"Portable import finished, but {engineLabel} was not found in {destinationDirectory}.";
-                return;
-            }
+            var importedPath = PortableExecutableImporter.Import(
+                executablePath,
+                portableExecutablePath);
 
             pathBox.Text = string.Empty;
-            ValidationText.Text = $"Imported portable engine: {destinationDirectory}";
+            ValidationText.Text =
+                $"Imported portable engine: {importedPath}";
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (
+            ex is IOException or
+            UnauthorizedAccessException or
+            ArgumentException)
         {
-            ValidationText.Text = "Portable import failed: " + ex.Message;
+            ValidationText.Text =
+                "Portable import failed: " + ex.Message;
         }
     }
 
@@ -242,39 +222,6 @@ public partial class SettingsWindow : Window
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
-    }
-
-    private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
-    {
-        Directory.CreateDirectory(destinationDirectory);
-
-        foreach (var directory in Directory.EnumerateDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(sourceDirectory, directory);
-            Directory.CreateDirectory(Path.Combine(destinationDirectory, relativePath));
-        }
-
-        foreach (var file in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(sourceDirectory, file);
-            var destinationFile = Path.Combine(destinationDirectory, relativePath);
-            var destinationParent = Path.GetDirectoryName(destinationFile);
-
-            if (!string.IsNullOrWhiteSpace(destinationParent))
-            {
-                Directory.CreateDirectory(destinationParent);
-            }
-
-            File.Copy(file, destinationFile, overwrite: true);
-        }
-    }
-
-    private static bool SameDirectory(string left, string right)
-    {
-        var leftFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(left));
-        var rightFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(right));
-
-        return string.Equals(leftFull, rightFull, StringComparison.OrdinalIgnoreCase);
     }
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)

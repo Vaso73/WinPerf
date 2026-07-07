@@ -377,6 +377,21 @@
                                 </StackPanel>
                             </Grid>
 
+                            <StackPanel x:Name="UdpBandwidthPanel"
+                                        Margin="0,0,0,8"
+                                        Visibility="Collapsed">
+                                <TextBlock Text="Bandwidth"
+                                           Foreground="{StaticResource TextMuted}"
+                                           FontSize="11" />
+                                <TextBox x:Name="UdpBandwidthBox"
+                                         Text="10M"
+                                         Margin="0,3,0,0"
+                                         ToolTip="Target UDP bandwidth, for example 10M, 100M, or 1G."
+                                         TextChanged="DashboardInputChanged"
+                                         KeyUp="DashboardInputChanged"
+                                         LostFocus="DashboardInputChanged" />
+                            </StackPanel>
+
                             <StackPanel>
                                 <Grid x:Name="RunButtonGrid" Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
