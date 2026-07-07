@@ -58,6 +58,75 @@ public sealed class IperfRunResultClassifierTests
     }
 
     [Fact]
+    public void Classify_CompleteIperf2UdpReportWithReadFinNoise_IsCompleted()
+    {
+        var result = CreateResult(
+            0,
+            Stdout(
+                "[  1] 0.00-1.00 sec 1.25 MBytes 10.5 Mbits/sec"),
+            Stderr(
+                "[  1] Read UDP fin failed: Connection reset by peer"));
+
+        var outcome = IperfRunResultClassifier.Classify(
+            IperfEngine.Iperf2,
+            result,
+            hasAuthoritativeIperf2UdpServerResult: true);
+
+        Assert.Equal(
+            IperfRunOutcomeKind.Completed,
+            outcome.Kind);
+        Assert.Equal(
+            "Test completed.",
+            outcome.Message);
+    }
+
+    [Fact]
+    public void Classify_CompleteIperf2UdpReportWithAckWarning_RemainsWarning()
+    {
+        var result = CreateResult(
+            0,
+            Stdout(
+                "[  1] 0.00-1.00 sec 1.25 MBytes 10.5 Mbits/sec"),
+            Stderr(
+                "[336] WARNING: did not receive ack of last datagram after 10 tries."));
+
+        var outcome = IperfRunResultClassifier.Classify(
+            IperfEngine.Iperf2,
+            result,
+            hasAuthoritativeIperf2UdpServerResult: true);
+
+        Assert.Equal(
+            IperfRunOutcomeKind.CompletedWithWarning,
+            outcome.Kind);
+        Assert.Contains(
+            "did not receive ack",
+            outcome.Message);
+    }
+
+    [Fact]
+    public void Classify_CompleteIperf2UdpReportWithWriteFinFailure_IsFailed()
+    {
+        var result = CreateResult(
+            0,
+            Stdout(
+                "[SUM] 0.00-1.00 sec 25.0 MBytes 210 Mbits/sec"),
+            Stderr(
+                "write-fin failed: Invalid argument."));
+
+        var outcome = IperfRunResultClassifier.Classify(
+            IperfEngine.Iperf2,
+            result,
+            hasAuthoritativeIperf2UdpServerResult: true);
+
+        Assert.Equal(
+            IperfRunOutcomeKind.Failed,
+            outcome.Kind);
+        Assert.Contains(
+            "write-fin failed",
+            outcome.Message);
+    }
+
+    [Fact]
     public void Classify_Iperf2StderrWithoutSamples_IsFailed()
     {
         var result = CreateResult(

@@ -4,7 +4,8 @@ public static class IperfRunResultClassifier
 {
     public static IperfRunOutcome Classify(
         IperfEngine engine,
-        IperfRunResult result)
+        IperfRunResult result,
+        bool hasAuthoritativeIperf2UdpServerResult = false)
     {
         ArgumentNullException.ThrowIfNull(result);
 
@@ -54,6 +55,15 @@ public static class IperfRunResultClassifier
                 "Test failed: " + fatalError);
         }
 
+        if (hasAuthoritativeIperf2UdpServerResult &&
+            standardError.All(
+                IsBenignIperf2UdpFinalizationNoise))
+        {
+            return new IperfRunOutcome(
+                IperfRunOutcomeKind.Completed,
+                "Test completed.");
+        }
+
         if (hasThroughputSample)
         {
             return new IperfRunOutcome(
@@ -65,6 +75,12 @@ public static class IperfRunResultClassifier
         return new IperfRunOutcome(
             IperfRunOutcomeKind.Failed,
             "Test failed: " + string.Join(" | ", standardError));
+    }
+
+    private static bool IsBenignIperf2UdpFinalizationNoise(
+        string text)
+    {
+        return Contains(text, "read udp fin failed");
     }
 
     private static bool IsKnownIperf2CompletionWarning(string text)
@@ -87,6 +103,7 @@ public static class IperfRunResultClassifier
             Contains(text, "name or service not known") ||
             Contains(text, "unknown host") ||
             Contains(text, "server is busy") ||
+            Contains(text, "write-fin failed") ||
             (Contains(text, "connect") && Contains(text, "failed"));
     }
 

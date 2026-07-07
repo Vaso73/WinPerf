@@ -33,6 +33,8 @@ public partial class MainWindow : Window
     private int _activeChartDurationSeconds = 10;
     private int _activeOmitSeconds;
     private int _omittedWarmupIntervalsReceived;
+    private IperfIntervalSample? _iperf2UdpServerReport;
+    private int _iperf2UdpServerReportCount;
     private SavedIperfProfilesDocument _profilesDocument = new();
     private bool _isLoadingProfileSelection;
     private bool _isApplyingDashboardProfile;
@@ -163,7 +165,35 @@ public partial class MainWindow : Window
                 },
                 _currentRunCancellation.Token);
 
-            var outcome = IperfRunResultClassifier.Classify(options.Engine, result);
+            var receivedIperf2UdpReportCount =
+                ReconcileFinalIperf2UdpServerReport(
+                    options,
+                    result);
+
+            var requiresCompleteIperf2UdpReport =
+                options.Engine == IperfEngine.Iperf2 &&
+                options.Mode is (
+                    IperfMode.UdpUpload or
+                    IperfMode.UdpDownload);
+
+            var hasAuthoritativeIperf2UdpServerResult =
+                requiresCompleteIperf2UdpReport &&
+                receivedIperf2UdpReportCount == options.Streams;
+
+            var outcome =
+                IperfRunResultClassifier.Classify(
+                    options.Engine,
+                    result,
+                    hasAuthoritativeIperf2UdpServerResult);
+
+            if (requiresCompleteIperf2UdpReport &&
+                receivedIperf2UdpReportCount != options.Streams &&
+                outcome.Kind != IperfRunOutcomeKind.Failed)
+            {
+                outcome = new IperfRunOutcome(
+                    IperfRunOutcomeKind.Failed,
+                    $"Test failed: incomplete iperf2 UDP server report ({receivedIperf2UdpReportCount}/{options.Streams} streams).");
+            }
             var summaryExitCode =
                 outcome.Kind == IperfRunOutcomeKind.Failed
                     ? result.ExitCode == 0 ? 1 : result.ExitCode
@@ -346,22 +376,50 @@ public partial class MainWindow : Window
             $"{GetEngineDisplayName(options.Engine)} · {FormatModeLabel(options.Mode)} · {options.Server}:{options.Port}"
         };
 
-        if (_throughputSamples.Count > 0)
+        var isIperf2Udp =
+            options.Engine == IperfEngine.Iperf2 &&
+            options.Mode is (
+                IperfMode.UdpUpload or
+                IperfMode.UdpDownload);
+
+        var udpServerReport =
+            isIperf2Udp
+                ? _iperf2UdpServerReport
+                : null;
+
+        if (udpServerReport?.MegabitsPerSecond is double receivedMegabits)
+        {
+            var sentSuffix = _throughputSamples.Count > 0
+                ? $" · sent avg {FormatMegabits(_throughputSamples.Average())}"
+                : string.Empty;
+
+            lines.Add(
+                $"Received {FormatMegabits(receivedMegabits)}{sentSuffix}");
+        }
+        else if (isIperf2Udp)
+        {
+            lines.Add(
+                $"Server result unavailable ({_iperf2UdpServerReportCount}/{options.Streams} streams).");
+        }
+        else if (_throughputSamples.Count > 0)
         {
             var current = _throughputSamples[^1];
             var min = _throughputSamples.Min();
             var avg = _throughputSamples.Average();
             var max = _throughputSamples.Max();
 
-            if (options.Mode == IperfMode.TcpBidirectional && _reverseThroughputSamples.Count > 0)
+            if (options.Mode == IperfMode.TcpBidirectional &&
+                _reverseThroughputSamples.Count > 0)
             {
                 var reverseCurrent = _reverseThroughputSamples[^1];
                 var reverseMin = _reverseThroughputSamples.Min();
                 var reverseAvg = _reverseThroughputSamples.Average();
                 var reverseMax = _reverseThroughputSamples.Max();
 
-                lines.Add($"Upload {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
-                lines.Add($"Download {FormatMegabits(reverseCurrent)} · min {FormatMegabits(reverseMin)} · avg {FormatMegabits(reverseAvg)} · max {FormatMegabits(reverseMax)}");
+                lines.Add(
+                    $"Upload {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+                lines.Add(
+                    $"Download {FormatMegabits(reverseCurrent)} · min {FormatMegabits(reverseMin)} · avg {FormatMegabits(reverseAvg)} · max {FormatMegabits(reverseMax)}");
             }
             else
             {
@@ -378,23 +436,71 @@ public partial class MainWindow : Window
         {
             var udpParts = new List<string>();
 
-            if (!string.IsNullOrWhiteSpace(JitterValueText.Text) &&
-                !string.Equals(JitterValueText.Text, "n/a", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(JitterValueText.Text, "-- ms", StringComparison.OrdinalIgnoreCase))
+            if (udpServerReport is not null)
             {
-                udpParts.Add("jitter " + JitterValueText.Text);
-            }
+                if (udpServerReport.JitterMs is double jitterMs)
+                {
+                    udpParts.Add(
+                        "jitter " +
+                        jitterMs.ToString(
+                            "0.000",
+                            CultureInfo.InvariantCulture) +
+                        " ms");
+                }
 
-            if (!string.IsNullOrWhiteSpace(LossValueText.Text) &&
-                !string.Equals(LossValueText.Text, "n/a", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(LossValueText.Text, "-- %", StringComparison.OrdinalIgnoreCase))
+                if (udpServerReport.EffectiveLostPercent is double lostPercent)
+                {
+                    var lossText =
+                        "loss " +
+                        lostPercent.ToString(
+                            "0.0",
+                            CultureInfo.InvariantCulture) +
+                        " %";
+
+                    if (udpServerReport.LostDatagrams is long lost &&
+                        udpServerReport.TotalDatagrams is long total)
+                    {
+                        lossText += $" ({lost}/{total})";
+                    }
+
+                    udpParts.Add(lossText);
+                }
+            }
+            else if (!isIperf2Udp)
             {
-                udpParts.Add("loss " + LossValueText.Text);
+                if (!string.IsNullOrWhiteSpace(JitterValueText.Text) &&
+                    !string.Equals(
+                        JitterValueText.Text,
+                        "n/a",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(
+                        JitterValueText.Text,
+                        "-- ms",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    udpParts.Add(
+                        "jitter " + JitterValueText.Text);
+                }
+
+                if (!string.IsNullOrWhiteSpace(LossValueText.Text) &&
+                    !string.Equals(
+                        LossValueText.Text,
+                        "n/a",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(
+                        LossValueText.Text,
+                        "-- %",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    udpParts.Add(
+                        "loss " + LossValueText.Text);
+                }
             }
 
             if (udpParts.Count > 0)
             {
-                lines.Add(string.Join(" · ", udpParts));
+                lines.Add(
+                    string.Join(" · ", udpParts));
             }
         }
 
@@ -1351,6 +1457,14 @@ public partial class MainWindow : Window
     {
         if (options.Engine == IperfEngine.Iperf2)
         {
+            if (Iperf2TextParser.TryParseUdpServerReport(
+                    text,
+                    out _))
+            {
+                AppendEngineOutput(text);
+                return true;
+            }
+
             var preferIperf2SumLine = options.Streams > 1;
             if (Iperf2TextParser.TryParseIntervalSample(text, out var iperf2Sample, preferIperf2SumLine, options.DurationSeconds))
             {
@@ -1391,6 +1505,108 @@ public partial class MainWindow : Window
         return false;
     }
 
+    private int ReconcileFinalIperf2UdpServerReport(
+        IperfTestOptions options,
+        IperfRunResult result)
+    {
+        if (options.Engine != IperfEngine.Iperf2 ||
+            options.Mode is not (
+                IperfMode.UdpUpload or
+                IperfMode.UdpDownload))
+        {
+            return 0;
+        }
+
+        var reports = new List<IperfIntervalSample>();
+
+        foreach (var line in result.Output)
+        {
+            if (line.Stream != IperfOutputStream.StandardOutput)
+            {
+                continue;
+            }
+
+            if (line.Text
+                .TrimStart()
+                .StartsWith(
+                    "[SUM]",
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (Iperf2TextParser.TryParseUdpServerReport(
+                    line.Text,
+                    out var parsedReport))
+            {
+                reports.Add(parsedReport);
+            }
+        }
+
+        _iperf2UdpServerReportCount = reports.Count;
+
+        if (!Iperf2TextParser.TryAggregateUdpServerReports(
+                reports,
+                options.Streams,
+                out var aggregate))
+        {
+            _iperf2UdpServerReport = null;
+            ApplyMissingIperf2UdpServerReport(
+                reports.Count,
+                options.Streams);
+
+            return reports.Count;
+        }
+
+        _iperf2UdpServerReport = aggregate;
+        ApplyIperf2UdpServerReport(aggregate);
+
+        return reports.Count;
+    }
+
+    private void ApplyMissingIperf2UdpServerReport(
+        int receivedReportCount,
+        int expectedReportCount)
+    {
+        ThroughputValueText.Text = "unavailable";
+        ThroughputCaptionText.Text = "Server result missing";
+        JitterValueText.Text = "unavailable";
+        LossValueText.Text = "unavailable";
+        LiveStatusText.Text =
+            $"Incomplete server report: {receivedReportCount}/{expectedReportCount} streams";
+    }
+
+    private void ApplyIperf2UdpServerReport(
+        IperfIntervalSample report)
+    {
+        if (report.MegabitsPerSecond is double receivedMegabits)
+        {
+            ThroughputValueText.Text =
+                FormatMegabits(receivedMegabits);
+            ThroughputCaptionText.Text = "Server received";
+            LiveStatusText.Text =
+                $"Server received {FormatMegabits(receivedMegabits)} · chart shows sent rate";
+        }
+
+        if (report.JitterMs is double jitterMs)
+        {
+            JitterValueText.Text =
+                jitterMs.ToString(
+                    "0.000",
+                    CultureInfo.InvariantCulture) +
+                " ms";
+        }
+
+        if (report.EffectiveLostPercent is double lostPercent)
+        {
+            LossValueText.Text =
+                lostPercent.ToString(
+                    "0.0",
+                    CultureInfo.InvariantCulture) +
+                " %";
+        }
+    }
+
     private void AppendEngineOutput(string text)
     {
         _engineOutput.AppendLine(text);
@@ -1408,7 +1624,24 @@ public partial class MainWindow : Window
 
     private void ResetLiveMetrics(IperfMode mode)
     {
-        ThroughputValueText.Text = "0 Mbps";
+        _iperf2UdpServerReport = null;
+        _iperf2UdpServerReportCount = 0;
+
+        var isIperf2Udp =
+            _activeEngine == IperfEngine.Iperf2 &&
+            mode is (
+                IperfMode.UdpUpload or
+                IperfMode.UdpDownload);
+
+        ThroughputValueText.Text =
+            isIperf2Udp
+                ? "pending"
+                : "0 Mbps";
+
+        ThroughputCaptionText.Text =
+            isIperf2Udp
+                ? "Awaiting server result"
+                : "Live average";
 
         if (mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
         {
@@ -1435,10 +1668,22 @@ public partial class MainWindow : Window
     {
         if (sample.MegabitsPerSecond is double megabitsPerSecond)
         {
-            ThroughputValueText.Text = _activeMode == IperfMode.TcpBidirectional &&
-                                       sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecond
-                ? FormatBidirectionalMegabits(megabitsPerSecond, reverseMegabitsPerSecond)
-                : FormatMegabits(megabitsPerSecond);
+            var keepIperf2UdpResultPending =
+                _activeEngine == IperfEngine.Iperf2 &&
+                _activeMode is (
+                    IperfMode.UdpUpload or
+                    IperfMode.UdpDownload);
+
+            if (!keepIperf2UdpResultPending)
+            {
+                ThroughputValueText.Text =
+                    _activeMode == IperfMode.TcpBidirectional &&
+                    sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecond
+                        ? FormatBidirectionalMegabits(
+                            megabitsPerSecond,
+                            reverseMegabitsPerSecond)
+                        : FormatMegabits(megabitsPerSecond);
+            }
 
             AddThroughputSample(
                 megabitsPerSecond,
@@ -1456,7 +1701,7 @@ public partial class MainWindow : Window
             JitterValueText.Text = "n/a";
         }
 
-        if (sample.LostPercent is double lostPercent)
+        if (sample.EffectiveLostPercent is double lostPercent)
         {
             LossValueText.Text = lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %";
         }

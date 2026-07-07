@@ -82,4 +82,169 @@ public sealed class Iperf2TextParserTests
         Assert.False(ok);
     }
 
+
+    [Fact]
+    public void TryParseUdpServerReport_ParsesZeroLossReport()
+    {
+        const string line =
+            "[  1] 0.00-10.01 sec  12.5 MBytes  10.5 Mbits/sec   0.000 ms 0/8910 (0%)";
+
+        var ok = Iperf2TextParser.TryParseUdpServerReport(
+            line,
+            out var sample);
+
+        Assert.True(ok);
+        Assert.Null(sample.Seconds);
+        Assert.Equal(10_500_000, sample.BitsPerSecond);
+        Assert.Equal(10.5, sample.MegabitsPerSecond);
+        Assert.Equal(0.000, sample.JitterMs);
+        Assert.Equal(0, sample.LostPercent);
+        Assert.Equal(
+            0d,
+            sample.EffectiveLostPercent!.Value);
+        Assert.Equal(
+            0L,
+            sample.LostDatagrams!.Value);
+        Assert.Equal(
+            8910L,
+            sample.TotalDatagrams!.Value);
+    }
+
+    [Fact]
+    public void TryParseUdpServerReport_ParsesNonZeroLossReport()
+    {
+        const string line =
+            "[  1] 0.00-10.00 sec  12.1 MBytes  10.1 Mbits/sec   0.125 ms 12/8910 (0.13%)";
+
+        var ok = Iperf2TextParser.TryParseUdpServerReport(
+            line,
+            out var sample);
+
+        Assert.True(ok);
+        Assert.Equal(10_100_000, sample.BitsPerSecond);
+        Assert.Equal(10.1, sample.MegabitsPerSecond);
+        Assert.Equal(0.125, sample.JitterMs);
+        Assert.Equal(0.13, sample.LostPercent);
+        Assert.Equal(
+            12L,
+            sample.LostDatagrams!.Value);
+        Assert.Equal(
+            8910L,
+            sample.TotalDatagrams!.Value);
+        Assert.Equal(
+            12d * 100d / 8910d,
+            sample.EffectiveLostPercent!.Value,
+            precision: 10);
+    }
+
+    [Fact]
+    public void TryParseUdpServerReport_IgnoresNormalInterval()
+    {
+        const string line =
+            "[  1] 1.00-2.00 sec  1.25 MBytes  10.5 Mbits/sec";
+
+        var ok = Iperf2TextParser.TryParseUdpServerReport(
+            line,
+            out _);
+
+        Assert.False(ok);
+    }
+
+
+    [Fact]
+    public void TryParseUdpServerReport_ParsesSaturatedWifiResult()
+    {
+        const string line =
+            "[  1] 0.00-10.21 sec   365 MBytes   300 Mbits/sec   0.000 ms 630768/891282 (70%)";
+
+        var ok = Iperf2TextParser.TryParseUdpServerReport(
+            line,
+            out var sample);
+
+        Assert.True(ok);
+        Assert.Equal(300, sample.MegabitsPerSecond);
+        Assert.Equal(0, sample.JitterMs);
+        Assert.Equal(70, sample.LostPercent);
+        Assert.Equal(
+            630768L,
+            sample.LostDatagrams!.Value);
+        Assert.Equal(
+            891282L,
+            sample.TotalDatagrams!.Value);
+        Assert.Equal(
+            630768d * 100d / 891282d,
+            sample.EffectiveLostPercent!.Value,
+            precision: 10);
+    }
+
+
+    [Fact]
+    public void TryAggregateUdpServerReports_SumsParallelStreams()
+    {
+        var reports = new[]
+        {
+            new IperfIntervalSample(
+                null,
+                105_000_000,
+                0.001,
+                0,
+                LostDatagrams: 1,
+                TotalDatagrams: 26752),
+            new IperfIntervalSample(
+                null,
+                105_000_000,
+                0.000,
+                0,
+                LostDatagrams: 0,
+                TotalDatagrams: 26752)
+        };
+
+        var ok =
+            Iperf2TextParser.TryAggregateUdpServerReports(
+                reports,
+                expectedStreamCount: 2,
+                out var aggregate);
+
+        Assert.True(ok);
+        Assert.Equal(
+            210,
+            aggregate.MegabitsPerSecond);
+        Assert.Equal(
+            0.001,
+            aggregate.JitterMs);
+        Assert.Equal(
+            1L,
+            aggregate.LostDatagrams);
+        Assert.Equal(
+            53504L,
+            aggregate.TotalDatagrams);
+        Assert.Equal(
+            1d * 100d / 53504d,
+            aggregate.EffectiveLostPercent!.Value,
+            precision: 10);
+    }
+
+    [Fact]
+    public void TryAggregateUdpServerReports_RejectsIncompleteStreamSet()
+    {
+        var reports = new[]
+        {
+            new IperfIntervalSample(
+                null,
+                105_000_000,
+                0,
+                0,
+                LostDatagrams: 0,
+                TotalDatagrams: 26752)
+        };
+
+        var ok =
+            Iperf2TextParser.TryAggregateUdpServerReports(
+                reports,
+                expectedStreamCount: 2,
+                out _);
+
+        Assert.False(ok);
+    }
+
 }

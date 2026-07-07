@@ -541,7 +541,10 @@
                             <StackPanel>
                                 <TextBlock Text="Throughput" Foreground="{StaticResource TextMuted}" />
                                 <TextBlock x:Name="ThroughputValueText" Text="0 Mbps" FontSize="34" FontWeight="Bold" Margin="0,8,0,0" />
-                                <TextBlock Text="Live average" Foreground="{StaticResource Accent}" Margin="0,6,0,0" />
+                                <TextBlock x:Name="ThroughputCaptionText"
+                                           Text="Live average"
+                                           Foreground="{StaticResource Accent}"
+                                           Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
 
