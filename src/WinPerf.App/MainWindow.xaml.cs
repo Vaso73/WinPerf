@@ -162,9 +162,17 @@ public partial class MainWindow : Window
                 },
                 _currentRunCancellation.Token);
 
+            var outcome = IperfRunResultClassifier.Classify(options.Engine, result);
+            var summaryExitCode =
+                outcome.Kind == IperfRunOutcomeKind.Failed
+                    ? result.ExitCode == 0 ? 1 : result.ExitCode
+                    : 0;
+
             AppendEngineOutput(string.Empty);
             AppendEngineOutput($"Process exited with code {result.ExitCode}.");
-            UpdateLastSummary(options, result.ExitCode);
+            AppendEngineOutput(outcome.Message);
+            UpdateLastSummary(options, summaryExitCode);
+            UpdateRunOutcomeStatus(outcome);
         }
         catch (OperationCanceledException)
         {
@@ -304,6 +312,30 @@ public partial class MainWindow : Window
                     0));
         }
 
+    }
+
+    private void UpdateRunOutcomeStatus(IperfRunOutcome outcome)
+    {
+        if (outcome.Kind == IperfRunOutcomeKind.Completed)
+        {
+            return;
+        }
+
+        LiveStatusText.Text = outcome.Kind switch
+        {
+            IperfRunOutcomeKind.CompletedWithWarning =>
+                "Test completed with warning.",
+            IperfRunOutcomeKind.Failed =>
+                "Test failed.",
+            _ =>
+                LiveStatusText.Text
+        };
+
+        var separator = string.IsNullOrWhiteSpace(LastSummaryText.Text)
+            ? string.Empty
+            : Environment.NewLine;
+
+        LastSummaryText.Text += separator + outcome.Message;
     }
 
     private void UpdateLastSummary(IperfTestOptions options, int exitCode)
