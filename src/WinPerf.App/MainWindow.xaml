@@ -354,8 +354,6 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="7" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="7" />
-                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -408,29 +406,6 @@
                                                VerticalAlignment="Center" />
                                 </Border>
 
-                                <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,10,0">
-                                    <TextBlock Text="Updater" FontWeight="SemiBold" />
-                                    <TextBlock x:Name="UpdaterIntegrationDetailText"
-                                               Text="Sponsor Pro core"
-                                               Foreground="{StaticResource TextMuted}"
-                                               FontSize="11"
-                                               TextTrimming="CharacterEllipsis" />
-                                    <TextBlock x:Name="UpdaterIntegrationPathText"
-                                               Visibility="Collapsed" />
-                                </StackPanel>
-                                <Border x:Name="UpdaterIntegrationStatusChip"
-                                        Grid.Row="4"
-                                        Grid.Column="1"
-                                        MinWidth="82"
-                                        Style="{StaticResource IntegrationStatusChip}">
-                                    <TextBlock x:Name="UpdaterIntegrationStatusText"
-                                               Text="Core ready"
-                                               Foreground="{StaticResource AccentGreen}"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center" />
-                                </Border>
                             </Grid>
                         </StackPanel>
                     </Border>

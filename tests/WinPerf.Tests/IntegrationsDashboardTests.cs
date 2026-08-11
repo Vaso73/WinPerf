@@ -17,9 +17,9 @@ public sealed class IntegrationsDashboardTests
         Assert.Contains("x:Name=\"Iperf3IntegrationStatusText\"", xaml);
         Assert.Contains("x:Name=\"Iperf2IntegrationStatusChip\"", xaml);
         Assert.Contains("x:Name=\"Iperf2IntegrationStatusText\"", xaml);
-        Assert.Contains("x:Name=\"UpdaterIntegrationStatusChip\"", xaml);
-        Assert.Contains("x:Name=\"UpdaterIntegrationStatusText\"", xaml);
-        Assert.Contains("Text=\"Sponsor Pro core\"", xaml);
+        Assert.DoesNotContain("UpdaterIntegrationStatusChip", xaml);
+        Assert.DoesNotContain("UpdaterIntegrationStatusText", xaml);
+        Assert.DoesNotContain("Text=\"Sponsor Pro core\"", xaml);
 
         var appSection = xaml.IndexOf("x:Name=\"AppMenuSection\"", StringComparison.Ordinal);
         var integrations = xaml.IndexOf("x:Name=\"CompactIntegrationsCard\"", StringComparison.Ordinal);
@@ -34,7 +34,7 @@ public sealed class IntegrationsDashboardTests
     }
 
     [Fact]
-    public void MainWindow_RefreshesBothIperfIntegrationsAndUpdaterStatus()
+    public void MainWindow_RefreshesOnlyIperfIntegrationsInLeftRail()
     {
         var code = File.ReadAllText(Path.Combine(AppDirectory, "MainWindow.xaml.cs"));
 
@@ -43,8 +43,8 @@ public sealed class IntegrationsDashboardTests
         Assert.Contains("ResolveIntegration(IperfEngine.Iperf3)", code);
         Assert.Contains("ResolveIntegration(IperfEngine.Iperf2)", code);
         Assert.Contains("SetIntegrationChipState", code);
-        Assert.Contains("WinPerfUpdateService.ProductId", code);
-        Assert.Contains("WinPerfUpdateService.AssetName", code);
-        Assert.Contains("WinPerfUpdateService.Channel", code);
+        Assert.DoesNotContain("UpdaterIntegrationStatusText", code);
+        Assert.DoesNotContain("UpdaterIntegrationDetailText", code);
+        Assert.DoesNotContain("UpdaterIntegrationPathText", code);
     }
 }

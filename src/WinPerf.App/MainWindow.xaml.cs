@@ -651,13 +651,6 @@ public partial class MainWindow : Window
             Iperf2IntegrationPathText,
             "iperf2 compatibility engine",
             iperf2);
-
-        UpdaterIntegrationStatusText.Text = "Core ready";
-        UpdaterIntegrationStatusText.Foreground = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
-        SetIntegrationChipState(UpdaterIntegrationStatusChip, UpdaterIntegrationStatusText, isReady: true);
-        UpdaterIntegrationDetailText.Text = $"{WinPerfUpdateService.ProductId} / {WinPerfUpdateService.Channel}";
-        UpdaterIntegrationPathText.Text = $"{WinPerfUpdateService.ProductId} / {WinPerfUpdateService.AssetName}";
-        UpdaterIntegrationPathText.ToolTip = WinPerfUpdateService.DefaultBaseUrl + WinPerfUpdateService.LatestPath;
     }
 
     private IperfExecutableResolution ResolveIntegration(IperfEngine engine)

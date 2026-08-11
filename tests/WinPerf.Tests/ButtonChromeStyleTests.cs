@@ -33,4 +33,19 @@ public sealed class ButtonChromeStyleTests
         Assert.Contains("x:Name=\"AppMenuButton\"", MainWindowXaml);
         Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}Background=\\\"#172A44\\\"", MainWindowXaml);
     }
+
+    [Fact]
+    public void ComboBoxesUseDarkCustomChromeInsteadOfWhiteWindowsDefault()
+    {
+        Assert.Contains("x:Key=\"ComboBoxBase\"", ThemeXaml);
+        Assert.Contains("ControlTemplate TargetType=\"{x:Type ComboBox}\"", ThemeXaml);
+        Assert.Contains("x:Name=\"PART_EditableTextBox\"", ThemeXaml);
+        Assert.Contains("x:Name=\"PART_Popup\"", ThemeXaml);
+        Assert.Contains("Background\" Value=\"#0B1628\"", ThemeXaml);
+        Assert.Contains("Foreground\" Value=\"{StaticResource TextMain}\"", ThemeXaml);
+        Assert.Contains("Style TargetType=\"{x:Type ComboBoxItem}\"", ThemeXaml);
+        Assert.Contains("Background=\"{StaticResource PanelSoft}\"", ThemeXaml);
+        Assert.DoesNotContain("Foreground\" Value=\"#0F172A\"", ThemeXaml);
+        Assert.DoesNotContain("Background=\"White\"", ThemeXaml);
+    }
 }
