@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using WinPerf.App.Settings;
 using WinPerf.Core.History;
 using WinPerf.Core.Iperf;
@@ -796,14 +797,14 @@ public partial class MainWindow : Window
                 var reverseMax = _reverseThroughputSamples.Max();
 
                 lines.Add(
-                    $"Upload {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+                    $"Upload last {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
                 lines.Add(
-                    $"Download {FormatMegabits(reverseCurrent)} · min {FormatMegabits(reverseMin)} · avg {FormatMegabits(reverseAvg)} · max {FormatMegabits(reverseMax)}");
+                    $"Download last {FormatMegabits(reverseCurrent)} · min {FormatMegabits(reverseMin)} · avg {FormatMegabits(reverseAvg)} · max {FormatMegabits(reverseMax)}");
             }
             else
             {
                 lines.Add(
-                    $"{FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+                    $"Last {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
             }
         }
         else
@@ -999,6 +1000,170 @@ public partial class MainWindow : Window
         }
     }
 
+    private void HistoryDetailsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetHistoryListItem(sender, out var item))
+        {
+            return;
+        }
+
+        var dialog = new HistoryDetailWindow(item)
+        {
+            Owner = this
+        };
+
+        dialog.ShowDialog();
+    }
+
+    private void HistoryCopyCommandButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetHistoryListItem(sender, out var item))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(item.CommandPreview) ||
+            string.Equals(item.CommandPreview, "Command unavailable.", StringComparison.OrdinalIgnoreCase))
+        {
+            HistoryStatusText.Text = "No command saved for this result.";
+            return;
+        }
+
+        Clipboard.SetText(item.CommandPreview);
+        HistoryStatusText.Text = "Command copied.";
+    }
+
+    private async void HistoryDeleteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetHistoryListItem(sender, out var item))
+        {
+            return;
+        }
+
+        if (!ConfirmDialogWindow.Confirm(
+                this,
+                "Delete history result?",
+                $"Delete this saved result?\n\n{item.Title}\n{item.FinishedLocalText}",
+                "Delete"))
+        {
+            return;
+        }
+
+        try
+        {
+            var deleted = await _historyStore.DeleteAsync(item.Id);
+            await RefreshHistoryPageAsync();
+            HistoryStatusText.Text = deleted ? "Result deleted." : "Result was not found.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryStatusText.Text = $"Delete failed: {ex.Message}";
+        }
+    }
+
+    private async void HistoryClearButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var document = await _historyStore.LoadAsync();
+            if (document.Entries.Count == 0)
+            {
+                HistoryStatusText.Text = "History is already empty.";
+                return;
+            }
+
+            if (!ConfirmDialogWindow.Confirm(
+                    this,
+                    "Clear all history?",
+                    $"Delete all {document.Entries.Count} saved history results from this portable runtime?",
+                    "Clear all"))
+            {
+                return;
+            }
+
+            await _historyStore.ClearAsync();
+            await RefreshHistoryPageAsync();
+            HistoryStatusText.Text = "History cleared.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryStatusText.Text = $"Clear failed: {ex.Message}";
+        }
+    }
+
+    private async void HistoryExportButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var document = await _historyStore.LoadAsync();
+            var dialog = new SaveFileDialog
+            {
+                Title = "Export WinPerf history",
+                FileName = $"WinPerf-history-{DateTime.Now:yyyyMMdd-HHmmss}.json",
+                DefaultExt = ".json",
+                Filter = "WinPerf history (*.json)|*.json|All files (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
+
+            var exportStore = new JsonIperfHistoryStore(dialog.FileName);
+            await exportStore.SaveAsync(document);
+            HistoryStatusText.Text = document.Entries.Count == 1
+                ? "Exported 1 result."
+                : $"Exported {document.Entries.Count} results.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryStatusText.Text = $"Export failed: {ex.Message}";
+        }
+    }
+
+    private async void HistoryImportButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Import WinPerf history",
+                DefaultExt = ".json",
+                Filter = "WinPerf history (*.json)|*.json|All files (*.*)|*.*",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
+
+            var importStore = new JsonIperfHistoryStore(dialog.FileName);
+            var importedDocument = await importStore.LoadAsync();
+            var mergedCount = await _historyStore.MergeAsync(importedDocument);
+            await RefreshHistoryPageAsync();
+            HistoryStatusText.Text = importedDocument.Entries.Count == 1
+                ? $"Imported 1 result. History now has {mergedCount} results."
+                : $"Imported {importedDocument.Entries.Count} results. History now has {mergedCount} results.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryStatusText.Text = $"Import failed: {ex.Message}";
+        }
+    }
+
+    private static bool TryGetHistoryListItem(object sender, out HistoryListItem item)
+    {
+        if (sender is FrameworkElement { DataContext: HistoryListItem historyItem })
+        {
+            item = historyItem;
+            return true;
+        }
+
+        item = default!;
+        return false;
+    }
+
     private HistoryListItem CreateHistoryListItem(IperfHistoryEntry entry)
     {
         var title = $"{GetEngineDisplayName(entry.Engine)} · {FormatModeLabel(entry.Mode)} · {entry.Server}:{entry.Port}";
@@ -1011,14 +1176,60 @@ public partial class MainWindow : Window
         var commandPreview = string.IsNullOrWhiteSpace(entry.CommandPreview)
             ? "Command unavailable."
             : entry.CommandPreview;
+        var details = BuildHistoryDetails(entry);
 
         return new HistoryListItem(
+            entry.Id,
             title,
             finishedLocalText,
             statusText,
             statusBrush,
             summary,
-            commandPreview);
+            commandPreview,
+            details);
+    }
+
+    private static string BuildHistoryDetails(IperfHistoryEntry entry)
+    {
+        var lines = new List<string>
+        {
+            $"Engine: {GetEngineDisplayName(entry.Engine)}",
+            $"Mode: {FormatModeLabel(entry.Mode)}",
+            $"Server: {entry.Server}",
+            $"Port: {entry.Port}",
+            $"Streams: {entry.Streams}",
+            $"Duration: {entry.DurationSeconds}s",
+            $"Omit: {entry.OmitSeconds}s",
+            $"Exit code: {entry.ExitCode}",
+            $"Status: {(entry.Succeeded ? "OK" : "Failed")}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(entry.UdpBandwidth))
+        {
+            lines.Add($"UDP bandwidth: {entry.UdpBandwidth}");
+        }
+
+        if (entry.AverageMbps is double averageMbps)
+        {
+            lines.Add($"Average: {FormatMegabits(averageMbps)}");
+        }
+
+        if (entry.MinimumMbps is double minimumMbps)
+        {
+            lines.Add($"Minimum: {FormatMegabits(minimumMbps)}");
+        }
+
+        if (entry.MaximumMbps is double maximumMbps)
+        {
+            lines.Add($"Maximum: {FormatMegabits(maximumMbps)}");
+        }
+
+        if (entry.ReverseAverageMbps is double reverseAverageMbps)
+        {
+            lines.Add($"Reverse average: {FormatMegabits(reverseAverageMbps)}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static string BuildHistoryDisplaySummary(string? summary, string title)
@@ -1038,9 +1249,30 @@ public partial class MainWindow : Window
             lines.RemoveAt(0);
         }
 
+        for (var i = 0; i < lines.Count; i++)
+        {
+            lines[i] = AddHistoryMetricLabel(lines[i]);
+        }
+
         return lines.Count == 0
             ? "No summary saved."
             : string.Join(Environment.NewLine, lines);
+    }
+
+    private static string AddHistoryMetricLabel(string line)
+    {
+        var trimmed = line.TrimStart();
+
+        return trimmed.Length > 0 &&
+               char.IsDigit(trimmed[0]) &&
+               trimmed.Contains(" Mbps", StringComparison.OrdinalIgnoreCase) &&
+               !trimmed.Contains(" avg ", StringComparison.OrdinalIgnoreCase)
+            ? line
+            : trimmed.Length > 0 &&
+              char.IsDigit(trimmed[0]) &&
+              trimmed.Contains(" Mbps", StringComparison.OrdinalIgnoreCase)
+                ? line[..(line.Length - trimmed.Length)] + "Last " + trimmed
+                : line;
     }
 
     private static string FormatModeLabel(IperfMode mode)
@@ -3044,10 +3276,12 @@ public partial class MainWindow : Window
     }
 
     public sealed record HistoryListItem(
+        Guid Id,
         string Title,
         string FinishedLocalText,
         string StatusText,
         Brush StatusBrush,
         string Summary,
-        string CommandPreview);
+        string CommandPreview,
+        string Details);
 }

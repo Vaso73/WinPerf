@@ -83,6 +83,53 @@ public sealed class JsonIperfHistoryStore
         await SaveAsync(document, cancellationToken);
     }
 
+    public async Task<bool> DeleteAsync(
+        Guid entryId,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await LoadAsync(cancellationToken);
+        var removed = document.Entries.RemoveAll(entry => entry.Id == entryId);
+
+        if (removed == 0)
+        {
+            return false;
+        }
+
+        await SaveAsync(document, cancellationToken);
+        return true;
+    }
+
+    public async Task ClearAsync(CancellationToken cancellationToken = default)
+    {
+        await SaveAsync(new IperfHistoryDocument(), cancellationToken);
+    }
+
+    public async Task<int> MergeAsync(
+        IperfHistoryDocument importedDocument,
+        int maxEntries = DefaultMaxEntries,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(importedDocument);
+
+        if (maxEntries < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxEntries), "History must keep at least one entry.");
+        }
+
+        var currentDocument = await LoadAsync(cancellationToken);
+        var mergedEntries = importedDocument.Entries
+            .Concat(currentDocument.Entries)
+            .GroupBy(entry => entry.Id)
+            .Select(group => group.First())
+            .OrderByDescending(entry => entry.FinishedAtUtc)
+            .ThenByDescending(entry => entry.StartedAtUtc)
+            .Take(maxEntries)
+            .ToList();
+
+        await SaveAsync(new IperfHistoryDocument { Entries = mergedEntries }, cancellationToken);
+        return mergedEntries.Count;
+    }
+
     public async Task SaveAsync(
         IperfHistoryDocument document,
         CancellationToken cancellationToken = default)

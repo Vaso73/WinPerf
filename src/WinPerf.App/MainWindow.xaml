@@ -827,20 +827,41 @@
                                Margin="0,3,0,0" />
                 </StackPanel>
 
-                <TextBlock x:Name="HistoryStatusText"
-                           DockPanel.Dock="Right"
-                           Text="Not loaded yet"
-                           Foreground="{StaticResource TextMuted}"
-                           VerticalAlignment="Bottom"
-                           Margin="12,0,0,2" />
+                <StackPanel DockPanel.Dock="Right"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Margin="12,0,0,0">
+                    <TextBlock x:Name="HistoryStatusText"
+                               Text="Not loaded yet"
+                               Foreground="{StaticResource TextMuted}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0" />
+                    <Button x:Name="HistoryExportButton"
+                            Content="Export"
+                            Style="{StaticResource CompactSecondaryButton}"
+                            Margin="0,0,8,0"
+                            Click="HistoryExportButton_Click" />
+                    <Button x:Name="HistoryImportButton"
+                            Content="Import"
+                            Style="{StaticResource CompactSecondaryButton}"
+                            Margin="0,0,8,0"
+                            Click="HistoryImportButton_Click" />
+                    <Button x:Name="HistoryClearButton"
+                            Content="Clear all"
+                            Style="{StaticResource CompactSecondaryButton}"
+                            Click="HistoryClearButton_Click" />
+                </StackPanel>
             </DockPanel>
 
             <Border Grid.Row="1" Style="{StaticResource Card}">
                 <Grid>
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  ClipToBounds="True">
                         <ItemsControl x:Name="HistoryItemsControl"
-                                      AutomationProperties.AutomationId="HistoryItemsControl">
+                                      AutomationProperties.AutomationId="HistoryItemsControl"
+                                      Margin="0,0,10,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Style="{StaticResource SectionCard}"
@@ -851,7 +872,7 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="6" />
                                                 <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="6" />
+                                                <RowDefinition Height="8" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
@@ -889,12 +910,41 @@
                                                        LineHeight="16" />
 
                                             <TextBlock Grid.Row="4"
-                                                       Grid.ColumnSpan="2"
+                                                       Grid.Column="0"
                                                        Text="{Binding CommandPreview}"
                                                        Foreground="{StaticResource TextMuted}"
                                                        FontFamily="Consolas"
                                                        FontSize="11"
-                                                       TextTrimming="CharacterEllipsis" />
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,12,0" />
+
+                                            <StackPanel Grid.Row="4"
+                                                        Grid.Column="1"
+                                                        Orientation="Horizontal"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center">
+                                                <Button Content="Details"
+                                                        Style="{StaticResource CompactSecondaryButton}"
+                                                        FontSize="11"
+                                                        Padding="8,0"
+                                                        MinHeight="28"
+                                                        Margin="0,0,8,0"
+                                                        Click="HistoryDetailsButton_Click" />
+                                                <Button Content="Copy command"
+                                                        Style="{StaticResource CompactSecondaryButton}"
+                                                        FontSize="11"
+                                                        Padding="8,0"
+                                                        MinHeight="28"
+                                                        Margin="0,0,8,0"
+                                                        Click="HistoryCopyCommandButton_Click" />
+                                                <Button Content="Delete"
+                                                        Style="{StaticResource CompactSecondaryButton}"
+                                                        FontSize="11"
+                                                        Padding="8,0"
+                                                        MinHeight="28"
+                                                        Click="HistoryDeleteButton_Click" />
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
