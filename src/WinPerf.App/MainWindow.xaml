@@ -247,8 +247,9 @@
                 BorderBrush="{StaticResource BorderSoft}"
                 BorderThickness="0,0,1,0"
                 Padding="18">
-            <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Top">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
                     <TextBlock Text="WinPerf"
                                FontSize="30"
                                FontWeight="Bold" />
@@ -647,7 +648,7 @@
                     </Border>
                 </StackPanel>
                 </StackPanel>
-            </DockPanel>
+            </ScrollViewer>
         </Border>
 
         <GridSplitter Grid.Column="1"
@@ -686,9 +687,9 @@
                   Margin="0">
                     <Grid.RowDefinitions>
                         <RowDefinition x:Name="MetricsRow" Height="150" />
-                        <RowDefinition x:Name="LiveThroughputRow" Height="*" MinHeight="180" />
+                        <RowDefinition x:Name="LiveThroughputRow" Height="*" MinHeight="260" />
                         <RowDefinition Height="14" />
-                        <RowDefinition x:Name="EngineOutputRow" Height="120" MinHeight="80" />
+                        <RowDefinition x:Name="EngineOutputRow" Height="180" MinHeight="110" MaxHeight="260" />
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0">

@@ -20,8 +20,9 @@ public sealed class UnifiedCompactLayoutTests
         Assert.Contains("x:Name=\"LeftRailColumn\" Width=\"360\" MinWidth=\"280\" MaxWidth=\"500\"", xaml);
         Assert.Contains("x:Name=\"DashboardContentPanel\" Grid.Column=\"2\" Margin=\"18\"", xaml);
         Assert.Contains("x:Name=\"MetricsRow\" Height=\"150\"", xaml);
-        Assert.Contains("x:Name=\"LiveThroughputRow\" Height=\"*\" MinHeight=\"180\"", xaml);
-        Assert.Contains("x:Name=\"EngineOutputRow\" Height=\"120\" MinHeight=\"80\"", xaml);
+        Assert.Contains("x:Name=\"LiveThroughputRow\" Height=\"*\" MinHeight=\"260\"", xaml);
+        Assert.Contains("x:Name=\"EngineOutputRow\" Height=\"180\" MinHeight=\"110\" MaxHeight=\"260\"", xaml);
+        Assert.Contains("<ScrollViewer VerticalScrollBarVisibility=\"Auto\"", xaml);
     }
 
     [Fact]
@@ -37,11 +38,13 @@ public sealed class UnifiedCompactLayoutTests
         Assert.Contains("Height=\"680\"", advanced);
         Assert.Contains("MinWidth=\"900\"", advanced);
         Assert.Contains("MinHeight=\"600\"", advanced);
+        Assert.Contains("Width=\"140\"", advanced);
 
         Assert.Contains("Width=\"760\"", custom);
         Assert.Contains("Height=\"500\"", custom);
         Assert.Contains("MinWidth=\"640\"", custom);
         Assert.Contains("MinHeight=\"440\"", custom);
+        Assert.Contains("Width=\"140\"", custom);
 
         Assert.Contains("Width=\"720\"", settings);
         Assert.Contains("Height=\"460\"", settings);

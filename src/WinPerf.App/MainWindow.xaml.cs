@@ -46,6 +46,8 @@ public partial class MainWindow : Window
     private const string CustomCommandOverrideSource = "Custom";
     private const int MaxRecentServers = 20;
     private const int MaxThroughputSamples = 60;
+    private const double DefaultDashboardEngineOutputHeight = 180;
+    private const double MaxDashboardEngineOutputHeight = 260;
 
     public MainWindow()
     {
@@ -63,7 +65,12 @@ public partial class MainWindow : Window
         UpdateCommandOverrideUx();
         UpdateDashboardCommandPreview();
 
-        Loaded += async (_, _) => await LoadDashboardProfilesAsync();
+        Loaded += async (_, _) =>
+        {
+            ApplyUnifiedCompactLayout();
+            ApplyDashboardLayout();
+            await LoadDashboardProfilesAsync();
+        };
         Closing += (_, _) => SaveDashboardLayout();
     }
 
@@ -305,7 +312,7 @@ public partial class MainWindow : Window
             !double.IsInfinity(height) &&
             height >= EngineOutputRow.MinHeight)
         {
-            EngineOutputRow.Height = new GridLength(height, GridUnitType.Pixel);
+            EngineOutputRow.Height = new GridLength(ClampDashboardEngineOutputHeight(height), GridUnitType.Pixel);
             LiveThroughputRow.Height = new GridLength(1, GridUnitType.Star);
         }
 
@@ -337,17 +344,17 @@ public partial class MainWindow : Window
 
         DashboardContentPanel.Margin = new Thickness(18);
         MetricsRow.Height = new GridLength(150);
-        LiveThroughputRow.MinHeight = 180;
-        EngineOutputRow.MinHeight = 80;
+        LiveThroughputRow.MinHeight = 260;
+        EngineOutputRow.MinHeight = 110;
+        EngineOutputRow.MaxHeight = MaxDashboardEngineOutputHeight;
 
         if (GetSavedDashboardEngineOutputHeight() is not double savedEngineOutputHeight)
         {
-            EngineOutputRow.Height = new GridLength(120);
+            EngineOutputRow.Height = new GridLength(DefaultDashboardEngineOutputHeight);
         }
         else
         {
-            EngineOutputRow.Height = new GridLength(
-                Math.Max(EngineOutputRow.MinHeight, savedEngineOutputHeight));
+            EngineOutputRow.Height = new GridLength(ClampDashboardEngineOutputHeight(savedEngineOutputHeight));
         }
 
         MinWidth = 760;
@@ -366,8 +373,14 @@ public partial class MainWindow : Window
 
     private void SetSavedDashboardEngineOutputHeight(double height)
     {
-        _settings.CompactDashboardEngineOutputHeight = height;
-        _settings.DashboardEngineOutputHeight = height;
+        var clampedHeight = ClampDashboardEngineOutputHeight(height);
+        _settings.CompactDashboardEngineOutputHeight = clampedHeight;
+        _settings.DashboardEngineOutputHeight = clampedHeight;
+    }
+
+    private double ClampDashboardEngineOutputHeight(double height)
+    {
+        return Math.Clamp(height, EngineOutputRow.MinHeight, MaxDashboardEngineOutputHeight);
     }
 
     private void SetSavedDashboardLeftRailWidth(double width)

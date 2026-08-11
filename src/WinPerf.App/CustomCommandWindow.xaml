@@ -193,7 +193,7 @@
                     <Button Content="Use Command"
                             DockPanel.Dock="Right"
                             Style="{StaticResource PrimaryButton}"
-                            Width="124"
+                            Width="140"
                             Click="UseButton_Click" />
                 </DockPanel>
             </Grid>
