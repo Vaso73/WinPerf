@@ -43,10 +43,11 @@ public sealed class CompactUiDensityTests
         Assert.Contains("MinWidth=\"700\"", settings);
         Assert.Contains("MinHeight=\"500\"", settings);
 
-        Assert.Contains("Width=\"560\"", about);
-        Assert.Contains("Height=\"340\"", about);
-        Assert.Contains("MinWidth=\"520\"", about);
-        Assert.Contains("MinHeight=\"320\"", about);
+        Assert.Contains("Width=\"620\"", about);
+        Assert.Contains("Height=\"500\"", about);
+        Assert.Contains("MinWidth=\"600\"", about);
+        Assert.Contains("MinHeight=\"480\"", about);
+        Assert.Contains("ResizeMode=\"NoResize\"", about);
 
         Assert.Contains("Width=\"760\"", updates);
         Assert.Contains("Height=\"560\"", updates);
