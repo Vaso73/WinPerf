@@ -29,9 +29,12 @@ public sealed class ServerModeUiTests
         Assert.Contains("x:Name=\"ServerProtocolBox\"", MainWindowXaml);
         Assert.Contains("x:Name=\"ServerPortBox\"", MainWindowXaml);
         Assert.Contains("x:Name=\"ServerOneOffBox\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"ServerOneOffUnavailableText\"", MainWindowXaml);
         Assert.Contains("x:Name=\"StartServerButton\"", MainWindowXaml);
         Assert.Contains("x:Name=\"StopServerButton\"", MainWindowXaml);
         Assert.Contains("x:Name=\"ServerOutputText\"", MainWindowXaml);
+        Assert.Contains("VerticalContentAlignment=\"Top\"", MainWindowXaml);
+        Assert.Contains("One-off is iperf3 only. iperf2 runs until stopped.", MainWindowXaml);
     }
 
     [Fact]
@@ -39,6 +42,7 @@ public sealed class ServerModeUiTests
     {
         Assert.Contains("IperfCommandBuilder.BuildServerCommand", MainWindowCode);
         Assert.Contains("BuildServerModeOptions()", MainWindowCode);
+        Assert.Contains("UpdateServerOneOffAvailability()", MainWindowCode);
         Assert.Contains("_processRunner.RunAsync(", MainWindowCode);
         Assert.Contains("StopServerButton_Click", MainWindowCode);
         Assert.Contains("_serverRunCancellation?.Cancel();", MainWindowCode);

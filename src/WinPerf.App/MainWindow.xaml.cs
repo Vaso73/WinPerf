@@ -427,7 +427,8 @@ public partial class MainWindow : Window
     {
         if (ServerEngineBox is null ||
             ServerPortBox is null ||
-            ServerOneOffBox is null)
+            ServerOneOffBox is null ||
+            ServerOneOffUnavailableText is null)
         {
             return;
         }
@@ -438,9 +439,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            ServerOneOffBox.IsEnabled =
-                _serverRunCancellation is null &&
-                GetSelectedServerEngine() == IperfEngine.Iperf3;
+            UpdateServerOneOffAvailability();
         }
 
         UpdateServerModeCommandPreview();
@@ -450,12 +449,12 @@ public partial class MainWindow : Window
     {
         var selectedEngine = GetSelectedServerEngine();
 
-        ServerOneOffBox.IsEnabled = selectedEngine == IperfEngine.Iperf3;
-
         if (selectedEngine == IperfEngine.Iperf2)
         {
             ServerOneOffBox.IsChecked = false;
         }
+
+        UpdateServerOneOffAvailability();
 
         if (selectedEngine == IperfEngine.Iperf2 &&
             string.Equals(ServerPortBox.Text.Trim(), "5201", StringComparison.Ordinal))
@@ -525,7 +524,7 @@ public partial class MainWindow : Window
         ServerEngineBox.IsEnabled = !isRunning;
         ServerProtocolBox.IsEnabled = !isRunning;
         ServerPortBox.IsEnabled = !isRunning;
-        ServerOneOffBox.IsEnabled = !isRunning && GetSelectedServerEngine() == IperfEngine.Iperf3;
+        UpdateServerOneOffAvailability();
 
         if (isRunning && options is not null)
         {
@@ -536,6 +535,25 @@ public partial class MainWindow : Window
         else
         {
             SetServerModeStatusChip(isRunning: false, isError: false);
+        }
+    }
+
+    private void UpdateServerOneOffAvailability()
+    {
+        if (ServerOneOffBox is null || ServerOneOffUnavailableText is null)
+        {
+            return;
+        }
+
+        var isIperf3 = GetSelectedServerEngine() == IperfEngine.Iperf3;
+
+        ServerOneOffBox.Visibility = isIperf3 ? Visibility.Visible : Visibility.Collapsed;
+        ServerOneOffUnavailableText.Visibility = isIperf3 ? Visibility.Collapsed : Visibility.Visible;
+        ServerOneOffBox.IsEnabled = _serverRunCancellation is null && isIperf3;
+
+        if (!isIperf3)
+        {
+            ServerOneOffBox.IsChecked = false;
         }
     }
 

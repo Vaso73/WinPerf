@@ -603,6 +603,7 @@
                                      FontSize="11"
                                      IsReadOnly="True"
                                      AcceptsReturn="True"
+                                     VerticalContentAlignment="Top"
                                      TextWrapping="Wrap"
                                      HorizontalScrollBarVisibility="Disabled"
                                      VerticalScrollBarVisibility="Auto" />
@@ -715,12 +716,20 @@
                                          LostFocus="ServerModeInputChanged" />
                             </StackPanel>
 
-                            <CheckBox x:Name="ServerOneOffBox"
-                                      Grid.Column="6"
-                                      Content="Stop after one client (--one-off, iperf3)"
-                                      VerticalAlignment="Bottom"
-                                      Checked="ServerModeInputChanged"
-                                      Unchecked="ServerModeInputChanged" />
+                            <Grid Grid.Column="6"
+                                  VerticalAlignment="Bottom">
+                                <CheckBox x:Name="ServerOneOffBox"
+                                          Content="Stop after one client (--one-off)"
+                                          VerticalAlignment="Center"
+                                          Checked="ServerModeInputChanged"
+                                          Unchecked="ServerModeInputChanged" />
+                                <TextBlock x:Name="ServerOneOffUnavailableText"
+                                           Text="One-off is iperf3 only. iperf2 runs until stopped."
+                                           Foreground="{StaticResource TextMuted}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           Visibility="Collapsed" />
+                            </Grid>
                         </Grid>
 
                         <Grid Grid.Row="4">
@@ -771,6 +780,7 @@
                                  FontSize="11"
                                  IsReadOnly="True"
                                  AcceptsReturn="True"
+                                 VerticalContentAlignment="Top"
                                  TextWrapping="Wrap"
                                  HorizontalScrollBarVisibility="Disabled"
                                  VerticalScrollBarVisibility="Auto" />

@@ -54,6 +54,8 @@ public sealed class ButtonChromeStyleTests
         Assert.Contains("x:Key=\"TextBoxBase\"", ThemeXaml);
         Assert.Contains("ControlTemplate TargetType=\"{x:Type TextBox}\"", ThemeXaml);
         Assert.Contains("x:Name=\"PART_ContentHost\"", ThemeXaml);
+        Assert.Contains("Property=\"VerticalContentAlignment\" Value=\"Center\"", ThemeXaml);
+        Assert.Contains("VerticalAlignment=\"{TemplateBinding VerticalContentAlignment}\"", ThemeXaml);
         Assert.Contains("Property=\"MinHeight\" Value=\"30\"", ThemeXaml);
         Assert.Contains("Property=\"Padding\" Value=\"8,3\"", ThemeXaml);
         Assert.Contains("x:Key=\"ComboBoxBase\"", ThemeXaml);
