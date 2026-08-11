@@ -113,7 +113,9 @@ public partial class MainWindow : Window
 
         if (!_engineResolution.IsConfigured || string.IsNullOrWhiteSpace(_engineResolution.ExecutablePath))
         {
-            EngineOutputText.Text = $"{GetEngineExecutableDisplayName(GetSelectedEngine())} is not configured. Open Settings and select the executable first.";
+            EngineOutputText.Text = AppText.F(
+                "{0} is not configured. Open Settings and select the executable first.",
+                GetEngineExecutableDisplayName(GetSelectedEngine()));
             return;
         }
 
@@ -148,14 +150,14 @@ public partial class MainWindow : Window
             ResetLiveMetrics(options.Mode);
 
             _engineOutput.Clear();
-            AppendEngineOutput("Running command:");
+            AppendEngineOutput(AppText.T("Running command:"));
             AppendEngineOutput(commandDisplayText);
             AppendEngineOutput(string.Empty);
 
             if (_activeOmitSeconds > 0)
             {
-                AppendEngineOutput($"Warm-up: omitting first {_activeOmitSeconds}s before live metrics.");
-                LiveStatusText.Text = $"Warm-up: omitting first {_activeOmitSeconds}s...";
+                AppendEngineOutput(AppText.F("Warm-up: omitting first {0}s before live metrics.", _activeOmitSeconds));
+                LiveStatusText.Text = AppText.F("Warm-up: omitting first {0}s...", _activeOmitSeconds);
                 ShowWarmupChartPlaceholder(0, _activeOmitSeconds, null);
             }
             else
@@ -209,15 +211,21 @@ public partial class MainWindow : Window
             {
                 outcome = new IperfRunOutcome(
                     IperfRunOutcomeKind.Failed,
-                    $"Test failed: incomplete iperf2 UDP server report ({receivedIperf2UdpReportCount}/{options.Streams} streams).");
+                    AppText.F(
+                        "Test failed: incomplete iperf2 UDP server report ({0}/{1} streams).",
+                        receivedIperf2UdpReportCount,
+                        options.Streams));
             }
+
+            outcome = LocalizeOutcome(outcome);
+
             var summaryExitCode =
                 outcome.Kind == IperfRunOutcomeKind.Failed
                     ? result.ExitCode == 0 ? 1 : result.ExitCode
                     : 0;
 
             AppendEngineOutput(string.Empty);
-            AppendEngineOutput($"Process exited with code {result.ExitCode}.");
+            AppendEngineOutput(AppText.F("Process exited with code {0}.", result.ExitCode));
             AppendEngineOutput(outcome.Message);
             UpdateLastSummary(options, summaryExitCode);
             await SaveHistoryEntryAsync(options, result, outcome, summaryExitCode, commandDisplayText);
@@ -226,16 +234,16 @@ public partial class MainWindow : Window
         catch (OperationCanceledException)
         {
             AppendEngineOutput(string.Empty);
-            AppendEngineOutput("Test stopped by user.");
+            AppendEngineOutput(AppText.T("Test stopped by user."));
         }
         catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or NotSupportedException)
         {
-            EngineOutputText.Text = "Invalid test configuration:" + Environment.NewLine + ex.Message;
+            EngineOutputText.Text = AppText.T("Invalid test configuration:") + Environment.NewLine + ex.Message;
         }
         catch (Exception ex)
         {
             AppendEngineOutput(string.Empty);
-            AppendEngineOutput($"Failed to run {GetEngineDisplayName(GetSelectedEngine())}:");
+            AppendEngineOutput(AppText.F("Failed to run {0}:", GetEngineDisplayName(GetSelectedEngine())));
             AppendEngineOutput(ex.Message);
         }
         finally
@@ -787,6 +795,69 @@ public partial class MainWindow : Window
 
     }
 
+    private static IperfRunOutcome LocalizeOutcome(IperfRunOutcome outcome)
+    {
+        return outcome with
+        {
+            Message = LocalizeOutcomeMessage(outcome.Message)
+        };
+    }
+
+    private static string LocalizeOutcomeMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return message;
+        }
+
+        if (string.Equals(message, "Test completed.", StringComparison.Ordinal))
+        {
+            return AppText.T("Test completed.");
+        }
+
+        if (string.Equals(message, "Test completed with warning.", StringComparison.Ordinal))
+        {
+            return AppText.T("Test completed with warning.");
+        }
+
+        if (string.Equals(message, "Test failed.", StringComparison.Ordinal))
+        {
+            return AppText.T("Test failed.");
+        }
+
+        const string missingDllMessage =
+            "Test failed: the iperf executable could not start because a required Windows DLL is missing. Re-import the portable engine from its full folder so WinPerf can copy the companion .dll files.";
+        if (string.Equals(message, missingDllMessage, StringComparison.Ordinal))
+        {
+            return AppText.T(missingDllMessage);
+        }
+
+        const string processExitPrefix = "Test failed: process exited with code ";
+        if (message.StartsWith(processExitPrefix, StringComparison.Ordinal) &&
+            message.EndsWith(".", StringComparison.Ordinal))
+        {
+            return AppText.F(
+                "Test failed: process exited with code {0}.",
+                message[processExitPrefix.Length..^1]);
+        }
+
+        const string warningPrefix = "Test completed with warning: ";
+        if (message.StartsWith(warningPrefix, StringComparison.Ordinal))
+        {
+            return AppText.F(
+                "Test completed with warning: {0}",
+                message[warningPrefix.Length..]);
+        }
+
+        const string failedPrefix = "Test failed: ";
+        if (message.StartsWith(failedPrefix, StringComparison.Ordinal))
+        {
+            return AppText.F("Test failed: {0}", message[failedPrefix.Length..]);
+        }
+
+        return AppText.T(message);
+    }
+
     private void UpdateRunOutcomeStatus(IperfRunOutcome outcome)
     {
         if (outcome.Kind == IperfRunOutcomeKind.Completed)
@@ -797,9 +868,9 @@ public partial class MainWindow : Window
         LiveStatusText.Text = outcome.Kind switch
         {
             IperfRunOutcomeKind.CompletedWithWarning =>
-                "Test completed with warning.",
+                AppText.T("Test completed with warning."),
             IperfRunOutcomeKind.Failed =>
-                "Test failed.",
+                AppText.T("Test failed."),
             _ =>
                 LiveStatusText.Text
         };
@@ -832,16 +903,19 @@ public partial class MainWindow : Window
         if (udpServerReport?.MegabitsPerSecond is double receivedMegabits)
         {
             var sentSuffix = _throughputSamples.Count > 0
-                ? $" · sent avg {FormatMegabits(_throughputSamples.Average())}"
+                ? " · " + AppText.F("sent avg {0}", FormatMegabits(_throughputSamples.Average()))
                 : string.Empty;
 
             lines.Add(
-                $"Received {FormatMegabits(receivedMegabits)}{sentSuffix}");
+                AppText.F("Received {0}{1}", FormatMegabits(receivedMegabits), sentSuffix));
         }
         else if (isIperf2Udp)
         {
             lines.Add(
-                $"Server result unavailable ({_iperf2UdpServerReportCount}/{options.Streams} streams).");
+                AppText.F(
+                    "Server result unavailable ({0}/{1} streams).",
+                    _iperf2UdpServerReportCount,
+                    options.Streams));
         }
         else if (_throughputSamples.Count > 0)
         {
@@ -859,19 +933,34 @@ public partial class MainWindow : Window
                 var reverseMax = _reverseThroughputSamples.Max();
 
                 lines.Add(
-                    $"Upload last {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+                    AppText.F(
+                        "Upload last {0} · min {1} · avg {2} · max {3}",
+                        FormatMegabits(current),
+                        FormatMegabits(min),
+                        FormatMegabits(avg),
+                        FormatMegabits(max)));
                 lines.Add(
-                    $"Download last {FormatMegabits(reverseCurrent)} · min {FormatMegabits(reverseMin)} · avg {FormatMegabits(reverseAvg)} · max {FormatMegabits(reverseMax)}");
+                    AppText.F(
+                        "Download last {0} · min {1} · avg {2} · max {3}",
+                        FormatMegabits(reverseCurrent),
+                        FormatMegabits(reverseMin),
+                        FormatMegabits(reverseAvg),
+                        FormatMegabits(reverseMax)));
             }
             else
             {
                 lines.Add(
-                    $"Last {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+                    AppText.F(
+                        "Last {0} · min {1} · avg {2} · max {3}",
+                        FormatMegabits(current),
+                        FormatMegabits(min),
+                        FormatMegabits(avg),
+                        FormatMegabits(max)));
             }
         }
         else
         {
-            lines.Add("No throughput samples.");
+            lines.Add(AppText.T("No throughput samples."));
         }
 
         if (options.Mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
@@ -883,21 +972,21 @@ public partial class MainWindow : Window
                 if (udpServerReport.JitterMs is double jitterMs)
                 {
                     udpParts.Add(
-                        "jitter " +
-                        jitterMs.ToString(
-                            "0.000",
-                            CultureInfo.InvariantCulture) +
-                        " ms");
+                        AppText.F(
+                            "jitter {0} ms",
+                            jitterMs.ToString(
+                                "0.000",
+                                CultureInfo.InvariantCulture)));
                 }
 
                 if (udpServerReport.EffectiveLostPercent is double lostPercent)
                 {
                     var lossText =
-                        "loss " +
-                        lostPercent.ToString(
-                            "0.0",
-                            CultureInfo.InvariantCulture) +
-                        " %";
+                        AppText.F(
+                            "loss {0} %",
+                            lostPercent.ToString(
+                                "0.0",
+                                CultureInfo.InvariantCulture));
 
                     if (udpServerReport.LostDatagrams is long lost &&
                         udpServerReport.TotalDatagrams is long total)
@@ -921,7 +1010,7 @@ public partial class MainWindow : Window
                         StringComparison.OrdinalIgnoreCase))
                 {
                     udpParts.Add(
-                        "jitter " + JitterValueText.Text);
+                        AppText.F("jitter {0}", JitterValueText.Text));
                 }
 
                 if (!string.IsNullOrWhiteSpace(LossValueText.Text) &&
@@ -935,7 +1024,7 @@ public partial class MainWindow : Window
                         StringComparison.OrdinalIgnoreCase))
                 {
                     udpParts.Add(
-                        "loss " + LossValueText.Text);
+                        AppText.F("loss {0}", LossValueText.Text));
                 }
             }
 
@@ -946,7 +1035,10 @@ public partial class MainWindow : Window
             }
         }
 
-        lines.Add($"{options.DurationSeconds}s · {options.Streams} stream(s) · {(exitCode == 0 ? "OK" : $"Exit {exitCode}")}");
+        var footerStatus = exitCode == 0
+            ? AppText.T("OK")
+            : AppText.F("Exit {0}", exitCode);
+        lines.Add(AppText.F("{0}s · {1} stream(s) · {2}", options.DurationSeconds, options.Streams, footerStatus));
 
         LastSummaryText.Text = string.Join(Environment.NewLine, lines);
     }
@@ -977,7 +1069,7 @@ public partial class MainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
         {
             AppendEngineOutput(string.Empty);
-            AppendEngineOutput($"History save failed: {ex.Message}");
+            AppendEngineOutput(AppText.F("History save failed: {0}", ex.Message));
         }
     }
 
@@ -1232,7 +1324,7 @@ public partial class MainWindow : Window
         var finishedLocalText = entry.FinishedAtUtc
             .ToLocalTime()
             .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture);
-        var statusText = entry.Succeeded ? AppText.T("OK") : $"Exit {entry.ExitCode}";
+        var statusText = entry.Succeeded ? AppText.T("OK") : AppText.F("Exit {0}", entry.ExitCode);
         var statusBrush = (Brush)FindResource(entry.Succeeded ? "AccentGreen" : "MissingChipForeground");
         var summary = BuildHistoryDisplaySummary(entry.Summary, title);
         var commandPreview = string.IsNullOrWhiteSpace(entry.CommandPreview)
@@ -1248,7 +1340,10 @@ public partial class MainWindow : Window
             statusBrush,
             summary,
             commandPreview,
-            details);
+            details,
+            AppText.T("Details"),
+            AppText.T("Copy command"),
+            AppText.T("Delete"));
     }
 
     private static string BuildHistoryDetails(IperfHistoryEntry entry)
@@ -1324,6 +1419,12 @@ public partial class MainWindow : Window
     private static string AddHistoryMetricLabel(string line)
     {
         var trimmed = line.TrimStart();
+        var leadingWhitespace = line[..(line.Length - trimmed.Length)];
+
+        if (TryLocalizeStoredHistoryMetricPrefix(trimmed, out var localizedLine))
+        {
+            return leadingWhitespace + localizedLine;
+        }
 
         return trimmed.Length > 0 &&
                char.IsDigit(trimmed[0]) &&
@@ -1333,20 +1434,55 @@ public partial class MainWindow : Window
             : trimmed.Length > 0 &&
               char.IsDigit(trimmed[0]) &&
               trimmed.Contains(" Mbps", StringComparison.OrdinalIgnoreCase)
-                ? line[..(line.Length - trimmed.Length)] + "Last " + trimmed
+                ? line[..(line.Length - trimmed.Length)] + AppText.F("Last {0}", trimmed)
                 : line;
+    }
+
+    private static bool TryLocalizeStoredHistoryMetricPrefix(string line, out string localizedLine)
+    {
+        localizedLine = line;
+
+        return TryReplacePrefix(line, "Last ", AppText.T("Last") + " ", out localizedLine) ||
+               TryReplacePrefix(line, "Upload last ", AppText.T("Upload last") + " ", out localizedLine) ||
+               TryReplacePrefix(line, "Download last ", AppText.T("Download last") + " ", out localizedLine);
+    }
+
+    private static bool TryReplacePrefix(string value, string prefix, string replacement, out string updated)
+    {
+        if (value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+            value.Contains(" Mbps", StringComparison.OrdinalIgnoreCase))
+        {
+            updated = replacement + value[prefix.Length..];
+            return true;
+        }
+
+        updated = value;
+        return false;
     }
 
     private static string FormatModeLabel(IperfMode mode)
     {
         return mode switch
         {
-            IperfMode.TcpUpload => "TCP Upload",
-            IperfMode.TcpDownload => "TCP Download",
-            IperfMode.TcpBidirectional => "TCP Bidirectional",
-            IperfMode.UdpUpload => "UDP Upload",
-            IperfMode.UdpDownload => "UDP Download",
+            IperfMode.TcpUpload => AppText.T("TCP Upload"),
+            IperfMode.TcpDownload => AppText.T("TCP Download"),
+            IperfMode.TcpBidirectional => AppText.T("TCP Bidirectional"),
+            IperfMode.UdpUpload => AppText.T("UDP Upload"),
+            IperfMode.UdpDownload => AppText.T("UDP Download"),
             _ => mode.ToString()
+        };
+    }
+
+    private static string ModeTag(IperfMode mode)
+    {
+        return mode switch
+        {
+            IperfMode.TcpUpload => "tcp-upload",
+            IperfMode.TcpDownload => "tcp-download",
+            IperfMode.TcpBidirectional => "tcp-bidirectional",
+            IperfMode.UdpUpload => "udp-upload",
+            IperfMode.UdpDownload => "udp-download",
+            _ => "tcp-upload"
         };
     }
 
@@ -1390,19 +1526,21 @@ public partial class MainWindow : Window
         {
             var source = string.IsNullOrWhiteSpace(_engineResolution.Source)
                 ? AppText.T("Configured")
-                : _engineResolution.Source;
+                : AppText.T(_engineResolution.Source);
 
             EngineStatusText.Text = AppText.F(
-                "Engine  ●  {0}  ●  Ready  ●  {1}",
+                "Engine  ●  {0}  ●  {1}  ●  {2}",
                 GetEngineDisplayName(selectedEngine),
+                AppText.T("Ready"),
                 source);
             EngineStatusText.ToolTip = _engineResolution.ExecutablePath;
             return;
         }
 
         EngineStatusText.Text = AppText.F(
-            "Engine  ●  {0}  ●  Not configured",
-            GetEngineDisplayName(selectedEngine));
+            "Engine  ●  {0}  ●  {1}",
+            GetEngineDisplayName(selectedEngine),
+            AppText.T("Not configured"));
         EngineStatusText.ToolTip = _engineResolution.Message;
     }
 
@@ -1451,13 +1589,13 @@ public partial class MainWindow : Window
         {
             var source = string.IsNullOrWhiteSpace(resolution.Source)
                 ? AppText.T("Configured")
-                : resolution.Source;
+                : AppText.T(resolution.Source);
 
             statusText.Text = AppText.T("Ready");
             SetIntegrationChipState(statusChip, statusText, isReady: true);
             var displayPath = FormatIntegrationPath(resolution.ExecutablePath);
             detailText.Text = source;
-            detailText.ToolTip = $"{description}: {displayPath}";
+            detailText.ToolTip = $"{AppText.T(description)}: {displayPath}";
             pathText.Text = displayPath;
             pathText.ToolTip = resolution.ExecutablePath;
             return;
@@ -1465,7 +1603,7 @@ public partial class MainWindow : Window
 
         statusText.Text = AppText.T("Missing");
         SetIntegrationChipState(statusChip, statusText, isReady: false);
-        detailText.Text = AppText.F("{0} not configured", description);
+        detailText.Text = AppText.F("{0} not configured", AppText.T(description));
         detailText.ToolTip = resolution.Message;
         pathText.Text = resolution.Message;
         pathText.ToolTip = resolution.Message;
@@ -1495,7 +1633,7 @@ public partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(path))
         {
-            return "Not configured";
+            return AppText.T("Not configured");
         }
 
         var appDirectory = AppContext.BaseDirectory.TrimEnd(
@@ -1748,18 +1886,18 @@ public partial class MainWindow : Window
             if (DashboardProfileBox.SelectedItem is SavedIperfProfile selectedProfile)
             {
                 ApplyProfileToDashboard(selectedProfile);
-                SetDashboardProfileStatus($"Loaded profile '{selectedProfile.Name}'.");
+                SetDashboardProfileStatus(AppText.F("Loaded profile '{0}'.", selectedProfile.Name));
             }
             else
             {
-                SetDashboardProfileStatus("No saved profiles found.");
+                SetDashboardProfileStatus(AppText.T("No saved profiles found."));
             }
         }
         catch (Exception ex)
         {
             _profilesDocument = new SavedIperfProfilesDocument();
             RefreshDashboardProfileList(null);
-            SetDashboardProfileStatus($"Profile load failed: {ex.Message}");
+            SetDashboardProfileStatus(AppText.F("Profile load failed: {0}", ex.Message));
         }
     }
 
@@ -1785,11 +1923,11 @@ public partial class MainWindow : Window
         try
         {
             await _profileStore.SaveAsync(_profilesDocument);
-            SetDashboardProfileStatus($"Selected profile '{selectedProfile.Name}'.");
+            SetDashboardProfileStatus(AppText.F("Selected profile '{0}'.", selectedProfile.Name));
         }
         catch (Exception ex)
         {
-            SetDashboardProfileStatus($"Profile selection was not saved: {ex.Message}");
+            SetDashboardProfileStatus(AppText.F("Profile selection was not saved: {0}", ex.Message));
         }
     }
 
@@ -1854,11 +1992,14 @@ public partial class MainWindow : Window
 
     private void SelectMode(IperfMode mode)
     {
-        var label = FormatModeLabel(mode);
+        var tag = ModeTag(mode);
 
         for (var i = 0; i < ModeBox.Items.Count; i++)
         {
-            if ((ModeBox.Items[i] as ComboBoxItem)?.Content?.ToString() == label)
+            if (string.Equals(
+                    (ModeBox.Items[i] as ComboBoxItem)?.Tag?.ToString(),
+                    tag,
+                    StringComparison.Ordinal))
             {
                 ModeBox.SelectedIndex = i;
                 return;
@@ -1981,18 +2122,18 @@ public partial class MainWindow : Window
         }
 
         var source = string.IsNullOrWhiteSpace(_activeCommandOverrideSource)
-            ? "Command"
-            : _activeCommandOverrideSource;
+            ? AppText.T("Command")
+            : AppText.T(_activeCommandOverrideSource);
 
-        CommandOverrideBadgeText.Text = $"{source} command override active";
-        CommandOverridePanel.ToolTip = "Start will run these generated/custom arguments instead of the dashboard fields.";
+        CommandOverrideBadgeText.Text = AppText.F("{0} command override active", source);
+        CommandOverridePanel.ToolTip = AppText.T("Start will run these generated/custom arguments instead of the dashboard fields.");
     }
 
     private string GetCommandOverridePreviewTitle()
     {
         return string.Equals(_activeCommandOverrideSource, AdvancedCommandOverrideSource, StringComparison.Ordinal)
-            ? "Advanced command preview:"
-            : "Custom command preview:";
+            ? AppText.T("Advanced command preview:")
+            : AppText.T("Custom command preview:");
     }
 
     private void UpdateDashboardCommandPreview()
@@ -2020,15 +2161,15 @@ public partial class MainWindow : Window
             var command = IperfCommandBuilder.BuildClientCommand(executablePath, BuildDashboardTestOptions());
 
             EngineOutputText.Text =
-                "Command preview:" + Environment.NewLine +
+                AppText.T("Command preview:") + Environment.NewLine +
                 string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
         {
             EngineOutputText.Text =
                 string.IsNullOrWhiteSpace(GetServerText())
-                    ? "Enter a server to preview the iperf command."
-                    : "Command preview unavailable:" + Environment.NewLine + ex.Message;
+                    ? AppText.T("Enter a server to preview the iperf command.")
+                    : AppText.T("Command preview unavailable:") + Environment.NewLine + ex.Message;
         }
     }
 
@@ -2230,15 +2371,15 @@ public partial class MainWindow : Window
 
     private IperfMode GetSelectedMode()
     {
-        var selectedText = (ModeBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+        var selectedTag = (ModeBox.SelectedItem as ComboBoxItem)?.Tag?.ToString();
 
-        return selectedText switch
+        return selectedTag switch
         {
-            "TCP Upload" => IperfMode.TcpUpload,
-            "TCP Download" => IperfMode.TcpDownload,
-            "TCP Bidirectional" => IperfMode.TcpBidirectional,
-            "UDP Upload" => IperfMode.UdpUpload,
-            "UDP Download" => IperfMode.UdpDownload,
+            "tcp-upload" => IperfMode.TcpUpload,
+            "tcp-download" => IperfMode.TcpDownload,
+            "tcp-bidirectional" => IperfMode.TcpBidirectional,
+            "udp-upload" => IperfMode.UdpUpload,
+            "udp-download" => IperfMode.UdpDownload,
             _ => IperfMode.TcpUpload
         };
     }
@@ -2387,12 +2528,14 @@ public partial class MainWindow : Window
         int receivedReportCount,
         int expectedReportCount)
     {
-        ThroughputValueText.Text = "unavailable";
-        ThroughputCaptionText.Text = "Server result missing";
-        JitterValueText.Text = "unavailable";
-        LossValueText.Text = "unavailable";
-        LiveStatusText.Text =
-            $"Incomplete server report: {receivedReportCount}/{expectedReportCount} streams";
+        ThroughputValueText.Text = AppText.T("unavailable");
+        ThroughputCaptionText.Text = AppText.T("Server result missing");
+        JitterValueText.Text = AppText.T("unavailable");
+        LossValueText.Text = AppText.T("unavailable");
+        LiveStatusText.Text = AppText.F(
+            "Incomplete server report: {0}/{1} streams",
+            receivedReportCount,
+            expectedReportCount);
     }
 
     private void ApplyIperf2UdpServerReport(
@@ -2402,9 +2545,10 @@ public partial class MainWindow : Window
         {
             ThroughputValueText.Text =
                 FormatMegabits(receivedMegabits);
-            ThroughputCaptionText.Text = "Server received total";
-            LiveStatusText.Text =
-                $"Server received total {FormatMegabits(receivedMegabits)} · chart shows sent rate";
+            ThroughputCaptionText.Text = AppText.T("Server received total");
+            LiveStatusText.Text = AppText.F(
+                "Server received total {0} · chart shows sent rate",
+                FormatMegabits(receivedMegabits));
         }
 
         if (report.JitterMs is double jitterMs)
@@ -2454,18 +2598,18 @@ public partial class MainWindow : Window
 
         ThroughputValueText.Text =
             isIperf2Udp
-                ? "pending"
+                ? AppText.T("pending")
                 : "0 Mbps";
 
         ThroughputCaptionText.Text =
             isIperf2Udp
-                ? "Awaiting server result"
-                : "Live total average";
+                ? AppText.T("Awaiting server result")
+                : AppText.T("Live total average");
 
         if (mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
         {
-            JitterValueText.Text = "pending";
-            LossValueText.Text = "pending";
+            JitterValueText.Text = AppText.T("pending");
+            LossValueText.Text = AppText.T("pending");
         }
         else
         {
@@ -2473,7 +2617,7 @@ public partial class MainWindow : Window
             LossValueText.Text = "n/a";
         }
 
-        LiveStatusText.Text = "Waiting for samples...";
+        LiveStatusText.Text = AppText.T("Waiting for samples...");
         ShowWaitingChartPlaceholder();
 
         _throughputSamples.Clear();
@@ -2530,8 +2674,8 @@ public partial class MainWindow : Window
         }
 
         LiveStatusText.Text = sample.Seconds is double seconds
-            ? "Last sample " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
-            : "Receiving samples...";
+            ? AppText.F("Last sample {0}s", seconds.ToString("0.0", CultureInfo.InvariantCulture))
+            : AppText.T("Receiving samples...");
     }
 
     private void HandleOmittedWarmupSample(IperfIntervalSample sample)
@@ -2543,12 +2687,12 @@ public partial class MainWindow : Window
             : _omittedWarmupIntervalsReceived;
 
         var throughputSuffix = sample.MegabitsPerSecond is double megabitsPerSecond
-            ? " · " + FormatMegabits(megabitsPerSecond) + " ignored"
+            ? " · " + AppText.F("{0} ignored", FormatMegabits(megabitsPerSecond))
             : string.Empty;
 
         LiveStatusText.Text = _activeOmitSeconds > 0
-            ? $"Warm-up {elapsed}/{_activeOmitSeconds}s omitted{throughputSuffix}"
-            : $"Warm-up sample omitted{throughputSuffix}";
+            ? AppText.F("Warm-up {0}/{1}s omitted{2}", elapsed, _activeOmitSeconds, throughputSuffix)
+            : AppText.F("Warm-up sample omitted{0}", throughputSuffix);
 
         if (_activeOmitSeconds > 0)
         {
@@ -2560,7 +2704,7 @@ public partial class MainWindow : Window
              _omittedWarmupIntervalsReceived % 5 == 0 ||
              elapsed >= _activeOmitSeconds))
         {
-            AppendEngineOutput($"Warm-up {elapsed}/{_activeOmitSeconds}s omitted{throughputSuffix}.");
+            AppendEngineOutput(AppText.F("Warm-up {0}/{1}s omitted{2}.", elapsed, _activeOmitSeconds, throughputSuffix));
         }
     }
 
@@ -2571,7 +2715,7 @@ public partial class MainWindow : Window
 
     private void ShowWaitingChartPlaceholder()
     {
-        ThroughputChartPlaceholder.Text = "Waiting for throughput samples...";
+        ThroughputChartPlaceholder.Text = AppText.T("Waiting for throughput samples...");
         ThroughputChartPlaceholder.Foreground = TryFindResource("TextMuted") as Brush ?? Brushes.LightSlateGray;
         ThroughputChartPlaceholder.Visibility = Visibility.Visible;
     }
@@ -2579,13 +2723,13 @@ public partial class MainWindow : Window
     private void ShowWarmupChartPlaceholder(int elapsedSeconds, int totalSeconds, double? ignoredMegabitsPerSecond)
     {
         var throughputText = ignoredMegabitsPerSecond is double mbps
-            ? Environment.NewLine + FormatMegabits(mbps) + " ignored"
+            ? Environment.NewLine + AppText.F("{0} ignored", FormatMegabits(mbps))
             : string.Empty;
 
         ThroughputChartPlaceholder.Text =
-            $"Warm-up {elapsedSeconds}/{totalSeconds}s" +
+            AppText.F("Warm-up {0}/{1}s", elapsedSeconds, totalSeconds) +
             Environment.NewLine +
-            "Ignoring warm-up samples. Live chart starts after warm-up." +
+            AppText.T("Ignoring warm-up samples. Live chart starts after warm-up.") +
             throughputText;
 
         ThroughputChartPlaceholder.Foreground = TryFindResource("AccentAmber") as Brush ?? Brushes.Orange;
@@ -2712,7 +2856,7 @@ public partial class MainWindow : Window
         var accentBrush = TryFindResource("Accent") as Brush ?? Brushes.DeepSkyBlue;
 
         DrawChartText(
-            "Total bandwidth",
+            AppText.T("Total bandwidth"),
             plotLeft + 8,
             5,
             14,
@@ -2873,7 +3017,7 @@ public partial class MainWindow : Window
         }
 
         DrawChartText("Mbps", 8, plotTop - 20, 10, FontWeights.SemiBold, axisBrush);
-        DrawChartText("Time (sec)", plotLeft + plotWidth - 62, plotTop + plotHeight + 8, 10, FontWeights.SemiBold, axisBrush);
+        DrawChartText(AppText.T("Time (sec)"), plotLeft + plotWidth - 62, plotTop + plotHeight + 8, 10, FontWeights.SemiBold, axisBrush);
     }
 
     private void DrawReverseThroughputLine(
@@ -2915,7 +3059,7 @@ public partial class MainWindow : Window
         });
 
         DrawChartText(
-            "Download",
+            AppText.T("Download"),
             plotLeft + 8,
             20,
             11,
@@ -3060,22 +3204,19 @@ public partial class MainWindow : Window
 
         if (streamValues is null || streamValues.Length == 0)
         {
-            return "Per-stream: " +
-                   streamCount.ToString(CultureInfo.InvariantCulture) +
-                   " streams · scale 0-" +
-                   FormatMegabits(streamAxisMax);
+            return AppText.F(
+                "Per-stream: {0} streams · scale 0-{1}",
+                streamCount.ToString(CultureInfo.InvariantCulture),
+                FormatMegabits(streamAxisMax));
         }
 
-        return "Per-stream: " +
-               streamValues.Length.ToString(CultureInfo.InvariantCulture) +
-               " streams · avg " +
-               FormatMegabits(streamValues.Average()) +
-               " · min " +
-               FormatMegabits(streamValues.Min()) +
-               " · max " +
-               FormatMegabits(streamValues.Max()) +
-               " · scale 0-" +
-               FormatMegabits(streamAxisMax);
+        return AppText.F(
+            "Per-stream: {0} streams · avg {1} · min {2} · max {3} · scale 0-{4}",
+            streamValues.Length.ToString(CultureInfo.InvariantCulture),
+            FormatMegabits(streamValues.Average()),
+            FormatMegabits(streamValues.Min()),
+            FormatMegabits(streamValues.Max()),
+            FormatMegabits(streamAxisMax));
     }
 
     private static Brush CreateStreamBrush(int streamIndex)
@@ -3145,16 +3286,20 @@ public partial class MainWindow : Window
             var reverseCurrent = _reverseThroughputSamples[^1];
             var reverseAvg = _reverseThroughputSamples.Average();
 
-            return "↑ " + FormatMegabits(current)
-                + " · ↓ " + FormatMegabits(reverseCurrent)
-                + "   ↑ avg " + FormatMegabits(avg)
-                + " · ↓ avg " + FormatMegabits(reverseAvg);
+            return AppText.F(
+                "↑ {0} · ↓ {1}   ↑ avg {2} · ↓ avg {3}",
+                FormatMegabits(current),
+                FormatMegabits(reverseCurrent),
+                FormatMegabits(avg),
+                FormatMegabits(reverseAvg));
         }
 
-        return "total " + FormatMegabits(current)
-            + "   min " + FormatMegabits(min)
-            + " · avg " + FormatMegabits(avg)
-            + " · max " + FormatMegabits(max);
+        return AppText.F(
+            "total {0}   min {1} · avg {2} · max {3}",
+            FormatMegabits(current),
+            FormatMegabits(min),
+            FormatMegabits(avg),
+            FormatMegabits(max));
     }
 
     private void DrawChartText(
@@ -3206,7 +3351,7 @@ public partial class MainWindow : Window
 
     private string FormatEndSummarySample(IperfIntervalSample sample)
     {
-        var parts = new List<string> { "Test completed" };
+        var parts = new List<string> { AppText.T("Test completed") };
 
         var uploadMegabitsPerSecond = sample.MegabitsPerSecond;
         var downloadMegabitsPerSecond = sample.ReverseMegabitsPerSecond;
@@ -3222,8 +3367,8 @@ public partial class MainWindow : Window
             uploadMegabitsPerSecond is double upload &&
             downloadMegabitsPerSecond is double download)
         {
-            parts.Add("upload " + FormatMegabits(upload));
-            parts.Add("download " + FormatMegabits(download));
+            parts.Add(AppText.F("upload {0}", FormatMegabits(upload)));
+            parts.Add(AppText.F("download {0}", FormatMegabits(download)));
         }
         else if (uploadMegabitsPerSecond is double megabitsPerSecond)
         {
@@ -3231,17 +3376,17 @@ public partial class MainWindow : Window
         }
         else if (downloadMegabitsPerSecond is double reverseMegabitsPerSecond)
         {
-            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecond));
+            parts.Add(AppText.F("download {0}", FormatMegabits(reverseMegabitsPerSecond)));
         }
 
         if (sample.JitterMs is double jitterMs)
         {
-            parts.Add("jitter " + jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+            parts.Add(AppText.F("jitter {0} ms", jitterMs.ToString("0.00", CultureInfo.InvariantCulture)));
         }
 
         if (sample.LostPercent is double lostPercent)
         {
-            parts.Add("loss " + lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %");
+            parts.Add(AppText.F("loss {0} %", lostPercent.ToString("0.0", CultureInfo.InvariantCulture)));
         }
 
         return string.Join(" · ", parts) + ".";
@@ -3253,14 +3398,14 @@ public partial class MainWindow : Window
         var parts = new List<string>();
 
         parts.Add(sample.Seconds is double seconds
-            ? "Interval " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
-            : "Interval");
+            ? AppText.F("Interval {0}s", seconds.ToString("0.0", CultureInfo.InvariantCulture))
+            : AppText.T("Interval"));
 
         if (sample.MegabitsPerSecond is double megabitsPerSecond &&
             sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecond)
         {
-            parts.Add("upload " + FormatMegabits(megabitsPerSecond));
-            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecond));
+            parts.Add(AppText.F("upload {0}", FormatMegabits(megabitsPerSecond)));
+            parts.Add(AppText.F("download {0}", FormatMegabits(reverseMegabitsPerSecond)));
         }
         else if (sample.MegabitsPerSecond is double megabitsPerSecondOnly)
         {
@@ -3268,17 +3413,17 @@ public partial class MainWindow : Window
         }
         else if (sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecondOnly)
         {
-            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecondOnly));
+            parts.Add(AppText.F("download {0}", FormatMegabits(reverseMegabitsPerSecondOnly)));
         }
 
         if (sample.JitterMs is double jitterMs)
         {
-            parts.Add("jitter " + jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+            parts.Add(AppText.F("jitter {0} ms", jitterMs.ToString("0.00", CultureInfo.InvariantCulture)));
         }
 
         if (sample.LostPercent is double lostPercent)
         {
-            parts.Add("loss " + lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %");
+            parts.Add(AppText.F("loss {0} %", lostPercent.ToString("0.0", CultureInfo.InvariantCulture)));
         }
 
         return string.Join(" · ", parts);
@@ -3308,11 +3453,11 @@ public partial class MainWindow : Window
 
             message = eventName?.ToLowerInvariant() switch
             {
-                "start" => "Test started.",
-                "end" => "Test completed.",
-                "error" => "iperf3 error: " + GetJsonEventDataText(root),
-                null or "" => "iperf3 event received.",
-                _ => "iperf3 event: " + eventName
+                "start" => AppText.T("Test started."),
+                "end" => AppText.T("Test completed."),
+                "error" => AppText.F("iperf3 error: {0}", GetJsonEventDataText(root)),
+                null or "" => AppText.T("iperf3 event received."),
+                _ => AppText.F("iperf3 event: {0}", eventName)
             };
 
             return true;
@@ -3327,11 +3472,11 @@ public partial class MainWindow : Window
     {
         if (!root.TryGetProperty("data", out var data))
         {
-            return "unknown error";
+            return AppText.T("unknown error");
         }
 
         return data.ValueKind == JsonValueKind.String
-            ? data.GetString() ?? "unknown error"
+            ? data.GetString() ?? AppText.T("unknown error")
             : data.ToString();
     }
 
@@ -3350,5 +3495,8 @@ public partial class MainWindow : Window
         Brush StatusBrush,
         string Summary,
         string CommandPreview,
-        string Details);
+        string Details,
+        string DetailsButtonText,
+        string CopyCommandButtonText,
+        string DeleteButtonText);
 }

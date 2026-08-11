@@ -13,10 +13,10 @@ public sealed class Iperf2UdpServerReportUiTests
             "MainWindow.xaml.cs");
 
         Assert.Contains(
-            "? \"pending\"",
+            "? AppText.T(\"pending\")",
             code);
         Assert.Contains(
-            "\"Awaiting server result\"",
+            "AppText.T(\"Awaiting server result\")",
             code);
         Assert.Contains(
             "keepIperf2UdpResultPending",
@@ -79,7 +79,7 @@ public sealed class Iperf2UdpServerReportUiTests
             "Server result unavailable",
             code);
         Assert.Contains(
-            "ThroughputCaptionText.Text = \"Server received total\";",
+            "ThroughputCaptionText.Text = AppText.T(\"Server received total\");",
             code);
     }
 

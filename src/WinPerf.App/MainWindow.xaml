@@ -280,11 +280,11 @@
                                               SelectedIndex="0"
                                               Margin="0,3,0,0"
                                               SelectionChanged="DashboardInputChanged">
-                                        <ComboBoxItem Content="TCP Upload" />
-                                        <ComboBoxItem Content="TCP Download" />
-                                        <ComboBoxItem Content="TCP Bidirectional" />
-                                        <ComboBoxItem Content="UDP Upload" />
-                                        <ComboBoxItem Content="UDP Download" />
+                                        <ComboBoxItem Content="TCP Upload" Tag="tcp-upload" />
+                                        <ComboBoxItem Content="TCP Download" Tag="tcp-download" />
+                                        <ComboBoxItem Content="TCP Bidirectional" Tag="tcp-bidirectional" />
+                                        <ComboBoxItem Content="UDP Upload" Tag="udp-upload" />
+                                        <ComboBoxItem Content="UDP Download" Tag="udp-download" />
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel Grid.Column="4">
@@ -924,21 +924,21 @@
                                                         Orientation="Horizontal"
                                                         HorizontalAlignment="Right"
                                                         VerticalAlignment="Center">
-                                                <Button Content="Details"
+                                                <Button Content="{Binding DetailsButtonText}"
                                                         Style="{StaticResource CompactSecondaryButton}"
                                                         FontSize="11"
                                                         Padding="8,0"
                                                         MinHeight="28"
                                                         Margin="0,0,8,0"
                                                         Click="HistoryDetailsButton_Click" />
-                                                <Button Content="Copy command"
+                                                <Button Content="{Binding CopyCommandButtonText}"
                                                         Style="{StaticResource CompactSecondaryButton}"
                                                         FontSize="11"
                                                         Padding="8,0"
                                                         MinHeight="28"
                                                         Margin="0,0,8,0"
                                                         Click="HistoryCopyCommandButton_Click" />
-                                                <Button Content="Delete"
+                                                <Button Content="{Binding DeleteButtonText}"
                                                         Style="{StaticResource CompactSecondaryButton}"
                                                         FontSize="11"
                                                         Padding="8,0"

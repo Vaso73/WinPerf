@@ -177,21 +177,21 @@
 
                                     <TextBlock Text="Run mode" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <ComboBox x:Name="RunModeBox" SelectedIndex="0" SelectionChanged="AnyInputChanged" Margin="0,3,0,7">
-                                        <ComboBoxItem Content="Client mode" />
-                                        <ComboBoxItem Content="Server mode" />
+                                        <ComboBoxItem Content="Client mode" Tag="client" />
+                                        <ComboBoxItem Content="Server mode" Tag="server" />
                                     </ComboBox>
 
                                     <TextBlock Text="Protocol" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <ComboBox x:Name="ProtocolBox" SelectedIndex="0" SelectionChanged="AnyInputChanged" Margin="0,3,0,7">
-                                        <ComboBoxItem Content="TCP" />
-                                        <ComboBoxItem Content="UDP" />
+                                        <ComboBoxItem Content="TCP" Tag="tcp" />
+                                        <ComboBoxItem Content="UDP" Tag="udp" />
                                     </ComboBox>
 
                                     <TextBlock Text="IP version" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <ComboBox x:Name="IpVersionBox" SelectedIndex="1" SelectionChanged="AnyInputChanged" Margin="0,3,0,0">
-                                        <ComboBoxItem Content="Default" />
-                                        <ComboBoxItem Content="IPv4" />
-                                        <ComboBoxItem Content="IPv6" />
+                                        <ComboBoxItem Content="Default" Tag="default" />
+                                        <ComboBoxItem Content="IPv4" Tag="ipv4" />
+                                        <ComboBoxItem Content="IPv6" Tag="ipv6" />
                                     </ComboBox>
                                 </StackPanel>
                             </Border>

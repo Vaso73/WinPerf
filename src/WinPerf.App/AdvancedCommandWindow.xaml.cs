@@ -79,12 +79,12 @@ public partial class AdvancedCommandWindow : Window
             if (ProfileBox.SelectedItem is SavedIperfProfile selectedProfile)
             {
                 ApplyProfileToInputs(selectedProfile);
-                SetProfileStatus($"Loaded profile '{selectedProfile.Name}'.");
+                SetProfileStatus(AppText.F("Loaded profile '{0}'.", selectedProfile.Name));
             }
             else
             {
                 ProfileNameBox.Text = BuildSuggestedProfileName();
-                SetProfileStatus("No saved profiles yet.");
+                SetProfileStatus(AppText.T("No saved profiles yet."));
             }
         }
         catch (Exception ex)
@@ -92,7 +92,7 @@ public partial class AdvancedCommandWindow : Window
             _profilesDocument = new SavedIperfProfilesDocument();
             _profilesLoaded = true;
             RefreshProfileList(null);
-            SetProfileStatus($"Profile load failed: {ex.Message}", isError: true);
+            SetProfileStatus(AppText.F("Profile load failed: {0}", ex.Message), isError: true);
         }
     }
 
@@ -114,7 +114,7 @@ public partial class AdvancedCommandWindow : Window
             LastSelectedProfileId = selectedProfile.Id
         };
 
-        await TrySaveProfilesAsync($"Selected profile '{selectedProfile.Name}'.", showMessageOnError: false);
+        await TrySaveProfilesAsync(AppText.F("Selected profile '{0}'.", selectedProfile.Name), showMessageOnError: false);
     }
 
     private async void SaveProfileButton_Click(object sender, RoutedEventArgs e)
@@ -132,7 +132,7 @@ public partial class AdvancedCommandWindow : Window
 
         UpsertProfile(updatedProfile, setDefaultWhenFirst: false);
 
-        if (await TrySaveProfilesAsync($"Saved profile '{updatedProfile.Name}'."))
+        if (await TrySaveProfilesAsync(AppText.F("Saved profile '{0}'.", updatedProfile.Name)))
         {
             RefreshProfileList(updatedProfile.Id);
         }
@@ -154,7 +154,7 @@ public partial class AdvancedCommandWindow : Window
 
         UpsertProfile(newProfile, setDefaultWhenFirst: true);
 
-        if (await TrySaveProfilesAsync($"Saved new profile '{newProfile.Name}'."))
+        if (await TrySaveProfilesAsync(AppText.F("Saved new profile '{0}'.", newProfile.Name)))
         {
             RefreshProfileList(newProfile.Id);
         }
@@ -178,7 +178,7 @@ public partial class AdvancedCommandWindow : Window
             LastSelectedProfileId = selectedProfile.Id
         };
 
-        await TrySaveProfilesAsync($"Default profile set to '{selectedProfile.Name}'.");
+        await TrySaveProfilesAsync(AppText.F("Default profile set to '{0}'.", selectedProfile.Name));
     }
 
     private async void DeleteProfileButton_Click(object sender, RoutedEventArgs e)
@@ -223,7 +223,7 @@ public partial class AdvancedCommandWindow : Window
             LastSelectedProfileId = lastSelectedProfileId
         };
 
-        if (await TrySaveProfilesAsync($"Deleted profile '{selectedProfile.Name}'."))
+        if (await TrySaveProfilesAsync(AppText.F("Deleted profile '{0}'.", selectedProfile.Name)))
         {
             RefreshProfileList(lastSelectedProfileId);
 
@@ -275,7 +275,7 @@ public partial class AdvancedCommandWindow : Window
             LastSelectedProfileId = profileId
         };
 
-        await TrySaveProfilesAsync("Last selected profile saved.", showMessageOnError: false);
+        await TrySaveProfilesAsync(AppText.T("Last selected profile saved."), showMessageOnError: false);
     }
 
     private async Task<bool> TrySaveProfilesAsync(string statusMessage, bool showMessageOnError = true)
@@ -288,7 +288,7 @@ public partial class AdvancedCommandWindow : Window
         }
         catch (Exception ex)
         {
-            SetProfileStatus($"Profile save failed: {ex.Message}", isError: true);
+            SetProfileStatus(AppText.F("Profile save failed: {0}", ex.Message), isError: true);
 
             if (showMessageOnError)
             {
@@ -400,7 +400,7 @@ public partial class AdvancedCommandWindow : Window
             Id = profileId,
             Name = GetProfileName(),
             RunMode = IsServerMode() ? SavedIperfRunMode.Server : SavedIperfRunMode.Client,
-            Protocol = SelectedText(ProtocolBox) == "UDP" ? SavedIperfProtocol.Udp : SavedIperfProtocol.Tcp,
+            Protocol = SelectedTag(ProtocolBox) == "udp" ? SavedIperfProtocol.Udp : SavedIperfProtocol.Tcp,
             AddressFamily = GetSelectedAddressFamily(),
             Server = EmptyToNull(ServerAddressBox.Text),
             BindAddress = EmptyToNull(BindAddressBox.Text),
@@ -438,23 +438,23 @@ public partial class AdvancedCommandWindow : Window
         {
             ProfileNameBox.Text = profile.Name;
 
-            SelectComboBoxText(
+            SelectComboBoxTag(
                 RunModeBox,
-                profile.RunMode == SavedIperfRunMode.Server ? "Server mode" : "Client mode",
+                profile.RunMode == SavedIperfRunMode.Server ? "server" : "client",
                 fallbackIndex: 0);
 
-            SelectComboBoxText(
+            SelectComboBoxTag(
                 ProtocolBox,
-                profile.Protocol == SavedIperfProtocol.Udp ? "UDP" : "TCP",
+                profile.Protocol == SavedIperfProtocol.Udp ? "udp" : "tcp",
                 fallbackIndex: 0);
 
-            SelectComboBoxText(
+            SelectComboBoxTag(
                 IpVersionBox,
                 profile.AddressFamily switch
                 {
-                    IperfAddressFamily.Default => "Default",
-                    IperfAddressFamily.IPv6 => "IPv6",
-                    _ => "IPv4"
+                    IperfAddressFamily.Default => "default",
+                    IperfAddressFamily.IPv6 => "ipv6",
+                    _ => "ipv4"
                 },
                 fallbackIndex: 1);
 
@@ -513,49 +513,49 @@ public partial class AdvancedCommandWindow : Window
     {
         if (!IsPositiveInt(PortBox.Text, out var port) || port is < 1 or > 65535)
         {
-            return "Port must be between 1 and 65535.";
+            return AppText.T("Port must be between 1 and 65535.");
         }
 
         if (IsClientMode() && string.IsNullOrWhiteSpace(ServerAddressBox.Text))
         {
-            return "Client mode requires a server address.";
+            return AppText.T("Client mode requires a server address.");
         }
 
         if (IsClientMode() && !IsPositiveInt(StreamsBox.Text, out _))
         {
-            return "Streams must be a positive number.";
+            return AppText.T("Streams must be a positive number.");
         }
 
         if (IsClientMode() && !IsPositiveInt(DurationBox.Text, out _))
         {
-            return "Duration must be a positive number.";
+            return AppText.T("Duration must be a positive number.");
         }
 
         if (!string.IsNullOrWhiteSpace(IntervalBox.Text) && !IsPositiveInt(IntervalBox.Text, out _))
         {
-            return "Report interval must be empty or a positive number.";
+            return AppText.T("Report interval must be empty or a positive number.");
         }
 
         if (!string.IsNullOrWhiteSpace(OmitSecondsBox.Text)
             && (!int.TryParse(OmitSecondsBox.Text.Trim(), out var omitSeconds) || omitSeconds < 0))
         {
-            return "Omit seconds must be empty, zero, or a positive number.";
+            return AppText.T("Omit seconds must be empty, zero, or a positive number.");
         }
 
         if (!string.IsNullOrWhiteSpace(ClientPortBox.Text)
             && (!int.TryParse(ClientPortBox.Text.Trim(), out var clientPort) || clientPort is < 1 or > 65535))
         {
-            return "Client port must be empty or between 1 and 65535.";
+            return AppText.T("Client port must be empty or between 1 and 65535.");
         }
 
         if (!string.IsNullOrWhiteSpace(TcpMssBox.Text) && !IsPositiveInt(TcpMssBox.Text, out _))
         {
-            return "TCP MSS must be empty or a positive number.";
+            return AppText.T("TCP MSS must be empty or a positive number.");
         }
 
         if (ReverseBox.IsChecked == true && BidirectionalBox.IsChecked == true)
         {
-            return "Reverse and bidirectional cannot be enabled together.";
+            return AppText.T("Reverse and bidirectional cannot be enabled together.");
         }
 
         return null;
@@ -583,17 +583,17 @@ public partial class AdvancedCommandWindow : Window
             AddPair(args, "-B", bind);
         }
 
-        switch (SelectedText(IpVersionBox))
+        switch (SelectedTag(IpVersionBox))
         {
-            case "IPv4":
+            case "ipv4":
                 args.Add("-4");
                 break;
-            case "IPv6":
+            case "ipv6":
                 args.Add("-6");
                 break;
         }
 
-        if (SelectedText(ProtocolBox) == "UDP")
+        if (SelectedTag(ProtocolBox) == "udp")
         {
             args.Add("-u");
 
@@ -718,7 +718,7 @@ public partial class AdvancedCommandWindow : Window
             host = "iperf3";
         }
 
-        var protocol = SelectedText(ProtocolBox);
+        var protocol = SelectedTag(ProtocolBox) == "udp" ? "UDP" : "TCP";
         var direction = BidirectionalBox.IsChecked == true
             ? "bidir"
             : ReverseBox.IsChecked == true
@@ -738,10 +738,10 @@ public partial class AdvancedCommandWindow : Window
 
     private IperfAddressFamily GetSelectedAddressFamily()
     {
-        return SelectedText(IpVersionBox) switch
+        return SelectedTag(IpVersionBox) switch
         {
-            "Default" => IperfAddressFamily.Default,
-            "IPv6" => IperfAddressFamily.IPv6,
+            "default" => IperfAddressFamily.Default,
+            "ipv6" => IperfAddressFamily.IPv6,
             _ => IperfAddressFamily.IPv4
         };
     }
@@ -805,9 +805,9 @@ public partial class AdvancedCommandWindow : Window
         return args;
     }
 
-    private bool IsClientMode() => SelectedText(RunModeBox) == "Client mode";
+    private bool IsClientMode() => SelectedTag(RunModeBox) == "client";
 
-    private bool IsServerMode() => SelectedText(RunModeBox) == "Server mode";
+    private bool IsServerMode() => SelectedTag(RunModeBox) == "server";
 
     private static bool IsPositiveInt(string value, out int number)
     {

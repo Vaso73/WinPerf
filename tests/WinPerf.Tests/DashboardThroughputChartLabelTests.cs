@@ -23,12 +23,11 @@ public sealed class DashboardThroughputChartLabelTests
         Assert.Contains("Total bandwidth", xaml);
         Assert.Contains("Live Total Throughput", xaml);
         Assert.Contains("Live total average", xaml);
-        Assert.Contains("\"Total bandwidth\"", code);
+        Assert.Contains("AppText.T(\"Total bandwidth\")", code);
         Assert.Contains("BuildPerStreamScaleLabel(streamAxisMax, streamCount)", code);
-        Assert.Contains("\"Per-stream: \"", code);
-        Assert.Contains("\" streams · avg \"", code);
-        Assert.Contains("\" · scale 0-\"", code);
-        Assert.Contains("\"total \" + FormatMegabits(current)", code);
+        Assert.Contains("Per-stream: {0} streams · avg {1} · min {2} · max {3} · scale 0-{4}", code);
+        Assert.Contains("Per-stream: {0} streams · scale 0-{1}", code);
+        Assert.Contains("total {0}   min {1} · avg {2} · max {3}", code);
         Assert.Contains("Server received total", code);
     }
 

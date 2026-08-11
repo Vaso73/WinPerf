@@ -26,6 +26,7 @@ public sealed class LanguagePackServiceTests
             Assert.Equal(LanguagePackService.SlovakLanguageCode, document.Info.LanguageCode);
             Assert.Equal("Slovenčina", document.Info.NativeName);
             Assert.Equal("Nastavenia", document.Texts["Settings"]);
+            Assert.Equal("Posledné", document.Texts["Last"]);
         }
         finally
         {
@@ -93,6 +94,51 @@ public sealed class LanguagePackServiceTests
 
             Assert.Equal("Vlastné nastavenia", document.Texts["Settings"]);
             Assert.True(document.Texts.ContainsKey("Dashboard"));
+        }
+        finally
+        {
+            DeleteTemporaryDirectory(baseDirectory);
+        }
+    }
+
+    [Fact]
+    public void EnsureSeedLanguagePacks_RefreshesStaleEnglishSeedValuesWithoutOverwritingCustomTranslations()
+    {
+        var baseDirectory = CreateTemporaryDirectory();
+
+        try
+        {
+            var languageDirectory = LanguagePackService.GetLanguageDirectory(baseDirectory);
+            Directory.CreateDirectory(languageDirectory);
+            var languagePackPath = Path.Combine(languageDirectory, $"{LanguagePackService.SlovakLanguageCode}.lang");
+
+            File.WriteAllText(
+                languagePackPath,
+                """
+                # app-id := winperf
+                # language-code := sk-SK
+                # language-name := Slovak
+                # native-name := Slovenčina
+                # direction := ltr
+
+                KEY := Settings || TEXT := Vlastné nastavenia
+                KEY := Advanced iperf3 builder || TEXT := Advanced iperf3 builder
+                KEY := TCP Upload || TEXT := TCP Upload
+                KEY := iperf2 executable · fallback tools\iperf2\iperf.exe or iperf2.exe || TEXT := iperf2 executable · fallback tools\iperf2\iperf.exe alebo iperf2.exe
+                """);
+
+            var service = new LanguagePackService();
+
+            service.EnsureSeedLanguagePacks(baseDirectory);
+
+            var document = LanguagePackService.Parse(File.ReadAllText(languagePackPath), languagePackPath);
+
+            Assert.Equal("Vlastné nastavenia", document.Texts["Settings"]);
+            Assert.Equal("Pokročilý tvorca iperf3 príkazu", document.Texts["Advanced iperf3 builder"]);
+            Assert.Equal("TCP upload", document.Texts["TCP Upload"]);
+            Assert.Equal(
+                "iperf2 spustiteľný súbor · záloha tools\\iperf2\\iperf.exe alebo iperf2.exe",
+                document.Texts["iperf2 executable · fallback tools\\iperf2\\iperf.exe or iperf2.exe"]);
         }
         finally
         {

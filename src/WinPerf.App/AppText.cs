@@ -76,7 +76,8 @@ public static class AppText
                 ApplyStringProperty(window, Window.TitleProperty);
                 break;
             case TextBlock textBlock:
-                if (BindingOperations.GetBindingExpression(textBlock, TextBlock.TextProperty) is null)
+                if (textBlock.Inlines.Count == 0 &&
+                    BindingOperations.GetBindingExpression(textBlock, TextBlock.TextProperty) is null)
                 {
                     ApplyStringProperty(textBlock, TextBlock.TextProperty);
                 }
@@ -85,7 +86,12 @@ public static class AppText
             case Run run:
                 ApplyStringProperty(run, Run.TextProperty);
                 break;
-            case ComboBoxItem:
+            case ComboBoxItem comboBoxItem:
+                if (comboBoxItem.Content is string comboBoxItemContent)
+                {
+                    comboBoxItem.Content = TranslateWithOriginalKey(comboBoxItem, comboBoxItemContent);
+                }
+
                 break;
             case HeaderedItemsControl headered:
                 if (headered.Header is string header)
@@ -158,7 +164,11 @@ public static class AppText
             }
         }
 
-        foreach (var logicalChild in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+        var logicalChildren = LogicalTreeHelper.GetChildren(root)
+            .OfType<DependencyObject>()
+            .ToList();
+
+        foreach (var logicalChild in logicalChildren)
         {
             foreach (var nested in EnumerateChildren(logicalChild, visited))
             {

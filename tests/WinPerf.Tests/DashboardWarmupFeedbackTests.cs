@@ -11,7 +11,7 @@ public sealed class DashboardWarmupFeedbackTests
         Assert.Contains("_omittedWarmupIntervalsReceived = 0;", code);
         Assert.Contains("Warm-up: omitting first", code);
         Assert.Contains("private void HandleOmittedWarmupSample(IperfIntervalSample sample)", code);
-        Assert.Contains("Warm-up {elapsed}/{_activeOmitSeconds}s omitted", code);
+        Assert.Contains("Warm-up {0}/{1}s omitted{2}", code);
         Assert.Contains("ShowWarmupChartPlaceholder", code);
         Assert.Contains("Ignoring warm-up samples. Live chart starts after warm-up.", code);
     }
