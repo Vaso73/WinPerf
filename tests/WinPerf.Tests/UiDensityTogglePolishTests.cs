@@ -15,7 +15,7 @@ public sealed class UiDensityTogglePolishTests
         Assert.Contains("x:Key=\"SidebarAppButton\"", MainWindowXaml);
         Assert.Contains("x:Name=\"UiDensityButton\"", MainWindowXaml);
         Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", MainWindowXaml);
-        Assert.Contains("Property=\"MinHeight\" Value=\"34\"", MainWindowXaml);
+        Assert.Contains("Property=\"MinHeight\" Value=\"30\"", MainWindowXaml);
         Assert.Contains("Property=\"HorizontalContentAlignment\" Value=\"Left\"", MainWindowXaml);
         Assert.Contains("<Button.ContextMenu>", MainWindowXaml);
         Assert.DoesNotMatch("x:Name=\\\"UiDensityButton\\\"[\\s\\S]{0,220}Style=\\\"\\{StaticResource StatusPillButton\\}\\\"", MainWindowXaml);

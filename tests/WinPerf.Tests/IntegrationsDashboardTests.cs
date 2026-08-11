@@ -6,24 +6,31 @@ public sealed class IntegrationsDashboardTests
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App"));
 
     [Fact]
-    public void Dashboard_ShowsLoadedIntegrationsCard()
+    public void LeftRail_ShowsCompactLoadedIntegrationsCard()
     {
         var xaml = File.ReadAllText(Path.Combine(AppDirectory, "MainWindow.xaml"));
 
-        Assert.Contains("x:Name=\"IntegrationsCard\"", xaml);
-        Assert.Contains("Text=\"Loaded integrations\"", xaml);
+        Assert.Contains("x:Name=\"CompactIntegrationsCard\"", xaml);
+        Assert.Contains("x:Key=\"IntegrationStatusChip\"", xaml);
+        Assert.Contains("Text=\"Loaded\"", xaml);
+        Assert.Contains("x:Name=\"Iperf3IntegrationStatusChip\"", xaml);
         Assert.Contains("x:Name=\"Iperf3IntegrationStatusText\"", xaml);
+        Assert.Contains("x:Name=\"Iperf2IntegrationStatusChip\"", xaml);
         Assert.Contains("x:Name=\"Iperf2IntegrationStatusText\"", xaml);
+        Assert.Contains("x:Name=\"UpdaterIntegrationStatusChip\"", xaml);
         Assert.Contains("x:Name=\"UpdaterIntegrationStatusText\"", xaml);
-        Assert.Contains("Text=\"winperf / WinPerf.zip\"", xaml);
+        Assert.Contains("Text=\"Sponsor Pro core\"", xaml);
 
-        var header = xaml.IndexOf("Text=\"Dashboard\"", StringComparison.Ordinal);
-        var integrations = xaml.IndexOf("x:Name=\"IntegrationsCard\"", StringComparison.Ordinal);
+        var appSection = xaml.IndexOf("x:Name=\"AppMenuSection\"", StringComparison.Ordinal);
+        var integrations = xaml.IndexOf("x:Name=\"CompactIntegrationsCard\"", StringComparison.Ordinal);
+        var config = xaml.IndexOf("x:Name=\"ConfigColumn\"", StringComparison.Ordinal);
         var results = xaml.IndexOf("x:Name=\"ResultsGrid\"", StringComparison.Ordinal);
 
-        Assert.True(header >= 0);
-        Assert.True(integrations > header);
-        Assert.True(results > integrations);
+        Assert.True(appSection >= 0);
+        Assert.True(integrations > appSection);
+        Assert.True(config > integrations);
+        Assert.True(results > config);
+        Assert.DoesNotContain("x:Name=\"IntegrationsCard\"", xaml);
     }
 
     [Fact]
@@ -35,8 +42,9 @@ public sealed class IntegrationsDashboardTests
         Assert.Contains("private void RefreshIntegrationStatus()", code);
         Assert.Contains("ResolveIntegration(IperfEngine.Iperf3)", code);
         Assert.Contains("ResolveIntegration(IperfEngine.Iperf2)", code);
+        Assert.Contains("SetIntegrationChipState", code);
         Assert.Contains("WinPerfUpdateService.ProductId", code);
         Assert.Contains("WinPerfUpdateService.AssetName", code);
-        Assert.Contains("Sponsor Pro update client and installer contracts loaded", code);
+        Assert.Contains("WinPerfUpdateService.Channel", code);
     }
 }

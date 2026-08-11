@@ -23,15 +23,18 @@ public sealed class SettingsDiscoverabilityTests
         Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", xaml);
         Assert.Contains("ToolTip=\"Open Settings\"", xaml);
         Assert.Contains("Click=\"SettingsButton_Click\"", xaml);
+        Assert.Contains("x:Name=\"CompactIntegrationsCard\"", xaml);
 
         var appSection = xaml.IndexOf("x:Name=\"AppMenuSection\"", StringComparison.Ordinal);
         var settingsButton = xaml.IndexOf("x:Name=\"SettingsButton\"", StringComparison.Ordinal);
+        var integrationsCard = xaml.IndexOf("x:Name=\"CompactIntegrationsCard\"", StringComparison.Ordinal);
         var configColumn = xaml.IndexOf("x:Name=\"ConfigColumn\"", StringComparison.Ordinal);
 
         Assert.True(appSection >= 0);
         Assert.True(settingsButton >= 0);
         Assert.True(settingsButton > appSection);
-        Assert.True(configColumn > settingsButton);
+        Assert.True(integrationsCard > settingsButton);
+        Assert.True(configColumn > integrationsCard);
         Assert.DoesNotMatch("x:Name=\\\"SettingsButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", xaml);
         Assert.DoesNotMatch("x:Name=\\\"SettingsButton\\\"[\\s\\S]{0,220}Style=\\\"\\{StaticResource StatusPillButton\\}\\\"", xaml);
     }
@@ -46,16 +49,20 @@ public sealed class SettingsDiscoverabilityTests
         var aboutButtonHandler = code.IndexOf("private void AboutButton_Click", StringComparison.Ordinal);
         var sharedHandler = code.IndexOf("private void OpenSettingsWindow", StringComparison.Ordinal);
         var aboutHandler = code.IndexOf("private void OpenAboutWindow", StringComparison.Ordinal);
+        var updatesHandler = code.IndexOf("private void OpenSponsorProUpdatesWindow", StringComparison.Ordinal);
 
         Assert.True(settingsButtonHandler >= 0);
         Assert.True(updatesButtonHandler > settingsButtonHandler);
         Assert.True(aboutButtonHandler > updatesButtonHandler);
         Assert.True(sharedHandler > aboutButtonHandler);
         Assert.True(aboutHandler > sharedHandler);
+        Assert.True(updatesHandler > aboutHandler);
 
         Assert.True(code.IndexOf("OpenSettingsWindow();", settingsButtonHandler, StringComparison.Ordinal) > settingsButtonHandler);
-        Assert.True(code.IndexOf("OpenAboutWindow();", updatesButtonHandler, StringComparison.Ordinal) > updatesButtonHandler);
+        Assert.True(code.IndexOf("OpenSponsorProUpdatesWindow();", updatesButtonHandler, StringComparison.Ordinal) > updatesButtonHandler);
         Assert.True(code.IndexOf("OpenAboutWindow();", aboutButtonHandler, StringComparison.Ordinal) > aboutButtonHandler);
+        Assert.Contains("new SponsorProUpdatesWindow(ResolveAppVersionText())", code);
+        Assert.Contains("new AboutWindow(ResolveAppVersionText())", code);
         Assert.DoesNotContain("EngineStatusText_MouseLeftButtonUp", code);
     }
 

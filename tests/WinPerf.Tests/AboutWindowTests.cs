@@ -6,18 +6,16 @@ public sealed class AboutWindowTests
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App"));
 
     [Fact]
-    public void AboutWindow_ShowsSponsorProAndUpdateIntegration()
+    public void AboutWindow_ShowsCompactProductInformation()
     {
         var xaml = File.ReadAllText(Path.Combine(AppDirectory, "AboutWindow.xaml"));
 
         Assert.Contains("Title=\"About WinPerf\"", xaml);
         Assert.Contains("x:Name=\"VersionText\"", xaml);
-        Assert.Contains("Sponsor Pro / Updates", xaml);
-        Assert.Contains("Update core", xaml);
-        Assert.Contains("Client, manifest validation and installer contract are loaded", xaml);
-        Assert.Contains("sponsor-pro / WinPerf.zip", xaml);
-        Assert.Contains("x:Name=\"CheckUpdatesButton\"", xaml);
-        Assert.Contains("x:Name=\"SponsorLoginButton\"", xaml);
+        Assert.Contains("Sponsor Pro planned; free edition will be reduced", xaml);
+        Assert.Contains("Single portable WinPerf.exe", xaml);
+        Assert.DoesNotContain("x:Name=\"CheckUpdatesButton\"", xaml);
+        Assert.DoesNotContain("x:Name=\"SponsorProAccountButton\"", xaml);
     }
 
     [Fact]

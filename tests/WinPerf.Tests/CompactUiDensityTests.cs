@@ -26,6 +26,7 @@ public sealed class CompactUiDensityTests
         var custom = ReadXaml("CustomCommandWindow.xaml");
         var settings = ReadXaml("SettingsWindow.xaml");
         var about = ReadXaml("AboutWindow.xaml");
+        var updates = ReadXaml("SponsorProUpdatesWindow.xaml");
 
         Assert.Contains("Width=\"980\"", advanced);
         Assert.Contains("Height=\"680\"", advanced);
@@ -42,10 +43,15 @@ public sealed class CompactUiDensityTests
         Assert.Contains("MinWidth=\"700\"", settings);
         Assert.Contains("MinHeight=\"500\"", settings);
 
-        Assert.Contains("Width=\"700\"", about);
-        Assert.Contains("Height=\"480\"", about);
-        Assert.Contains("MinWidth=\"640\"", about);
-        Assert.Contains("MinHeight=\"420\"", about);
+        Assert.Contains("Width=\"560\"", about);
+        Assert.Contains("Height=\"340\"", about);
+        Assert.Contains("MinWidth=\"520\"", about);
+        Assert.Contains("MinHeight=\"320\"", about);
+
+        Assert.Contains("Width=\"760\"", updates);
+        Assert.Contains("Height=\"560\"", updates);
+        Assert.Contains("MinWidth=\"680\"", updates);
+        Assert.Contains("MinHeight=\"500\"", updates);
     }
 
     [Fact]
@@ -56,7 +62,8 @@ public sealed class CompactUiDensityTests
             ReadXaml("AdvancedCommandWindow.xaml") +
             ReadXaml("CustomCommandWindow.xaml") +
             ReadXaml("SettingsWindow.xaml") +
-            ReadXaml("AboutWindow.xaml");
+            ReadXaml("AboutWindow.xaml") +
+            ReadXaml("SponsorProUpdatesWindow.xaml");
 
         Assert.DoesNotContain("CaptionHeight=\"42\"", combined);
         Assert.DoesNotContain("<RowDefinition Height=\"42\" />", combined);

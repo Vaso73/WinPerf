@@ -1,0 +1,277 @@
+using System.Diagnostics;
+using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using WinPerf.App.Settings;
+using WinPerf.App.Updates;
+using WinPerf.Core.Updates;
+
+namespace WinPerf.App;
+
+public partial class SponsorProUpdatesWindow : Window
+{
+    private readonly SponsorProSessionStore _sessionStore = new();
+    private readonly string _versionText;
+    private CancellationTokenSource? _operationCancellation;
+    private SponsorProSession? _session;
+    private WinPerfUpdateManifest? _availableManifest;
+
+    public SponsorProUpdatesWindow(string versionText)
+    {
+        InitializeComponent();
+        WindowPlacementStore.Track(this, "SponsorProUpdatesWindow");
+
+        _versionText = versionText;
+        InstalledVersionText.Text = versionText;
+        ProductText.Text = WinPerfUpdateService.ProductId;
+
+        SetChip(UpdateCoreStatusChip, UpdateCoreStatusText, ChipState.Ready, "Ready");
+        RefreshSponsorProStatus();
+        ResetUpdateState();
+
+        Closed += (_, _) =>
+        {
+            _operationCancellation?.Cancel();
+            _operationCancellation?.Dispose();
+        };
+    }
+
+    private void RefreshSponsorProStatus()
+    {
+        _session = _sessionStore.Load();
+
+        if (_session?.IsUsable == true)
+        {
+            var login = string.IsNullOrWhiteSpace(_session.GithubLogin)
+                ? "GitHub account"
+                : _session.GithubLogin;
+            var tier = string.IsNullOrWhiteSpace(_session.SponsorTier)
+                ? "Sponsor Pro"
+                : _session.SponsorTier;
+
+            AccountBadgeText.Text = "GH";
+            AccountTitleText.Text = $"GitHub: {login}";
+            AccountStatusText.Text = $"{tier} active · expires {_session.ExpiresAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
+            SponsorProAccountButton.Content = "Sign out";
+            SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Ready, "Active");
+            StatusText.Text = "Sponsor Pro account is connected. You can check for private updates.";
+            return;
+        }
+
+        AccountBadgeText.Text = "GH";
+        AccountTitleText.Text = "Not signed in";
+        AccountStatusText.Text = "Sign in with GitHub to use Sponsor Pro updates.";
+        SponsorProAccountButton.Content = "Sign in with GitHub";
+        SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Missing, "Missing");
+        StatusText.Text = "Ready. Sign in to enable Sponsor Pro update checks.";
+    }
+
+    private void ResetUpdateState()
+    {
+        _availableManifest = null;
+        LatestVersionText.Text = "Not checked yet";
+        InstallUpdateButton.IsEnabled = false;
+        SetChip(UpdateStateChip, UpdateStateText, ChipState.Idle, "Idle");
+    }
+
+    private async void SponsorProAccountButton_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshSponsorProStatus();
+        if (_session?.IsUsable == true)
+        {
+            SignOutOfSponsorPro();
+            return;
+        }
+
+        var cancellationToken = BeginOperation();
+        SetBusy(true);
+        StatusText.Text = "Opening GitHub Sponsor Pro login...";
+
+        try
+        {
+            using var service = new WinPerfUpdateService();
+            var start = await service.StartLoginAsync(cancellationToken);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = start.LoginUrl.AbsoluteUri,
+                UseShellExecute = true
+            });
+
+            StatusText.Text = "Waiting for GitHub authorization...";
+            var result = await service.PollLoginAsync(start, cancellationToken);
+            if (result.Success && result.Session is not null)
+            {
+                _sessionStore.Save(result.Session);
+                RefreshSponsorProStatus();
+                ResetUpdateState();
+                return;
+            }
+
+            StatusText.Text = "Sponsor Pro login failed or was not authorized.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Sponsor Pro login was cancelled.";
+        }
+        catch (Exception)
+        {
+            StatusText.Text = "Sponsor Pro login failed. Check your connection and try again.";
+        }
+        finally
+        {
+            SetBusy(false);
+            RefreshSponsorProStatus();
+        }
+    }
+
+    private void SignOutOfSponsorPro()
+    {
+        _operationCancellation?.Cancel();
+        var cleared = _sessionStore.Clear();
+        RefreshSponsorProStatus();
+        ResetUpdateState();
+        StatusText.Text = cleared
+            ? "Signed out locally. Your GitHub browser session is unchanged."
+            : "Could not remove the local Sponsor Pro session.";
+    }
+
+    private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshSponsorProStatus();
+        if (_session?.IsUsable != true)
+        {
+            StatusText.Text = "Sign in with GitHub Sponsor Pro before checking for updates.";
+            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, "Login");
+            return;
+        }
+
+        var cancellationToken = BeginOperation();
+        SetBusy(true);
+        StatusText.Text = "Checking Sponsor Pro update channel...";
+        SetChip(UpdateStateChip, UpdateStateText, ChipState.Idle, "Checking");
+
+        try
+        {
+            using var service = new WinPerfUpdateService();
+            var result = await service.CheckAsync(ParseVersion(_versionText), cancellationToken);
+
+            if (result.Status == UpdateCheckStatus.UpToDate)
+            {
+                _availableManifest = null;
+                LatestVersionText.Text = result.LatestVersion?.ToString() ?? "Current version is up to date";
+                InstallUpdateButton.IsEnabled = false;
+                SetChip(UpdateStateChip, UpdateStateText, ChipState.Ready, "Current");
+                StatusText.Text = "WinPerf is up to date on the Sponsor Pro channel.";
+                return;
+            }
+
+            if (result.Status == UpdateCheckStatus.UpdateAvailable &&
+                result.Manifest is not null &&
+                result.LatestVersion is not null)
+            {
+                _availableManifest = result.Manifest;
+                LatestVersionText.Text = $"v{result.LatestVersion} · {result.Manifest.AssetName}";
+                InstallUpdateButton.IsEnabled = false;
+                SetChip(UpdateStateChip, UpdateStateText, ChipState.Ready, "Available");
+                StatusText.Text = "Update found. Install button will be enabled after helper launcher/startup wiring.";
+                return;
+            }
+
+            _availableManifest = null;
+            LatestVersionText.Text = result.ErrorCode ?? "Update check failed";
+            InstallUpdateButton.IsEnabled = false;
+            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, "Error");
+            StatusText.Text = "Update check failed or server response was invalid.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Update check was cancelled.";
+        }
+        catch (Exception)
+        {
+            _availableManifest = null;
+            LatestVersionText.Text = "Update check failed";
+            InstallUpdateButton.IsEnabled = false;
+            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, "Error");
+            StatusText.Text = "Update check failed. Check your connection and try again.";
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private CancellationToken BeginOperation()
+    {
+        _operationCancellation?.Cancel();
+        _operationCancellation?.Dispose();
+        _operationCancellation = new CancellationTokenSource();
+        return _operationCancellation.Token;
+    }
+
+    private void SetBusy(bool busy)
+    {
+        BusyProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+        SponsorProAccountButton.IsEnabled = !busy;
+        CheckUpdatesButton.IsEnabled = !busy;
+        InstallUpdateButton.IsEnabled = false;
+    }
+
+    private void SetChip(Border chip, TextBlock text, ChipState state, string label)
+    {
+        text.Text = label;
+
+        var (background, border, foreground) = state switch
+        {
+            ChipState.Ready => (
+                Color.FromRgb(0x12, 0x3B, 0x2A),
+                Color.FromRgb(0x22, 0xC5, 0x5E),
+                Color.FromRgb(0x22, 0xC5, 0x5E)),
+            ChipState.Missing => (
+                Color.FromRgb(0x4C, 0x1D, 0x1D),
+                Color.FromRgb(0xEF, 0x44, 0x44),
+                Color.FromRgb(0xFC, 0xA5, 0xA5)),
+            _ => (
+                Color.FromRgb(0x13, 0x23, 0x3A),
+                Color.FromRgb(0x20, 0x35, 0x54),
+                Color.FromRgb(0x94, 0xA3, 0xB8))
+        };
+
+        chip.Background = new SolidColorBrush(background);
+        chip.BorderBrush = new SolidColorBrush(border);
+        text.Foreground = new SolidColorBrush(foreground);
+    }
+
+    private static Version ParseVersion(string versionText)
+    {
+        var match = Regex.Match(versionText, @"\d+(?:\.\d+){1,3}", RegexOptions.CultureInvariant);
+        return match.Success && Version.TryParse(match.Value, out var version)
+            ? version
+            : new Version(0, 0, 0);
+    }
+
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeRestoreButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private enum ChipState
+    {
+        Idle,
+        Ready,
+        Missing
+    }
+}

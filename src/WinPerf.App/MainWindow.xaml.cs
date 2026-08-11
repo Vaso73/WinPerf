@@ -242,7 +242,7 @@ public partial class MainWindow : Window
 
     private void UpdatesButton_Click(object sender, RoutedEventArgs e)
     {
-        OpenAboutWindow();
+        OpenSponsorProUpdatesWindow();
     }
 
     private void AboutButton_Click(object sender, RoutedEventArgs e)
@@ -276,6 +276,17 @@ public partial class MainWindow : Window
         };
 
         dialog.ShowDialog();
+    }
+
+    private void OpenSponsorProUpdatesWindow()
+    {
+        var dialog = new SponsorProUpdatesWindow(ResolveAppVersionText())
+        {
+            Owner = this
+        };
+
+        dialog.ShowDialog();
+        RefreshIntegrationStatus();
     }
 
     private void ApplyDashboardLayout()
@@ -751,6 +762,7 @@ public partial class MainWindow : Window
 
         UpdateIntegrationRow(
             Iperf3IntegrationStatusText,
+            Iperf3IntegrationStatusChip,
             Iperf3IntegrationDetailText,
             Iperf3IntegrationPathText,
             "iperf3 throughput engine",
@@ -758,6 +770,7 @@ public partial class MainWindow : Window
 
         UpdateIntegrationRow(
             Iperf2IntegrationStatusText,
+            Iperf2IntegrationStatusChip,
             Iperf2IntegrationDetailText,
             Iperf2IntegrationPathText,
             "iperf2 compatibility engine",
@@ -765,8 +778,10 @@ public partial class MainWindow : Window
 
         UpdaterIntegrationStatusText.Text = "Core ready";
         UpdaterIntegrationStatusText.Foreground = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
-        UpdaterIntegrationDetailText.Text = "Sponsor Pro update client and installer contracts loaded";
+        SetIntegrationChipState(UpdaterIntegrationStatusChip, UpdaterIntegrationStatusText, isReady: true);
+        UpdaterIntegrationDetailText.Text = $"{WinPerfUpdateService.ProductId} / {WinPerfUpdateService.Channel}";
         UpdaterIntegrationPathText.Text = $"{WinPerfUpdateService.ProductId} / {WinPerfUpdateService.AssetName}";
+        UpdaterIntegrationPathText.ToolTip = WinPerfUpdateService.DefaultBaseUrl + WinPerfUpdateService.LatestPath;
     }
 
     private IperfExecutableResolution ResolveIntegration(IperfEngine engine)
@@ -782,6 +797,7 @@ public partial class MainWindow : Window
 
     private void UpdateIntegrationRow(
         TextBlock statusText,
+        Border statusChip,
         TextBlock detailText,
         TextBlock pathText,
         string description,
@@ -794,18 +810,36 @@ public partial class MainWindow : Window
                 : resolution.Source;
 
             statusText.Text = "Ready";
-            statusText.Foreground = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
-            detailText.Text = $"{description} loaded from {source}";
-            pathText.Text = FormatIntegrationPath(resolution.ExecutablePath);
+            SetIntegrationChipState(statusChip, statusText, isReady: true);
+            var displayPath = FormatIntegrationPath(resolution.ExecutablePath);
+            detailText.Text = source;
+            detailText.ToolTip = $"{description}: {displayPath}";
+            pathText.Text = displayPath;
             pathText.ToolTip = resolution.ExecutablePath;
             return;
         }
 
         statusText.Text = "Missing";
-        statusText.Foreground = FindResource("AccentAmber") as Brush ?? Brushes.Orange;
+        SetIntegrationChipState(statusChip, statusText, isReady: false);
         detailText.Text = description + " not configured";
+        detailText.ToolTip = resolution.Message;
         pathText.Text = resolution.Message;
         pathText.ToolTip = resolution.Message;
+    }
+
+    private void SetIntegrationChipState(Border chip, TextBlock text, bool isReady)
+    {
+        if (isReady)
+        {
+            chip.Background = new SolidColorBrush(Color.FromRgb(0x12, 0x3B, 0x2A));
+            chip.BorderBrush = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
+            text.Foreground = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
+            return;
+        }
+
+        chip.Background = new SolidColorBrush(Color.FromRgb(0x4C, 0x1D, 0x1D));
+        chip.BorderBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
+        text.Foreground = new SolidColorBrush(Color.FromRgb(0xFC, 0xA5, 0xA5));
     }
 
     private static string FormatIntegrationPath(string? path)

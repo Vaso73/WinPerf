@@ -4,10 +4,10 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="About WinPerf"
         Icon="Assets/WinPerf.ico"
-        Width="700"
-        Height="480"
-        MinWidth="640"
-        MinHeight="420"
+        Width="560"
+        Height="340"
+        MinWidth="520"
+        MinHeight="320"
         Background="{StaticResource Bg}"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
@@ -19,20 +19,12 @@
                             CornerRadius="12" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
-
         <Style TargetType="TextBlock" BasedOn="{StaticResource TextBlockBase}" />
-
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButtonBase}">
             <Setter Property="Padding" Value="18,10" />
         </Style>
-
-        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource SecondaryButtonBase}">
-            <Setter Property="Padding" Value="18,10" />
-        </Style>
-
         <Style x:Key="SectionCard" TargetType="Border" BasedOn="{StaticResource CardBase}">
-            <Setter Property="Padding" Value="14" />
-            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Padding" Value="16" />
         </Style>
     </Window.Resources>
 
@@ -107,7 +99,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                <StackPanel Grid.Row="0" Margin="0,0,0,14">
                     <TextBlock Text="About WinPerf"
                                FontSize="24"
                                FontWeight="SemiBold" />
@@ -117,166 +109,60 @@
                                Margin="0,3,0,0" />
                 </StackPanel>
 
-                <ScrollViewer Grid.Row="1"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel>
-                        <Border Style="{StaticResource SectionCard}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="150" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+                <Border Grid.Row="1" Style="{StaticResource SectionCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0"
-                                           Grid.Column="0"
-                                           Text="Version"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,0,12,8" />
-                                <TextBlock x:Name="VersionText"
-                                           Grid.Row="0"
-                                           Grid.Column="1"
-                                           Text="WinPerf"
-                                           FontWeight="SemiBold"
-                                           Margin="0,0,0,8" />
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="0"
+                                   Text="Version"
+                                   Foreground="{StaticResource TextMuted}"
+                                   Margin="0,0,12,10" />
+                        <TextBlock x:Name="VersionText"
+                                   Grid.Row="0"
+                                   Grid.Column="1"
+                                   Text="WinPerf"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,10" />
 
-                                <TextBlock Grid.Row="1"
-                                           Grid.Column="0"
-                                           Text="Edition"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,0,12,8" />
-                                <TextBlock x:Name="EditionText"
-                                           Grid.Row="1"
-                                           Grid.Column="1"
-                                           Text="Sponsor Pro planned; free edition will be reduced"
-                                           FontWeight="SemiBold"
-                                           Margin="0,0,0,8" />
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="0"
+                                   Text="Edition"
+                                   Foreground="{StaticResource TextMuted}"
+                                   Margin="0,0,12,10" />
+                        <TextBlock x:Name="EditionText"
+                                   Grid.Row="1"
+                                   Grid.Column="1"
+                                   Text="Sponsor Pro planned; free edition will be reduced"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,10" />
 
-                                <TextBlock Grid.Row="2"
-                                           Grid.Column="0"
-                                           Text="Package"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,0,12,0" />
-                                <TextBlock Grid.Row="2"
-                                           Grid.Column="1"
-                                           Text="Single portable WinPerf.exe"
-                                           FontWeight="SemiBold" />
-                            </Grid>
-                        </Border>
-
-                        <Border Style="{StaticResource SectionCard}">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="8" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="150" />
-                                    <ColumnDefinition Width="110" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Grid.Row="0"
-                                           Grid.Column="0"
-                                           Text="Sponsor Pro / Updates"
-                                           FontWeight="SemiBold" />
-                                <TextBlock Grid.Row="0"
-                                           Grid.Column="2"
-                                           Text="Update integration"
-                                           HorizontalAlignment="Right"
-                                           Foreground="{StaticResource TextMuted}"
-                                           FontSize="11" />
-
-                                <TextBlock Grid.Row="2"
-                                           Grid.Column="0"
-                                           Text="Update core"
-                                           Margin="0,0,12,7" />
-                                <TextBlock Grid.Row="2"
-                                           Grid.Column="1"
-                                           Text="Ready"
-                                           Foreground="{StaticResource AccentGreen}"
-                                           FontWeight="SemiBold"
-                                           Margin="0,0,12,7" />
-                                <TextBlock Grid.Row="2"
-                                           Grid.Column="2"
-                                           Text="Client, manifest validation and installer contract are loaded"
-                                           Foreground="{StaticResource TextMuted}"
-                                           TextTrimming="CharacterEllipsis"
-                                           Margin="0,0,0,7" />
-
-                                <TextBlock Grid.Row="3"
-                                           Grid.Column="0"
-                                           Text="Product"
-                                           Margin="0,0,12,7" />
-                                <TextBlock Grid.Row="3"
-                                           Grid.Column="1"
-                                           Text="winperf"
-                                           Foreground="{StaticResource AccentGreen}"
-                                           FontWeight="SemiBold"
-                                           Margin="0,0,12,7" />
-                                <TextBlock Grid.Row="3"
-                                           Grid.Column="2"
-                                           Text="sponsor-pro / WinPerf.zip"
-                                           Foreground="{StaticResource TextMuted}"
-                                           TextTrimming="CharacterEllipsis"
-                                           Margin="0,0,0,7" />
-
-                                <TextBlock Grid.Row="4"
-                                           Grid.Column="0"
-                                           Text="Account"
-                                           Margin="0,0,12,7" />
-                                <TextBlock Grid.Row="4"
-                                           Grid.Column="1"
-                                           Text="Not signed in"
-                                           Foreground="{StaticResource AccentAmber}"
-                                           FontWeight="SemiBold"
-                                           Margin="0,0,12,7" />
-                                <TextBlock Grid.Row="4"
-                                           Grid.Column="2"
-                                           Text="GitHub Sponsor Pro login UI will be wired in the next step"
-                                           Foreground="{StaticResource TextMuted}"
-                                           TextTrimming="CharacterEllipsis"
-                                           Margin="0,0,0,7" />
-
-                                <StackPanel Grid.Row="5"
-                                            Grid.Column="0"
-                                            Grid.ColumnSpan="3"
-                                            Orientation="Horizontal"
-                                            Margin="0,6,0,0">
-                                    <Button x:Name="CheckUpdatesButton"
-                                            Content="Check for updates"
-                                            Style="{StaticResource SecondaryButton}"
-                                            Width="170"
-                                            IsEnabled="False"
-                                            ToolTip="Sponsor Pro update UI will be connected in the next step." />
-                                    <Button x:Name="SponsorLoginButton"
-                                            Content="Sponsor Pro login"
-                                            Style="{StaticResource SecondaryButton}"
-                                            Width="170"
-                                            Margin="8,0,0,0"
-                                            IsEnabled="False"
-                                            ToolTip="Sponsor Pro login UI will be connected in the next step." />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Text="Package"
+                                   Foreground="{StaticResource TextMuted}"
+                                   Margin="0,0,12,0" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="1"
+                                   Text="Single portable WinPerf.exe"
+                                   FontWeight="SemiBold" />
+                    </Grid>
+                </Border>
 
                 <Button Grid.Row="2"
                         Content="Close"
                         Style="{StaticResource PrimaryButton}"
                         Width="110"
                         HorizontalAlignment="Right"
-                        Margin="0,8,0,0"
+                        Margin="0,12,0,0"
                         Click="CloseButton_Click" />
             </Grid>
         </Grid>
