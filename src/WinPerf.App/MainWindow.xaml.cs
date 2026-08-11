@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -8,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using WinPerf.App.Settings;
+using WinPerf.Core.History;
 using WinPerf.Core.Iperf;
 using WinPerf.Core.Profiles;
 using WinPerf.Core.Updates;
@@ -20,6 +22,7 @@ public partial class MainWindow : Window
     private readonly IperfExecutableResolver _executableResolver = new();
     private readonly IperfProcessRunner _processRunner = new();
     private readonly JsonSavedIperfProfileStore _profileStore = new(JsonSavedIperfProfileStore.GetDefaultFilePath());
+    private readonly JsonIperfHistoryStore _historyStore = new(JsonIperfHistoryStore.GetDefaultFilePath());
 
     private WinPerfSettings _settings = new();
     private IperfExecutableResolution _engineResolution = new(false, null, "NotConfigured", "iperf3.exe is not configured.");
@@ -214,6 +217,7 @@ public partial class MainWindow : Window
             AppendEngineOutput($"Process exited with code {result.ExitCode}.");
             AppendEngineOutput(outcome.Message);
             UpdateLastSummary(options, summaryExitCode);
+            await SaveHistoryEntryAsync(options, result, outcome, summaryExitCode, commandDisplayText);
             UpdateRunOutcomeStatus(outcome);
         }
         catch (OperationCanceledException)
@@ -254,11 +258,17 @@ public partial class MainWindow : Window
         ShowServerModePage();
     }
 
+    private async void HistoryNavButton_Click(object sender, RoutedEventArgs e)
+    {
+        await ShowHistoryPageAsync();
+    }
+
     private void ShowDashboardPage()
     {
         DashboardContentPanel.Visibility = Visibility.Visible;
         ServerModeContentPanel.Visibility = Visibility.Collapsed;
-        SetSidebarNavigation(isServerMode: false);
+        HistoryContentPanel.Visibility = Visibility.Collapsed;
+        SetSidebarNavigation(ActivePage.Dashboard);
         RefreshEngineStatus();
     }
 
@@ -266,19 +276,30 @@ public partial class MainWindow : Window
     {
         DashboardContentPanel.Visibility = Visibility.Collapsed;
         ServerModeContentPanel.Visibility = Visibility.Visible;
-        SetSidebarNavigation(isServerMode: true);
+        HistoryContentPanel.Visibility = Visibility.Collapsed;
+        SetSidebarNavigation(ActivePage.ServerMode);
         UpdateServerModeCommandPreview();
     }
 
-    private void SetSidebarNavigation(bool isServerMode)
+    private async Task ShowHistoryPageAsync()
     {
-        if (DashboardNavButton is null || ServerModeNavButton is null)
+        DashboardContentPanel.Visibility = Visibility.Collapsed;
+        ServerModeContentPanel.Visibility = Visibility.Collapsed;
+        HistoryContentPanel.Visibility = Visibility.Visible;
+        SetSidebarNavigation(ActivePage.History);
+        await RefreshHistoryPageAsync();
+    }
+
+    private void SetSidebarNavigation(ActivePage activePage)
+    {
+        if (DashboardNavButton is null || ServerModeNavButton is null || HistoryNavButton is null)
         {
             return;
         }
 
-        DashboardNavButton.Style = FindResource(isServerMode ? "SidebarNavButton" : "SidebarNavSelectedButton") as Style;
-        ServerModeNavButton.Style = FindResource(isServerMode ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
+        DashboardNavButton.Style = FindResource(activePage == ActivePage.Dashboard ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
+        ServerModeNavButton.Style = FindResource(activePage == ActivePage.ServerMode ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
+        HistoryNavButton.Style = FindResource(activePage == ActivePage.History ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
     }
 
     private void AppMenuButton_Click(object sender, RoutedEventArgs e)
@@ -865,6 +886,161 @@ public partial class MainWindow : Window
         lines.Add($"{options.DurationSeconds}s · {options.Streams} stream(s) · {(exitCode == 0 ? "OK" : $"Exit {exitCode}")}");
 
         LastSummaryText.Text = string.Join(Environment.NewLine, lines);
+    }
+
+    private async Task SaveHistoryEntryAsync(
+        IperfTestOptions options,
+        IperfRunResult result,
+        IperfRunOutcome outcome,
+        int summaryExitCode,
+        string commandPreview)
+    {
+        try
+        {
+            var entry = BuildHistoryEntry(
+                options,
+                result,
+                outcome,
+                summaryExitCode,
+                commandPreview);
+
+            await _historyStore.AddAsync(entry);
+
+            if (HistoryContentPanel.Visibility == Visibility.Visible)
+            {
+                await RefreshHistoryPageAsync();
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            AppendEngineOutput(string.Empty);
+            AppendEngineOutput($"History save failed: {ex.Message}");
+        }
+    }
+
+    private IperfHistoryEntry BuildHistoryEntry(
+        IperfTestOptions options,
+        IperfRunResult result,
+        IperfRunOutcome outcome,
+        int summaryExitCode,
+        string commandPreview)
+    {
+        var throughputSamples = _throughputSamples.ToList();
+        var reverseThroughputSamples = _reverseThroughputSamples.ToList();
+
+        double? averageMbps = throughputSamples.Count > 0
+            ? throughputSamples.Average()
+            : null;
+        double? minimumMbps = throughputSamples.Count > 0
+            ? throughputSamples.Min()
+            : null;
+        double? maximumMbps = throughputSamples.Count > 0
+            ? throughputSamples.Max()
+            : null;
+
+        if (options.Engine == IperfEngine.Iperf2 &&
+            options.Mode is IperfMode.UdpUpload or IperfMode.UdpDownload &&
+            _iperf2UdpServerReport?.MegabitsPerSecond is double receivedMbps)
+        {
+            averageMbps = receivedMbps;
+            minimumMbps ??= receivedMbps;
+            maximumMbps ??= receivedMbps;
+        }
+
+        return new IperfHistoryEntry
+        {
+            StartedAtUtc = result.StartedAtUtc,
+            FinishedAtUtc = result.FinishedAtUtc,
+            Engine = options.Engine,
+            Mode = options.Mode,
+            Server = options.Server,
+            Port = options.Port,
+            Streams = options.Streams,
+            DurationSeconds = options.DurationSeconds,
+            OmitSeconds = options.OmitSeconds,
+            UdpBandwidth = options.Mode is IperfMode.UdpUpload or IperfMode.UdpDownload
+                ? options.UdpBandwidth
+                : null,
+            ExitCode = summaryExitCode,
+            Succeeded = outcome.Kind != IperfRunOutcomeKind.Failed && summaryExitCode == 0,
+            AverageMbps = averageMbps,
+            MinimumMbps = minimumMbps,
+            MaximumMbps = maximumMbps,
+            ReverseAverageMbps = reverseThroughputSamples.Count > 0
+                ? reverseThroughputSamples.Average()
+                : null,
+            CommandPreview = commandPreview,
+            Summary = LastSummaryText.Text
+        };
+    }
+
+    private async Task RefreshHistoryPageAsync()
+    {
+        try
+        {
+            var document = await _historyStore.LoadAsync();
+            var entries = document.Entries
+                .Select(CreateHistoryListItem)
+                .ToList();
+
+            HistoryItemsControl.ItemsSource = entries;
+            HistoryEmptyText.Text = "No saved history yet. Run a test and WinPerf will save the result here.";
+            HistoryEmptyText.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            HistoryStatusText.Text = entries.Count == 1
+                ? "1 saved result"
+                : $"{entries.Count} saved results";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryItemsControl.ItemsSource = null;
+            HistoryEmptyText.Visibility = Visibility.Visible;
+            HistoryEmptyText.Text = "History could not be loaded. Check the portable data folder.";
+            HistoryStatusText.Text = ex.Message;
+        }
+    }
+
+    private HistoryListItem CreateHistoryListItem(IperfHistoryEntry entry)
+    {
+        var title = $"{GetEngineDisplayName(entry.Engine)} · {FormatModeLabel(entry.Mode)} · {entry.Server}:{entry.Port}";
+        var finishedLocalText = entry.FinishedAtUtc
+            .ToLocalTime()
+            .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture);
+        var statusText = entry.Succeeded ? "OK" : $"Exit {entry.ExitCode}";
+        var statusBrush = (Brush)FindResource(entry.Succeeded ? "AccentGreen" : "MissingChipForeground");
+        var summary = BuildHistoryDisplaySummary(entry.Summary, title);
+        var commandPreview = string.IsNullOrWhiteSpace(entry.CommandPreview)
+            ? "Command unavailable."
+            : entry.CommandPreview;
+
+        return new HistoryListItem(
+            title,
+            finishedLocalText,
+            statusText,
+            statusBrush,
+            summary,
+            commandPreview);
+    }
+
+    private static string BuildHistoryDisplaySummary(string? summary, string title)
+    {
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return "No summary saved.";
+        }
+
+        var lines = summary
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToList();
+
+        if (lines.Count > 0 && string.Equals(lines[0].Trim(), title, StringComparison.OrdinalIgnoreCase))
+        {
+            lines.RemoveAt(0);
+        }
+
+        return lines.Count == 0
+            ? "No summary saved."
+            : string.Join(Environment.NewLine, lines);
     }
 
     private static string FormatModeLabel(IperfMode mode)
@@ -2859,4 +3035,19 @@ public partial class MainWindow : Window
             ? data.GetString() ?? "unknown error"
             : data.ToString();
     }
+
+    private enum ActivePage
+    {
+        Dashboard,
+        ServerMode,
+        History
+    }
+
+    public sealed record HistoryListItem(
+        string Title,
+        string FinishedLocalText,
+        string StatusText,
+        Brush StatusBrush,
+        string Summary,
+        string CommandPreview);
 }

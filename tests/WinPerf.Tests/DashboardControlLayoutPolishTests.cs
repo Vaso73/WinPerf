@@ -8,6 +8,9 @@ public sealed class DashboardControlLayoutPolishTests
     private static readonly string MainWindowSource = File.ReadAllText(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", "MainWindow.xaml.cs"));
 
+    private static readonly string ThemeXaml = File.ReadAllText(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", "ResourceDictionaries", "Theme.xaml"));
+
     [Fact]
     public void Dashboard_StartStopButtonsShareAvailableWidth()
     {
@@ -49,12 +52,33 @@ public sealed class DashboardControlLayoutPolishTests
     }
 
     [Fact]
-    public void Dashboard_SplittersAreVisuallySubtle()
+    public void Dashboard_SplittersUseVisibleGripStyles()
     {
-        Assert.Contains("Width=\"4\"", MainWindowXaml);
-        Assert.Contains("Height=\"4\"", MainWindowXaml);
-        Assert.Contains("Background=\"{StaticResource SplitterBackground}\"", MainWindowXaml);
-        Assert.Contains("Opacity=\"0.55\"", MainWindowXaml);
+        Assert.Contains("Style=\"{StaticResource VerticalGripSplitter}\"", MainWindowXaml);
+        Assert.Contains("Style=\"{StaticResource HorizontalGripSplitter}\"", MainWindowXaml);
+        Assert.Contains("<ColumnDefinition Width=\"10\" />", MainWindowXaml);
+        Assert.Contains("Padding=\"18,18,10,18\"", MainWindowXaml);
+        Assert.Contains("<StackPanel Margin=\"0,0,14,0\">", MainWindowXaml);
+        Assert.Contains("x:Key=\"VerticalGripSplitter\"", ThemeXaml);
+        Assert.Contains("x:Key=\"HorizontalGripSplitter\"", ThemeXaml);
+        Assert.Contains("<Setter Property=\"Width\" Value=\"10\" />", ThemeXaml);
+        Assert.Contains("Cursor\" Value=\"SizeWE\"", ThemeXaml);
+        Assert.Contains("Cursor\" Value=\"SizeNS\"", ThemeXaml);
+        Assert.Contains("IsMouseOver", ThemeXaml);
+        Assert.Contains("IsDragging", ThemeXaml);
+    }
+
+    [Fact]
+    public void App_UsesCustomDarkScrollbars()
+    {
+        Assert.Contains("x:Key=\"ScrollbarThumb\"", ThemeXaml);
+        Assert.Contains("x:Key=\"VerticalScrollbarTemplate\"", ThemeXaml);
+        Assert.Contains("x:Key=\"HorizontalScrollbarTemplate\"", ThemeXaml);
+        Assert.Contains("Style TargetType=\"{x:Type ScrollBar}\"", ThemeXaml);
+        Assert.Contains("CornerRadius=\"4\"", ThemeXaml);
+        Assert.Contains("Value=\"6\"", ThemeXaml);
+        Assert.Contains("Background=\"Transparent\"", ThemeXaml);
+        Assert.DoesNotContain("SystemColors.ScrollBarBrushKey", ThemeXaml);
     }
 
     private static string SliceAround(string text, string marker)
