@@ -526,7 +526,6 @@ public partial class MainWindow : Window
         ServerProtocolBox.IsEnabled = !isRunning;
         ServerPortBox.IsEnabled = !isRunning;
         ServerOneOffBox.IsEnabled = !isRunning && GetSelectedServerEngine() == IperfEngine.Iperf3;
-        DashboardNavButton.IsEnabled = !isRunning;
 
         if (isRunning && options is not null)
         {
