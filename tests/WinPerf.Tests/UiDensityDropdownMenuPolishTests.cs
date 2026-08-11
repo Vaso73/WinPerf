@@ -12,7 +12,7 @@ public sealed class UiDensityDropdownMenuPolishTests
     public void DensityDropdownMenu_UsesCompactMenuSizing()
     {
         Assert.Contains("x:Name=\"UiDensityContextMenu\"", MainWindowXaml);
-        Assert.Contains("Width=\"96\"", MainWindowXaml);
+        Assert.Contains("Width=\"112\"", MainWindowXaml);
         Assert.Contains("Padding=\"2\"", MainWindowXaml);
         Assert.Contains("Property=\"FontSize\" Value=\"11\"", MainWindowXaml);
         Assert.Contains("Property=\"MinHeight\" Value=\"22\"", MainWindowXaml);

@@ -31,12 +31,15 @@ public sealed class DashboardControlLayoutPolishTests
     }
 
     [Fact]
-    public void StatusBar_UsesDensityDropdown()
+    public void AppMenu_UsesDensityDropdown()
     {
+        Assert.Contains("x:Name=\"AppMenuSection\"", MainWindowXaml);
         Assert.Contains("x:Name=\"UiDensityButton\"", MainWindowXaml);
+        Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", MainWindowXaml);
         Assert.Contains("x:Name=\"CompactUiDensityMenuItem\"", MainWindowXaml);
         Assert.Contains("x:Name=\"ComfortableUiDensityMenuItem\"", MainWindowXaml);
         Assert.Contains("UpdateUiDensityMenuUx(isCompact);", MainWindowSource);
+        Assert.DoesNotMatch("x:Name=\\\"UiDensityButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", MainWindowXaml);
     }
 
     [Fact]

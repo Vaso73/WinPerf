@@ -29,7 +29,8 @@ public sealed class ThemeShellColorResourceTests
             "MainWindow.xaml",
             "AdvancedCommandWindow.xaml",
             "CustomCommandWindow.xaml",
-            "SettingsWindow.xaml"
+            "SettingsWindow.xaml",
+            "AboutWindow.xaml"
         };
 
         foreach (var fileName in windowFiles)

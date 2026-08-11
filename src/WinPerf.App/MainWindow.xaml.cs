@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using WinPerf.App.Settings;
 using WinPerf.Core.Iperf;
 using WinPerf.Core.Profiles;
+using WinPerf.Core.Updates;
 
 namespace WinPerf.App;
 
@@ -56,6 +57,7 @@ public partial class MainWindow : Window
 
         _settings = _settingsStore.Load();
         RefreshEngineStatus();
+        RefreshIntegrationStatus();
         PopulateRecentServers();
         ApplyDashboardLayout();
         ApplyUiDensity(resizeWindow: false);
@@ -238,9 +240,14 @@ public partial class MainWindow : Window
         OpenSettingsWindow();
     }
 
-    private void EngineStatusText_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void UpdatesButton_Click(object sender, RoutedEventArgs e)
     {
-        OpenSettingsWindow();
+        OpenAboutWindow();
+    }
+
+    private void AboutButton_Click(object sender, RoutedEventArgs e)
+    {
+        OpenAboutWindow();
     }
 
     private void OpenSettingsWindow()
@@ -256,8 +263,19 @@ public partial class MainWindow : Window
             _settings.Iperf2ExecutablePath = dialog.Iperf2ExecutablePath;
             _settingsStore.Save(_settings);
             RefreshEngineStatus();
+            RefreshIntegrationStatus();
             UpdateDashboardCommandPreview();
         }
+    }
+
+    private void OpenAboutWindow()
+    {
+        var dialog = new AboutWindow(ResolveAppVersionText())
+        {
+            Owner = this
+        };
+
+        dialog.ShowDialog();
     }
 
     private void ApplyDashboardLayout()
@@ -724,6 +742,93 @@ public partial class MainWindow : Window
 
         EngineStatusText.Text = $"Engine  ●  {GetEngineDisplayName(selectedEngine)}  ●  Not configured";
         EngineStatusText.ToolTip = _engineResolution.Message;
+    }
+
+    private void RefreshIntegrationStatus()
+    {
+        var iperf3 = ResolveIntegration(IperfEngine.Iperf3);
+        var iperf2 = ResolveIntegration(IperfEngine.Iperf2);
+
+        UpdateIntegrationRow(
+            Iperf3IntegrationStatusText,
+            Iperf3IntegrationDetailText,
+            Iperf3IntegrationPathText,
+            "iperf3 throughput engine",
+            iperf3);
+
+        UpdateIntegrationRow(
+            Iperf2IntegrationStatusText,
+            Iperf2IntegrationDetailText,
+            Iperf2IntegrationPathText,
+            "iperf2 compatibility engine",
+            iperf2);
+
+        UpdaterIntegrationStatusText.Text = "Core ready";
+        UpdaterIntegrationStatusText.Foreground = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
+        UpdaterIntegrationDetailText.Text = "Sponsor Pro update client and installer contracts loaded";
+        UpdaterIntegrationPathText.Text = $"{WinPerfUpdateService.ProductId} / {WinPerfUpdateService.AssetName}";
+    }
+
+    private IperfExecutableResolution ResolveIntegration(IperfEngine engine)
+    {
+        return _executableResolver.Resolve(AppContext.BaseDirectory, new IperfEngineSettings
+        {
+            Engine = engine,
+            ExecutablePath = _settings.IperfExecutablePath,
+            Iperf3ExecutablePath = _settings.IperfExecutablePath,
+            Iperf2ExecutablePath = _settings.Iperf2ExecutablePath
+        });
+    }
+
+    private void UpdateIntegrationRow(
+        TextBlock statusText,
+        TextBlock detailText,
+        TextBlock pathText,
+        string description,
+        IperfExecutableResolution resolution)
+    {
+        if (resolution.IsConfigured)
+        {
+            var source = string.IsNullOrWhiteSpace(resolution.Source)
+                ? "Configured"
+                : resolution.Source;
+
+            statusText.Text = "Ready";
+            statusText.Foreground = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
+            detailText.Text = $"{description} loaded from {source}";
+            pathText.Text = FormatIntegrationPath(resolution.ExecutablePath);
+            pathText.ToolTip = resolution.ExecutablePath;
+            return;
+        }
+
+        statusText.Text = "Missing";
+        statusText.Foreground = FindResource("AccentAmber") as Brush ?? Brushes.Orange;
+        detailText.Text = description + " not configured";
+        pathText.Text = resolution.Message;
+        pathText.ToolTip = resolution.Message;
+    }
+
+    private static string FormatIntegrationPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return "Not configured";
+        }
+
+        var appDirectory = AppContext.BaseDirectory.TrimEnd(
+            System.IO.Path.DirectorySeparatorChar,
+            System.IO.Path.AltDirectorySeparatorChar);
+
+        if (path.StartsWith(appDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            var relative = path[appDirectory.Length..].TrimStart(
+                System.IO.Path.DirectorySeparatorChar,
+                System.IO.Path.AltDirectorySeparatorChar);
+
+            return relative.Replace(System.IO.Path.DirectorySeparatorChar, '\\');
+        }
+
+        return path;
     }
 
     private void CommandMenuButton_Click(object sender, RoutedEventArgs e)
@@ -1371,6 +1476,7 @@ public partial class MainWindow : Window
 
         ClearCommandOverride(updatePreview: false);
         RefreshEngineStatus();
+        RefreshIntegrationStatus();
         Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
     }
 

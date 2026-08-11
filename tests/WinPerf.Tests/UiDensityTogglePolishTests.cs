@@ -9,15 +9,16 @@ public sealed class UiDensityTogglePolishTests
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", "MainWindow.xaml.cs"));
 
     [Fact]
-    public void StatusBarDensityToggle_UsesCompactPillDropdown()
+    public void AppMenuDensityToggle_UsesSidebarDropdown()
     {
-        Assert.Contains("x:Key=\"StatusPillButton\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"AppMenuSection\"", MainWindowXaml);
+        Assert.Contains("x:Key=\"SidebarAppButton\"", MainWindowXaml);
         Assert.Contains("x:Name=\"UiDensityButton\"", MainWindowXaml);
-        Assert.Contains("Style=\"{StaticResource StatusPillButton}\"", MainWindowXaml);
-        Assert.Contains("Property=\"Height\" Value=\"22\"", MainWindowXaml);
-        Assert.Contains("Property=\"MinWidth\" Value=\"132\"", MainWindowXaml);
-        Assert.Contains("Property=\"VerticalAlignment\" Value=\"Center\"", MainWindowXaml);
+        Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", MainWindowXaml);
+        Assert.Contains("Property=\"MinHeight\" Value=\"34\"", MainWindowXaml);
+        Assert.Contains("Property=\"HorizontalContentAlignment\" Value=\"Left\"", MainWindowXaml);
         Assert.Contains("<Button.ContextMenu>", MainWindowXaml);
+        Assert.DoesNotMatch("x:Name=\\\"UiDensityButton\\\"[\\s\\S]{0,220}Style=\\\"\\{StaticResource StatusPillButton\\}\\\"", MainWindowXaml);
     }
 
     [Fact]

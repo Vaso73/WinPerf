@@ -10,39 +10,53 @@ public sealed class SettingsDiscoverabilityTests
     private static readonly string SettingsWindowXamlPath = Path.Combine(AppDirectory, "SettingsWindow.xaml");
 
     [Fact]
-    public void MainWindow_FooterShowsDedicatedSettingsButton()
+    public void MainWindow_AppSectionShowsSettingsAndAppActions()
     {
         var xaml = File.ReadAllText(MainWindowXamlPath);
 
+        Assert.Contains("x:Name=\"AppMenuSection\"", xaml);
         Assert.Contains("x:Name=\"SettingsButton\"", xaml);
-        Assert.Contains("DockPanel.Dock=\"Right\"", xaml);
         Assert.Contains("Content=\"Settings\"", xaml);
-        Assert.Contains("Style=\"{StaticResource StatusPillButton}\"", xaml);
+        Assert.Contains("Content=\"Sponsor Pro / Updates\"", xaml);
+        Assert.Contains("Content=\"About WinPerf\"", xaml);
+        Assert.Contains("Content=\"UI: Compact ▾\"", xaml);
+        Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", xaml);
         Assert.Contains("ToolTip=\"Open Settings\"", xaml);
         Assert.Contains("Click=\"SettingsButton_Click\"", xaml);
 
+        var appSection = xaml.IndexOf("x:Name=\"AppMenuSection\"", StringComparison.Ordinal);
         var settingsButton = xaml.IndexOf("x:Name=\"SettingsButton\"", StringComparison.Ordinal);
-        var engineStatus = xaml.IndexOf("x:Name=\"EngineStatusText\"", StringComparison.Ordinal);
+        var configColumn = xaml.IndexOf("x:Name=\"ConfigColumn\"", StringComparison.Ordinal);
 
+        Assert.True(appSection >= 0);
         Assert.True(settingsButton >= 0);
-        Assert.True(engineStatus > settingsButton);
+        Assert.True(settingsButton > appSection);
+        Assert.True(configColumn > settingsButton);
+        Assert.DoesNotMatch("x:Name=\\\"SettingsButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", xaml);
+        Assert.DoesNotMatch("x:Name=\\\"SettingsButton\\\"[\\s\\S]{0,220}Style=\\\"\\{StaticResource StatusPillButton\\}\\\"", xaml);
     }
 
     [Fact]
-    public void MainWindow_SettingsEntryPointsShareSettingsDialogHandler()
+    public void MainWindow_AppMenuActionsOpenExpectedDialogs()
     {
         var code = File.ReadAllText(MainWindowCodePath);
 
         var settingsButtonHandler = code.IndexOf("private void SettingsButton_Click", StringComparison.Ordinal);
-        var engineStatusHandler = code.IndexOf("private void EngineStatusText_MouseLeftButtonUp", StringComparison.Ordinal);
+        var updatesButtonHandler = code.IndexOf("private void UpdatesButton_Click", StringComparison.Ordinal);
+        var aboutButtonHandler = code.IndexOf("private void AboutButton_Click", StringComparison.Ordinal);
         var sharedHandler = code.IndexOf("private void OpenSettingsWindow", StringComparison.Ordinal);
+        var aboutHandler = code.IndexOf("private void OpenAboutWindow", StringComparison.Ordinal);
 
         Assert.True(settingsButtonHandler >= 0);
-        Assert.True(engineStatusHandler > settingsButtonHandler);
-        Assert.True(sharedHandler > engineStatusHandler);
+        Assert.True(updatesButtonHandler > settingsButtonHandler);
+        Assert.True(aboutButtonHandler > updatesButtonHandler);
+        Assert.True(sharedHandler > aboutButtonHandler);
+        Assert.True(aboutHandler > sharedHandler);
 
         Assert.True(code.IndexOf("OpenSettingsWindow();", settingsButtonHandler, StringComparison.Ordinal) > settingsButtonHandler);
-        Assert.True(code.IndexOf("OpenSettingsWindow();", engineStatusHandler, StringComparison.Ordinal) > engineStatusHandler);
+        Assert.True(code.IndexOf("OpenAboutWindow();", updatesButtonHandler, StringComparison.Ordinal) > updatesButtonHandler);
+        Assert.True(code.IndexOf("OpenAboutWindow();", aboutButtonHandler, StringComparison.Ordinal) > aboutButtonHandler);
+        Assert.DoesNotContain("EngineStatusText_MouseLeftButtonUp", code);
     }
 
     [Fact]
