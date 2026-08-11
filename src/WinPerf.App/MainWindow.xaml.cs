@@ -1583,9 +1583,9 @@ public partial class MainWindow : Window
         {
             ThroughputValueText.Text =
                 FormatMegabits(receivedMegabits);
-            ThroughputCaptionText.Text = "Server received";
+            ThroughputCaptionText.Text = "Server received total";
             LiveStatusText.Text =
-                $"Server received {FormatMegabits(receivedMegabits)} · chart shows sent rate";
+                $"Server received total {FormatMegabits(receivedMegabits)} · chart shows sent rate";
         }
 
         if (report.JitterMs is double jitterMs)
@@ -1641,7 +1641,7 @@ public partial class MainWindow : Window
         ThroughputCaptionText.Text =
             isIperf2Udp
                 ? "Awaiting server result"
-                : "Live average";
+                : "Live total average";
 
         if (mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
         {
@@ -1893,7 +1893,7 @@ public partial class MainWindow : Window
         var accentBrush = TryFindResource("Accent") as Brush ?? Brushes.DeepSkyBlue;
 
         DrawChartText(
-            "Bandwidth",
+            "Total bandwidth",
             plotLeft + 8,
             5,
             14,
@@ -2163,7 +2163,7 @@ public partial class MainWindow : Window
         });
 
         DrawChartText(
-            "Streams scale 0-" + FormatMegabits(streamAxisMax),
+            BuildPerStreamScaleLabel(streamAxisMax, streamCount),
             plotLeft + 8,
             streamBandTop + 4,
             10,
@@ -2227,6 +2227,36 @@ public partial class MainWindow : Window
                 Opacity = dashed ? 0.66 : 0.82
             });
         }
+    }
+
+    private string BuildPerStreamScaleLabel(double streamAxisMax, int streamCount)
+    {
+        var latestStreams =
+            _streamThroughputSamples.LastOrDefault(sample => sample.Count > 0) ??
+            _reverseStreamThroughputSamples.LastOrDefault(sample => sample.Count > 0);
+
+        var streamValues = latestStreams?
+            .Where(value => value > 0)
+            .ToArray();
+
+        if (streamValues is null || streamValues.Length == 0)
+        {
+            return "Per-stream: " +
+                   streamCount.ToString(CultureInfo.InvariantCulture) +
+                   " streams · scale 0-" +
+                   FormatMegabits(streamAxisMax);
+        }
+
+        return "Per-stream: " +
+               streamValues.Length.ToString(CultureInfo.InvariantCulture) +
+               " streams · avg " +
+               FormatMegabits(streamValues.Average()) +
+               " · min " +
+               FormatMegabits(streamValues.Min()) +
+               " · max " +
+               FormatMegabits(streamValues.Max()) +
+               " · scale 0-" +
+               FormatMegabits(streamAxisMax);
     }
 
     private static Brush CreateStreamBrush(int streamIndex)
@@ -2302,7 +2332,7 @@ public partial class MainWindow : Window
                 + " · ↓ avg " + FormatMegabits(reverseAvg);
         }
 
-        return FormatMegabits(current)
+        return "total " + FormatMegabits(current)
             + "   min " + FormatMegabits(min)
             + " · avg " + FormatMegabits(avg)
             + " · max " + FormatMegabits(max);

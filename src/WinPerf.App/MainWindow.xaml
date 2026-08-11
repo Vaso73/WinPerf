@@ -380,13 +380,13 @@
                             <StackPanel x:Name="UdpBandwidthPanel"
                                         Margin="0,0,0,8"
                                         Visibility="Collapsed">
-                                <TextBlock Text="Bandwidth"
+                                <TextBlock Text="Bandwidth / stream"
                                            Foreground="{StaticResource TextMuted}"
                                            FontSize="11" />
                                 <TextBox x:Name="UdpBandwidthBox"
                                          Text="10M"
                                          Margin="0,3,0,0"
-                                         ToolTip="Target UDP bandwidth, for example 10M, 100M, or 1G."
+                                         ToolTip="Target UDP bandwidth per stream. With 10 streams, 10M is about 100M total."
                                          TextChanged="DashboardInputChanged"
                                          KeyUp="DashboardInputChanged"
                                          LostFocus="DashboardInputChanged" />
@@ -539,10 +539,10 @@
 
                         <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,12,0">
                             <StackPanel>
-                                <TextBlock Text="Throughput" Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="Total bandwidth" Foreground="{StaticResource TextMuted}" />
                                 <TextBlock x:Name="ThroughputValueText" Text="0 Mbps" FontSize="34" FontWeight="Bold" Margin="0,8,0,0" />
                                 <TextBlock x:Name="ThroughputCaptionText"
-                                           Text="Live average"
+                                           Text="Live total average"
                                            Foreground="{StaticResource Accent}"
                                            Margin="0,6,0,0" />
                             </StackPanel>
@@ -573,7 +573,7 @@
                             </Grid.RowDefinitions>
 
                             <DockPanel Grid.Row="0" LastChildFill="False">
-                                <TextBlock Text="Live Throughput"
+                                <TextBlock Text="Live Total Throughput"
                                            DockPanel.Dock="Left"
                                            FontSize="11"
                                            FontWeight="SemiBold" />

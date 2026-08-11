@@ -79,7 +79,7 @@ public sealed class Iperf2UdpServerReportUiTests
             "Server result unavailable",
             code);
         Assert.Contains(
-            "ThroughputCaptionText.Text = \"Server received\";",
+            "ThroughputCaptionText.Text = \"Server received total\";",
             code);
     }
 

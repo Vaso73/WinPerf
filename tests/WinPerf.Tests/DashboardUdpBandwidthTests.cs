@@ -28,6 +28,10 @@ public sealed class DashboardUdpBandwidthTests
             "UdpBandwidthBox");
 
         Assert.Contains("Visibility=\"Collapsed\"", panel);
+        Assert.Contains("Bandwidth / stream", xaml);
+        Assert.Contains(
+            "Target UDP bandwidth per stream. With 10 streams, 10M is about 100M total.",
+            textBox);
         Assert.Contains("Text=\"10M\"", textBox);
         Assert.Contains(
             "TextChanged=\"DashboardInputChanged\"",
