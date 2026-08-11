@@ -12,18 +12,20 @@ public sealed class AppVersionFooterTests
         Assert.Contains("Application version from the running executable.", xaml);
         Assert.Contains("AppVersionText.Text = ResolveAppVersionText();", code);
         Assert.Contains("AssemblyInformationalVersionAttribute", code);
-        Assert.Contains("WinPerf v{version}", code);
+        Assert.Contains("WinPerfProductEdition.EditionName", code);
+        Assert.Contains("v{version}", code);
     }
 
     [Fact]
-    public void MainWindowFooterKeepsEngineStatusClickable()
+    public void MainWindowFooterKeepsEngineStatusInformational()
     {
         var xaml = ReadRepoFile("src", "WinPerf.App", "MainWindow.xaml");
 
         Assert.Contains("DockPanel.Dock=\"Left\"", xaml);
         Assert.Contains("x:Name=\"EngineStatusText\"", xaml);
-        Assert.Contains("ToolTip=\"Click to configure iperf engines\"", xaml);
-        Assert.Contains("MouseLeftButtonUp=\"EngineStatusText_MouseLeftButtonUp\"", xaml);
+        Assert.Contains("ToolTip=\"Selected engine integration status\"", xaml);
+        Assert.DoesNotContain("MouseLeftButtonUp=\"EngineStatusText_MouseLeftButtonUp\"", xaml);
+        Assert.DoesNotMatch("x:Name=\\\"EngineStatusText\\\"[\\s\\S]{0,220}Cursor=\\\"Hand\\\"", xaml);
 
         var versionIndex = xaml.IndexOf("x:Name=\"AppVersionText\"", StringComparison.Ordinal);
         var engineIndex = xaml.IndexOf("x:Name=\"EngineStatusText\"", StringComparison.Ordinal);

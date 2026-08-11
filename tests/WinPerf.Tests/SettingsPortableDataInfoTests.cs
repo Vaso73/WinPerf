@@ -16,7 +16,7 @@ public sealed class SettingsPortableDataInfoTests
         Assert.Contains("Portable data folder", xaml);
         Assert.Contains("x:Name=\"DataDirectoryText\"", xaml);
         Assert.Contains("x:Name=\"OpenDataDirectoryButton\"", xaml);
-        Assert.Contains("Content=\"Open data folder\"", xaml);
+        Assert.Contains("Content=\"Open data\"", xaml);
         Assert.Contains("Click=\"OpenDataDirectoryButton_Click\"", xaml);
     }
 
@@ -26,9 +26,9 @@ public sealed class SettingsPortableDataInfoTests
         var code = File.ReadAllText(SettingsWindowCodePath);
 
         Assert.Contains("DataDirectoryText.Text = DataDirectory;", code);
-        Assert.Contains("Path.Combine(_appDirectory, \"data\")", code);
+        Assert.Contains("Path.Combine(_appDirectory, WinPerfProductEdition.DataDirectoryName)", code);
         Assert.Contains("private void OpenDataDirectoryButton_Click", code);
-        Assert.Contains("OpenDirectory(DataDirectory, \"data folder\");", code);
+        Assert.Contains("OpenDirectory(DataDirectory, AppText.T(\"data folder\"));", code);
         Assert.Contains("Directory.CreateDirectory(directory);", code);
         Assert.Contains("UseShellExecute = true", code);
     }

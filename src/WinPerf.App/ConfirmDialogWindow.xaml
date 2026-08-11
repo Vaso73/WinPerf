@@ -1,0 +1,83 @@
+<Window x:Class="WinPerf.App.ConfirmDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:WinPerf.App"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Confirm"
+        Icon="Assets/WinPerf.ico"
+        Width="430"
+        MinWidth="400"
+        MinHeight="210"
+        MaxHeight="320"
+        SizeToContent="Height"
+        Background="{StaticResource Bg}"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        ResizeMode="NoResize">
+    <shell:WindowChrome.WindowChrome>
+        <app:AppWindowChrome />
+    </shell:WindowChrome.WindowChrome>
+
+    <Border Style="{StaticResource ShellWindowBorder}">
+        <DockPanel Background="{StaticResource Bg}">
+            <Border DockPanel.Dock="Top"
+                    Style="{StaticResource ShellTitleBar}">
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="6,0,0,0">
+                        <Image Source="Assets/WinPerf.ico"
+                               Width="16"
+                               Height="16"
+                               Margin="0,0,6,0" />
+                        <TextBlock x:Name="TitleText"
+                                   Text="Confirm"
+                                   Style="{StaticResource ShellTitleText}" />
+                    </StackPanel>
+
+                    <Button Content="×"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource ShellCloseTitleButton}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="CancelButton_Click" />
+                </Grid>
+            </Border>
+
+            <Border DockPanel.Dock="Bottom"
+                    Background="{StaticResource PanelDark}"
+                    BorderBrush="{StaticResource BorderSoft}"
+                    BorderThickness="0,1,0,0"
+                    Padding="16">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton"
+                            Content="Cancel"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,8,0"
+                            Click="CancelButton_Click" />
+                    <Button x:Name="ConfirmButton"
+                            Content="Confirm"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="ConfirmButton_Click" />
+                </StackPanel>
+            </Border>
+
+            <Grid Margin="20,18,20,14">
+                <Border Style="{StaticResource CompactSectionCard}">
+                    <StackPanel>
+                        <TextBlock x:Name="HeadingText"
+                                   Text="Confirm action"
+                                   FontSize="17"
+                                   FontWeight="SemiBold" />
+                        <TextBlock x:Name="MessageText"
+                                   Text="Continue?"
+                                   Foreground="{StaticResource TextMuted}"
+                                   TextWrapping="Wrap"
+                                   FontSize="12"
+                                   LineHeight="17"
+                                   Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DockPanel>
+    </Border>
+</Window>

@@ -16,7 +16,7 @@ public sealed class SettingsPortableEngineInfoTests
         Assert.Contains("Portable iperf3 engine folder", xaml);
         Assert.Contains("x:Name=\"PortableIperf3EngineDirectoryText\"", xaml);
         Assert.Contains("x:Name=\"OpenPortableEngineDirectoryButton\"", xaml);
-        Assert.Contains("Content=\"Open iperf3 folder\"", xaml);
+        Assert.Contains("Content=\"Open iperf3\"", xaml);
         Assert.Contains("Click=\"OpenPortableEngineDirectoryButton_Click\"", xaml);
     }
 
@@ -28,7 +28,7 @@ public sealed class SettingsPortableEngineInfoTests
         Assert.Contains("Portable iperf2 engine folder", xaml);
         Assert.Contains("x:Name=\"PortableIperf2EngineDirectoryText\"", xaml);
         Assert.Contains("x:Name=\"OpenPortableIperf2EngineDirectoryButton\"", xaml);
-        Assert.Contains("Content=\"Open iperf2 folder\"", xaml);
+        Assert.Contains("Content=\"Open iperf2\"", xaml);
         Assert.Contains("Click=\"OpenPortableIperf2EngineDirectoryButton_Click\"", xaml);
     }
 
@@ -50,10 +50,10 @@ public sealed class SettingsPortableEngineInfoTests
         Assert.Contains("PortableIperf2EngineDirectoryText.Text = PortableIperf2EngineDirectory;", code);
 
         Assert.Contains("private void OpenPortableEngineDirectoryButton_Click", code);
-        Assert.Contains("OpenDirectory(PortableIperf3EngineDirectory, \"portable iperf3 engine folder\");", code);
+        Assert.Contains("OpenDirectory(PortableIperf3EngineDirectory, AppText.T(\"portable iperf3 engine folder\"));", code);
 
         Assert.Contains("private void OpenPortableIperf2EngineDirectoryButton_Click", code);
-        Assert.Contains("OpenDirectory(PortableIperf2EngineDirectory, \"portable iperf2 engine folder\");", code);
+        Assert.Contains("OpenDirectory(PortableIperf2EngineDirectory, AppText.T(\"portable iperf2 engine folder\"));", code);
 
         Assert.Contains("Directory.CreateDirectory(directory);", code);
         Assert.Contains("FileName = directory", code);

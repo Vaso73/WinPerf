@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(WinPerfEdition)' == 'Free'">
+    <DefineConstants>$(DefineConstants);WINPERF_FREE</DefineConstants>
+  </PropertyGroup>
+
 </Project>

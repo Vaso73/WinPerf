@@ -35,6 +35,22 @@ public sealed class IperfProcessRunnerTests
     }
 
     [Fact]
+    public void CreateStartInfo_UsesExecutableDirectoryAsWorkingDirectory()
+    {
+        var executablePath = Path.Combine(
+            Path.GetTempPath(),
+            "WinPerf.Tests",
+            "tools",
+            "iperf3",
+            "iperf3.exe");
+        var command = new IperfCommand(executablePath, ["--version"]);
+
+        var startInfo = IperfProcessRunner.CreateStartInfo(command);
+
+        Assert.Equal(Path.GetDirectoryName(executablePath), startInfo.WorkingDirectory);
+    }
+
+    [Fact]
     public void CreateStartInfo_RejectsMissingExecutablePath()
     {
         var command = new IperfCommand("", []);

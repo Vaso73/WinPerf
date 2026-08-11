@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using WinPerf.Core.Product;
 
 namespace WinPerf.App.Settings;
 
@@ -15,7 +16,7 @@ public static class WindowPlacementStore
     };
 
     private static string SettingsDirectory =>
-        Path.Combine(AppContext.BaseDirectory, "data");
+        Path.Combine(AppContext.BaseDirectory, WinPerfProductEdition.DataDirectoryName);
 
     private static string LayoutPath =>
         Path.Combine(SettingsDirectory, LayoutFileName);

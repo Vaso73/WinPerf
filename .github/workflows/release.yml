@@ -1,9 +1,12 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      confirm_source_release:
+        description: "Type publish-source-release to create a GitHub release in this source repository."
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -16,36 +19,131 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIRM_SOURCE_RELEASE: ${{ inputs.confirm_source_release }}
+        run: |
+          set -euo pipefail
+
+          if [ "${CONFIRM_SOURCE_RELEASE}" != "publish-source-release" ]; then
+            echo "Source repository releases are manual-only. Normal delivery should use the approved Sponsor Pro or free/demo release path."
+            exit 1
+          fi
+
+          VERSION="$(grep -oPm1 '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)"
+          TAG_NAME="v${VERSION}"
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+            if gh release view "${TAG_NAME}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Tag ${TAG_NAME} and release already exist. Nothing to release."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              echo "should_create_tag=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "Tag ${TAG_NAME} exists but release is missing. Creating release from existing tag."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "should_create_tag=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+          echo "should_create_tag=true" >> "$GITHUB_OUTPUT"
 
       - name: Setup .NET
+        if: steps.release.outputs.should_release == 'true'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
 
       - name: Test
+        if: steps.release.outputs.should_release == 'true'
         run: dotnet test tests/WinPerf.Tests/WinPerf.Tests.csproj --configuration Release
 
       - name: Publish WinPerf
+        if: steps.release.outputs.should_release == 'true'
         run: |
           rm -rf artifacts/publish/WinPerf-win-x64 artifacts/release
           dotnet publish src/WinPerf.App/WinPerf.App.csproj \
             --configuration Release \
             --runtime win-x64 \
-            --self-contained false \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
             --output artifacts/publish/WinPerf-win-x64
 
       - name: Package release ZIP
+        if: steps.release.outputs.should_release == 'true'
         run: |
-          mkdir -p artifacts/release
-          test -f artifacts/publish/WinPerf-win-x64/WinPerf.exe
-          cd artifacts/publish/WinPerf-win-x64
-          zip -9 ../../release/WinPerf.zip WinPerf.exe
+          python3 - <<'PYZIP'
+          from pathlib import Path
+          import zipfile
+
+          root = Path("artifacts/publish/WinPerf-win-x64")
+          out = Path("artifacts/release/WinPerf.zip")
+          exe = root / "WinPerf.exe"
+
+          if not exe.exists():
+              raise SystemExit(f"Missing expected executable: {exe}")
+
+          out.parent.mkdir(parents=True, exist_ok=True)
+
+          info = zipfile.ZipInfo("WinPerf.exe")
+          info.date_time = (1980, 1, 1, 0, 0, 0)
+          info.compress_type = zipfile.ZIP_DEFLATED
+
+          with zipfile.ZipFile(out, "w") as z:
+              z.writestr(info, exe.read_bytes())
+
+          print(f"{out} {out.stat().st_size} bytes")
+          PYZIP
+
+      - name: Verify ZIP contract
+        if: steps.release.outputs.should_release == 'true'
+        run: |
+          unzip -l artifacts/release/WinPerf.zip
+          zipinfo -1 artifacts/release/WinPerf.zip | sort
+          bad="$(zipinfo -1 artifacts/release/WinPerf.zip | grep -Ei '\.(pdb|config|json|schema\.json)$' || true)"
+          if [ -n "$bad" ]; then
+            echo "Blocked files found in ZIP:"
+            echo "$bad"
+            exit 1
+          fi
+          test "$(zipinfo -1 artifacts/release/WinPerf.zip | wc -l)" -eq 1
+          test "$(zipinfo -1 artifacts/release/WinPerf.zip | grep -c '^WinPerf.exe$')" -eq 1
+          sha256sum artifacts/publish/WinPerf-win-x64/WinPerf.exe
+          sha256sum artifacts/release/WinPerf.zip
+
+      - name: Create release tag
+        if: steps.release.outputs.should_create_tag == 'true'
+        env:
+          TAG_NAME: ${{ steps.release.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG_NAME" "$GITHUB_SHA"
+          git push origin "$TAG_NAME"
 
       - name: Create GitHub Release
+        if: steps.release.outputs.should_release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.release.outputs.tag }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            artifacts/release/WinPerf.zip \
-            --title "WinPerf ${GITHUB_REF_NAME}" \
-            --notes "WinPerf ${GITHUB_REF_NAME}"
+          gh release create "$TAG_NAME" artifacts/release/WinPerf.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "WinPerf $TAG_NAME" \
+            --notes "Automated WinPerf source release for $TAG_NAME."

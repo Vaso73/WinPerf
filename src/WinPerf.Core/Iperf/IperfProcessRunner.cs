@@ -24,6 +24,13 @@ public sealed class IperfProcessRunner
             startInfo.ArgumentList.Add(argument);
         }
 
+        var executableDirectory = Path.GetDirectoryName(command.ExecutablePath);
+
+        if (!string.IsNullOrWhiteSpace(executableDirectory))
+        {
+            startInfo.WorkingDirectory = executableDirectory;
+        }
+
         return startInfo;
     }
 

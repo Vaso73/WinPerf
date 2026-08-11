@@ -4,6 +4,9 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using WinPerf.App.Settings;
+using WinPerf.Core.Iperf;
+using WinPerf.Core.Localization;
+using WinPerf.Core.Product;
 
 namespace WinPerf.App;
 
@@ -11,19 +14,30 @@ public partial class SettingsWindow : Window
 {
     private readonly string _appDirectory;
 
-    public SettingsWindow(string? currentIperf3Path, string? currentIperf2Path, string appDirectory)
+    public SettingsWindow(
+        string? currentIperf3Path,
+        string? currentIperf2Path,
+        string appDirectory,
+        string? currentLanguageCode)
     {
         InitializeComponent();
         WindowPlacementStore.Track(this, "SettingsWindow");
+        AppText.ApplyTo(this);
 
         _appDirectory = appDirectory;
+        PopulateLanguageBox(currentLanguageCode);
         IperfPathBox.Text = currentIperf3Path ?? string.Empty;
         Iperf2PathBox.Text = currentIperf2Path ?? string.Empty;
         DataDirectoryText.Text = DataDirectory;
         PortableIperf3EngineDirectoryText.Text = PortableIperf3EngineDirectory;
         PortableIperf2EngineDirectoryText.Text = PortableIperf2EngineDirectory;
+        ApplyProductEditionBoundary();
         IperfPathBox.Focus();
     }
+
+    public event EventHandler<SettingsAppliedEventArgs>? Applied;
+
+    public string SelectedLanguageCode { get; private set; } = LanguagePackService.DefaultLanguageCode;
 
     public string? IperfExecutablePath
     {
@@ -38,6 +52,11 @@ public partial class SettingsWindow : Window
     {
         get
         {
+            if (!WinPerfProductEdition.SupportsIperf2)
+            {
+                return null;
+            }
+
             var value = Iperf2PathBox.Text.Trim();
             return string.IsNullOrWhiteSpace(value) ? null : value;
         }
@@ -55,11 +74,65 @@ public partial class SettingsWindow : Window
     private string PortableIperf2ExecutablePath =>
         Path.Combine(PortableIperf2EngineDirectory, "iperf.exe");
 
-    private string PortableIperf2AlternateExecutablePath =>
-        Path.Combine(PortableIperf2EngineDirectory, "iperf2.exe");
-
     private string DataDirectory =>
-        Path.Combine(_appDirectory, "data");
+        Path.Combine(_appDirectory, WinPerfProductEdition.DataDirectoryName);
+
+    private void ApplyProductEditionBoundary()
+    {
+        if (WinPerfProductEdition.SupportsIperf2)
+        {
+            return;
+        }
+
+        Iperf2PathBox.Text = string.Empty;
+
+        foreach (var element in new FrameworkElement[]
+                 {
+                     Iperf2SettingsLabel,
+                     Iperf2PathBox,
+                     BrowseIperf2Button,
+                     ImportPortableIperf2Button,
+                     ClearIperf2Button,
+                     PortableIperf2EngineDirectoryLabel,
+                     PortableIperf2EngineDirectoryText,
+                     OpenPortableIperf2EngineDirectoryButton
+                 })
+        {
+            element.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void PopulateLanguageBox(string? currentLanguageCode)
+    {
+        var languages = AppText.AvailableLanguages
+            .Select(language => new LanguageChoice(
+                language.LanguageCode,
+                AppText.GetLanguageDisplayName(language)))
+            .ToList();
+
+        if (languages.Count == 0)
+        {
+            languages.Add(new LanguageChoice(
+                LanguagePackService.DefaultLanguageCode,
+                AppText.T("WinPerfLanguage.EnglishDisplay")));
+        }
+
+        var selectedCode = string.IsNullOrWhiteSpace(currentLanguageCode)
+            ? LanguagePackService.DefaultLanguageCode
+            : currentLanguageCode;
+
+        if (!languages.Any(language =>
+                string.Equals(language.Code, selectedCode, StringComparison.OrdinalIgnoreCase)))
+        {
+            selectedCode = LanguagePackService.DefaultLanguageCode;
+        }
+
+        LanguageBox.ItemsSource = languages;
+        LanguageBox.DisplayMemberPath = nameof(LanguageChoice.DisplayName);
+        LanguageBox.SelectedValuePath = nameof(LanguageChoice.Code);
+        LanguageBox.SelectedValue = selectedCode;
+        SelectedLanguageCode = selectedCode;
+    }
 
     private void BrowseButton_Click(object sender, RoutedEventArgs e)
     {
@@ -71,6 +144,12 @@ public partial class SettingsWindow : Window
 
     private void BrowseIperf2Button_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            ValidationText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         BrowseExecutable(
             Iperf2PathBox,
             "Select iperf2 executable",
@@ -110,84 +189,78 @@ public partial class SettingsWindow : Window
     {
         ImportPortableEngine(
             IperfPathBox,
-            PortableIperf3EngineDirectory,
-            [PortableIperf3ExecutablePath],
+            PortableIperf3ExecutablePath,
             "iperf3.exe");
     }
 
     private void ImportPortableIperf2Button_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            ValidationText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         ImportPortableEngine(
             Iperf2PathBox,
-            PortableIperf2EngineDirectory,
-            [PortableIperf2ExecutablePath, PortableIperf2AlternateExecutablePath],
-            "iperf.exe / iperf2.exe");
+            PortableIperf2ExecutablePath,
+            "iperf2 executable");
     }
 
     private void ImportPortableEngine(
         TextBox pathBox,
-        string portableEngineDirectory,
-        IReadOnlyList<string> expectedPortableExecutables,
+        string portableExecutablePath,
         string engineLabel)
     {
         var executablePath = pathBox.Text.Trim();
 
-        if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
+        if (string.IsNullOrWhiteSpace(executablePath) ||
+            !File.Exists(executablePath))
         {
-            ValidationText.Text = $"Select an existing {engineLabel} first.";
-            return;
-        }
-
-        var sourceExe = Path.GetFullPath(executablePath);
-        var sourceDirectory = Path.GetDirectoryName(sourceExe);
-
-        if (string.IsNullOrWhiteSpace(sourceDirectory) || !Directory.Exists(sourceDirectory))
-        {
-            ValidationText.Text = $"Selected {engineLabel} directory was not found.";
-            return;
-        }
-
-        var destinationDirectory = Path.GetFullPath(portableEngineDirectory);
-
-        if (SameDirectory(sourceDirectory, destinationDirectory))
-        {
-            pathBox.Text = string.Empty;
-            ValidationText.Text = $"Already portable: {destinationDirectory}";
+            ValidationText.Text =
+                AppText.F("Select an existing {0} first.", engineLabel);
             return;
         }
 
         try
         {
-            CopyDirectory(sourceDirectory, destinationDirectory);
-
-            if (!expectedPortableExecutables.Any(File.Exists))
-            {
-                ValidationText.Text = $"Portable import finished, but {engineLabel} was not found in {destinationDirectory}.";
-                return;
-            }
+            var importedPath = PortableExecutableImporter.Import(
+                executablePath,
+                portableExecutablePath);
 
             pathBox.Text = string.Empty;
-            ValidationText.Text = $"Imported portable engine: {destinationDirectory}";
+            ValidationText.Text =
+                AppText.F("Imported portable engine: {0}", importedPath);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (
+            ex is IOException or
+            UnauthorizedAccessException or
+            ArgumentException)
         {
-            ValidationText.Text = "Portable import failed: " + ex.Message;
+            ValidationText.Text =
+                AppText.F("Portable import failed: {0}", ex.Message);
         }
     }
 
     private void OpenPortableEngineDirectoryButton_Click(object sender, RoutedEventArgs e)
     {
-        OpenDirectory(PortableIperf3EngineDirectory, "portable iperf3 engine folder");
+        OpenDirectory(PortableIperf3EngineDirectory, AppText.T("portable iperf3 engine folder"));
     }
 
     private void OpenPortableIperf2EngineDirectoryButton_Click(object sender, RoutedEventArgs e)
     {
-        OpenDirectory(PortableIperf2EngineDirectory, "portable iperf2 engine folder");
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            ValidationText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
+        OpenDirectory(PortableIperf2EngineDirectory, AppText.T("portable iperf2 engine folder"));
     }
 
     private void OpenDataDirectoryButton_Click(object sender, RoutedEventArgs e)
     {
-        OpenDirectory(DataDirectory, "data folder");
+        OpenDirectory(DataDirectory, AppText.T("data folder"));
     }
 
     private void OpenDirectory(string directory, string label)
@@ -202,37 +275,76 @@ public partial class SettingsWindow : Window
                 UseShellExecute = true
             });
 
-            ValidationText.Text = $"Opened {label}: {directory}";
+            ValidationText.Text = AppText.F("Opened {0}: {1}", label, directory);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
-            ValidationText.Text = $"Could not open {label}: " + ex.Message;
+            ValidationText.Text = AppText.F("Could not open {0}: {1}", label, ex.Message);
         }
     }
 
     private void ClearButton_Click(object sender, RoutedEventArgs e)
     {
         IperfPathBox.Text = string.Empty;
-        ValidationText.Text = "Manual iperf3 path cleared. WinPerf will use fallback detection.";
+        ValidationText.Text = AppText.T("Manual iperf3 path cleared. WinPerf will use fallback detection.");
     }
 
     private void ClearIperf2Button_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            ValidationText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         Iperf2PathBox.Text = string.Empty;
-        ValidationText.Text = "Manual iperf2 path cleared. WinPerf will use fallback detection.";
+        ValidationText.Text = AppText.T("Manual iperf2 path cleared. WinPerf will use fallback detection.");
     }
 
-    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    private void ApplyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryCaptureSettings())
+        {
+            return;
+        }
+
+        Applied?.Invoke(
+            this,
+            new SettingsAppliedEventArgs(
+                IperfExecutablePath,
+                Iperf2ExecutablePath,
+                SelectedLanguageCode));
+
+        PopulateLanguageBox(SelectedLanguageCode);
+        AppText.ApplyTo(this);
+        ValidationText.Text = AppText.T("Changes applied for this session. Save to keep them after restart.");
+    }
+
+    private bool TryCaptureSettings()
     {
         if (!string.IsNullOrWhiteSpace(IperfExecutablePath) && !File.Exists(IperfExecutablePath))
         {
-            ValidationText.Text = "Selected iperf3.exe path does not exist.";
-            return;
+            ValidationText.Text = AppText.T("Selected iperf3.exe path does not exist.");
+            return false;
         }
 
         if (!string.IsNullOrWhiteSpace(Iperf2ExecutablePath) && !File.Exists(Iperf2ExecutablePath))
         {
-            ValidationText.Text = "Selected iperf.exe / iperf2.exe path does not exist.";
+            ValidationText.Text = AppText.T("Selected iperf.exe / iperf2.exe path does not exist.");
+            return false;
+        }
+
+        SelectedLanguageCode =
+            LanguageBox.SelectedValue as string ??
+            LanguagePackService.DefaultLanguageCode;
+
+        return true;
+    }
+
+    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryCaptureSettings())
+        {
             return;
         }
 
@@ -242,39 +354,6 @@ public partial class SettingsWindow : Window
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
-    }
-
-    private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
-    {
-        Directory.CreateDirectory(destinationDirectory);
-
-        foreach (var directory in Directory.EnumerateDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(sourceDirectory, directory);
-            Directory.CreateDirectory(Path.Combine(destinationDirectory, relativePath));
-        }
-
-        foreach (var file in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(sourceDirectory, file);
-            var destinationFile = Path.Combine(destinationDirectory, relativePath);
-            var destinationParent = Path.GetDirectoryName(destinationFile);
-
-            if (!string.IsNullOrWhiteSpace(destinationParent))
-            {
-                Directory.CreateDirectory(destinationParent);
-            }
-
-            File.Copy(file, destinationFile, overwrite: true);
-        }
-    }
-
-    private static bool SameDirectory(string left, string right)
-    {
-        var leftFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(left));
-        var rightFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(right));
-
-        return string.Equals(leftFull, rightFull, StringComparison.OrdinalIgnoreCase);
     }
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)
@@ -293,4 +372,11 @@ public partial class SettingsWindow : Window
     {
         Close();
     }
+
+    private sealed record LanguageChoice(string Code, string DisplayName);
 }
+
+public sealed record SettingsAppliedEventArgs(
+    string? IperfExecutablePath,
+    string? Iperf2ExecutablePath,
+    string LanguageCode);

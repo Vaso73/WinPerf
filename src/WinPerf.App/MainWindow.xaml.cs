@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -7,9 +8,14 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using WinPerf.App.Settings;
+using WinPerf.App.Updates;
+using WinPerf.Core.History;
 using WinPerf.Core.Iperf;
+using WinPerf.Core.Product;
 using WinPerf.Core.Profiles;
+using WinPerf.Core.Updates;
 
 namespace WinPerf.App;
 
@@ -19,11 +25,14 @@ public partial class MainWindow : Window
     private readonly IperfExecutableResolver _executableResolver = new();
     private readonly IperfProcessRunner _processRunner = new();
     private readonly JsonSavedIperfProfileStore _profileStore = new(JsonSavedIperfProfileStore.GetDefaultFilePath());
+    private readonly JsonIperfHistoryStore _historyStore = new(JsonIperfHistoryStore.GetDefaultFilePath());
 
     private WinPerfSettings _settings = new();
     private IperfExecutableResolution _engineResolution = new(false, null, "NotConfigured", "iperf3.exe is not configured.");
     private CancellationTokenSource? _currentRunCancellation;
+    private CancellationTokenSource? _serverRunCancellation;
     private readonly StringBuilder _engineOutput = new();
+    private readonly StringBuilder _serverOutput = new();
     private readonly List<double> _throughputSamples = new();
     private readonly List<IReadOnlyList<double>> _streamThroughputSamples = new();
     private readonly List<double> _reverseThroughputSamples = new();
@@ -33,6 +42,8 @@ public partial class MainWindow : Window
     private int _activeChartDurationSeconds = 10;
     private int _activeOmitSeconds;
     private int _omittedWarmupIntervalsReceived;
+    private IperfIntervalSample? _iperf2UdpServerReport;
+    private int _iperf2UdpServerReportCount;
     private SavedIperfProfilesDocument _profilesDocument = new();
     private bool _isLoadingProfileSelection;
     private bool _isApplyingDashboardProfile;
@@ -41,10 +52,10 @@ public partial class MainWindow : Window
 
     private const string AdvancedCommandOverrideSource = "Advanced";
     private const string CustomCommandOverrideSource = "Custom";
-    private const string UiDensityComfortable = "Comfortable";
-    private const string UiDensityCompact = "Compact";
     private const int MaxRecentServers = 20;
     private const int MaxThroughputSamples = 60;
+    private const double DefaultDashboardEngineOutputHeight = 180;
+    private const double MaxDashboardEngineOutputHeight = 260;
 
     public MainWindow()
     {
@@ -53,14 +64,28 @@ public partial class MainWindow : Window
         WindowPlacementStore.Track(this, "MainWindow");
 
         _settings = _settingsStore.Load();
+        AppText.Initialize(AppContext.BaseDirectory, _settings.LanguageCode);
+        ApplyLocalization();
         RefreshEngineStatus();
+        RefreshIntegrationStatus();
         PopulateRecentServers();
+        ApplyProductEditionBoundary();
+        ApplyUnifiedCompactLayout();
         ApplyDashboardLayout();
-        ApplyUiDensity(resizeWindow: false);
+        ShowDashboardPage();
+        UpdateUdpBandwidthVisibility();
         UpdateCommandOverrideUx();
         UpdateDashboardCommandPreview();
+        UpdateServerModeCommandPreview();
 
-        Loaded += async (_, _) => await LoadDashboardProfilesAsync();
+        Loaded += async (_, _) =>
+        {
+            ApplyUnifiedCompactLayout();
+            ApplyDashboardLayout();
+            ApplyProductEditionBoundary();
+            await LoadDashboardProfilesAsync();
+            ShowStartupUpdateResult();
+        };
         Closing += (_, _) => SaveDashboardLayout();
     }
 
@@ -93,7 +118,9 @@ public partial class MainWindow : Window
 
         if (!_engineResolution.IsConfigured || string.IsNullOrWhiteSpace(_engineResolution.ExecutablePath))
         {
-            EngineOutputText.Text = $"{GetEngineExecutableDisplayName(GetSelectedEngine())} is not configured. Open Settings and select the executable first.";
+            EngineOutputText.Text = AppText.F(
+                "{0} is not configured. Open Settings and select the executable first.",
+                GetEngineExecutableDisplayName(GetSelectedEngine()));
             return;
         }
 
@@ -128,14 +155,14 @@ public partial class MainWindow : Window
             ResetLiveMetrics(options.Mode);
 
             _engineOutput.Clear();
-            AppendEngineOutput("Running command:");
+            AppendEngineOutput(AppText.T("Running command:"));
             AppendEngineOutput(commandDisplayText);
             AppendEngineOutput(string.Empty);
 
             if (_activeOmitSeconds > 0)
             {
-                AppendEngineOutput($"Warm-up: omitting first {_activeOmitSeconds}s before live metrics.");
-                LiveStatusText.Text = $"Warm-up: omitting first {_activeOmitSeconds}s...";
+                AppendEngineOutput(AppText.F("Warm-up: omitting first {0}s before live metrics.", _activeOmitSeconds));
+                LiveStatusText.Text = AppText.F("Warm-up: omitting first {0}s...", _activeOmitSeconds);
                 ShowWarmupChartPlaceholder(0, _activeOmitSeconds, null);
             }
             else
@@ -162,23 +189,66 @@ public partial class MainWindow : Window
                 },
                 _currentRunCancellation.Token);
 
+            var receivedIperf2UdpReportCount =
+                ReconcileFinalIperf2UdpServerReport(
+                    options,
+                    result);
+
+            var requiresCompleteIperf2UdpReport =
+                options.Engine == IperfEngine.Iperf2 &&
+                options.Mode is (
+                    IperfMode.UdpUpload or
+                    IperfMode.UdpDownload);
+
+            var hasAuthoritativeIperf2UdpServerResult =
+                requiresCompleteIperf2UdpReport &&
+                receivedIperf2UdpReportCount == options.Streams;
+
+            var outcome =
+                IperfRunResultClassifier.Classify(
+                    options.Engine,
+                    result,
+                    hasAuthoritativeIperf2UdpServerResult);
+
+            if (requiresCompleteIperf2UdpReport &&
+                receivedIperf2UdpReportCount != options.Streams &&
+                outcome.Kind != IperfRunOutcomeKind.Failed)
+            {
+                outcome = new IperfRunOutcome(
+                    IperfRunOutcomeKind.Failed,
+                    AppText.F(
+                        "Test failed: incomplete iperf2 UDP server report ({0}/{1} streams).",
+                        receivedIperf2UdpReportCount,
+                        options.Streams));
+            }
+
+            outcome = LocalizeOutcome(outcome);
+
+            var summaryExitCode =
+                outcome.Kind == IperfRunOutcomeKind.Failed
+                    ? result.ExitCode == 0 ? 1 : result.ExitCode
+                    : 0;
+
             AppendEngineOutput(string.Empty);
-            AppendEngineOutput($"Process exited with code {result.ExitCode}.");
-            UpdateLastSummary(options, result.ExitCode);
+            AppendEngineOutput(AppText.F("Process exited with code {0}.", result.ExitCode));
+            AppendEngineOutput(outcome.Message);
+            UpdateLastSummary(options, summaryExitCode);
+            await SaveHistoryEntryAsync(options, result, outcome, summaryExitCode, commandDisplayText);
+            UpdateRunOutcomeStatus(outcome);
         }
         catch (OperationCanceledException)
         {
             AppendEngineOutput(string.Empty);
-            AppendEngineOutput("Test stopped by user.");
+            AppendEngineOutput(AppText.T("Test stopped by user."));
         }
-        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or NotSupportedException)
+        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or InvalidOperationException or NotSupportedException)
         {
-            EngineOutputText.Text = "Invalid test configuration:" + Environment.NewLine + ex.Message;
+            EngineOutputText.Text = AppText.T("Invalid test configuration:") + Environment.NewLine + ex.Message;
         }
         catch (Exception ex)
         {
             AppendEngineOutput(string.Empty);
-            AppendEngineOutput($"Failed to run {GetEngineDisplayName(GetSelectedEngine())}:");
+            AppendEngineOutput(AppText.F("Failed to run {0}:", GetEngineDisplayName(GetSelectedEngine())));
             AppendEngineOutput(ex.Message);
         }
         finally
@@ -194,31 +264,608 @@ public partial class MainWindow : Window
         _currentRunCancellation?.Cancel();
     }
 
-    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    private void DashboardNavButton_Click(object sender, RoutedEventArgs e)
+    {
+        ShowDashboardPage();
+    }
+
+    private void ServerModeNavButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!WinPerfProductEdition.SupportsServerMode)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                WinPerfProductEdition.EditionName,
+                AppText.T("Available in WinPerf Sponsor Pro."));
+            return;
+        }
+
+        ShowServerModePage();
+    }
+
+    private async void HistoryNavButton_Click(object sender, RoutedEventArgs e)
+    {
+        await ShowHistoryPageAsync();
+    }
+
+    private void ShowDashboardPage()
+    {
+        DashboardContentPanel.Visibility = Visibility.Visible;
+        ServerModeContentPanel.Visibility = Visibility.Collapsed;
+        HistoryContentPanel.Visibility = Visibility.Collapsed;
+        SetSidebarNavigation(ActivePage.Dashboard);
+        RefreshEngineStatus();
+    }
+
+    private void ShowServerModePage()
+    {
+        DashboardContentPanel.Visibility = Visibility.Collapsed;
+        ServerModeContentPanel.Visibility = Visibility.Visible;
+        HistoryContentPanel.Visibility = Visibility.Collapsed;
+        SetSidebarNavigation(ActivePage.ServerMode);
+        UpdateServerModeCommandPreview();
+    }
+
+    private async Task ShowHistoryPageAsync()
+    {
+        DashboardContentPanel.Visibility = Visibility.Collapsed;
+        ServerModeContentPanel.Visibility = Visibility.Collapsed;
+        HistoryContentPanel.Visibility = Visibility.Visible;
+        SetSidebarNavigation(ActivePage.History);
+        await RefreshHistoryPageAsync();
+    }
+
+    private void SetSidebarNavigation(ActivePage activePage)
+    {
+        if (DashboardNavButton is null || ServerModeNavButton is null || HistoryNavButton is null)
+        {
+            return;
+        }
+
+        DashboardNavButton.Style = FindResource(activePage == ActivePage.Dashboard ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
+        ServerModeNavButton.Style = FindResource(activePage == ActivePage.ServerMode ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
+        HistoryNavButton.Style = FindResource(activePage == ActivePage.History ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
+    }
+
+    private void ApplyProductEditionBoundary()
+    {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            HideComboBoxItemByContent(EngineBox, "iperf2");
+            Iperf2IntegrationPanel.Visibility = Visibility.Collapsed;
+            Iperf2IntegrationStatusChip.Visibility = Visibility.Collapsed;
+            if (GetSelectedEngine() == IperfEngine.Iperf2)
+            {
+                SelectEngine(IperfEngine.Iperf3);
+            }
+        }
+
+        if (!WinPerfProductEdition.SupportsUdp)
+        {
+            HideComboBoxItemByTag(ModeBox, "udp-upload");
+            HideComboBoxItemByTag(ModeBox, "udp-download");
+        }
+
+        if (!WinPerfProductEdition.SupportsBidirectional)
+        {
+            HideComboBoxItemByTag(ModeBox, "tcp-bidirectional");
+        }
+
+        NormalizeDashboardForProductEdition();
+        ServerModeNavButton.IsEnabled = WinPerfProductEdition.SupportsServerMode;
+        ServerModeNavButton.ToolTip = WinPerfProductEdition.SupportsServerMode
+            ? null
+            : AppText.T("Available in WinPerf Sponsor Pro.");
+        CommandMenuButton.IsEnabled =
+            WinPerfProductEdition.SupportsAdvancedCommands ||
+            WinPerfProductEdition.SupportsCustomCommands;
+        AdvancedCommandMenuItem.IsEnabled = WinPerfProductEdition.SupportsAdvancedCommands;
+        CustomCommandMenuItem.IsEnabled = WinPerfProductEdition.SupportsCustomCommands;
+        HistoryExportButton.IsEnabled = WinPerfProductEdition.SupportsHistoryExportImport;
+        HistoryImportButton.IsEnabled = WinPerfProductEdition.SupportsHistoryExportImport;
+
+        if (WinPerfProductEdition.IsPublicFree)
+        {
+            DashboardProfileStatusText.Text = AppText.T("WinPerf Free includes iperf3 TCP upload/download, 1 stream and 10 second tests.");
+        }
+    }
+
+    private static void HideComboBoxItemByContent(ComboBox comboBox, string content)
+    {
+        foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Content?.ToString(), content, StringComparison.Ordinal))
+            {
+                item.Visibility = Visibility.Collapsed;
+                item.IsEnabled = false;
+            }
+        }
+    }
+
+    private static void HideComboBoxItemByTag(ComboBox comboBox, string tag)
+    {
+        foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString(), tag, StringComparison.Ordinal))
+            {
+                item.Visibility = Visibility.Collapsed;
+                item.IsEnabled = false;
+            }
+        }
+    }
+
+    private void NormalizeDashboardForProductEdition()
+    {
+        if (EngineBox is null ||
+            ModeBox is null ||
+            StreamsBox is null ||
+            DurationBox is null ||
+            UdpBandwidthPanel is null ||
+            UdpBandwidthBox is null)
+        {
+            return;
+        }
+
+        if (WinPerfProductEdition.SupportsIperf2 &&
+            WinPerfProductEdition.SupportsUdp &&
+            WinPerfProductEdition.SupportsBidirectional &&
+            WinPerfProductEdition.MaxStreams == int.MaxValue &&
+            WinPerfProductEdition.MaxDurationSeconds == int.MaxValue)
+        {
+            return;
+        }
+
+        if (!WinPerfProductEdition.SupportsIperf2 && GetSelectedEngine() == IperfEngine.Iperf2)
+        {
+            SelectEngine(IperfEngine.Iperf3);
+        }
+
+        var selectedMode = GetSelectedMode();
+        if (!IsModeAllowedByProductEdition(selectedMode))
+        {
+            SelectMode(IperfMode.TcpUpload);
+        }
+
+        NormalizeLimitedPositiveIntBox(StreamsBox, WinPerfProductEdition.MaxStreams);
+        NormalizeLimitedPositiveIntBox(DurationBox, WinPerfProductEdition.MaxDurationSeconds);
+        UpdateUdpBandwidthVisibility();
+    }
+
+    private static void NormalizeLimitedPositiveIntBox(TextBox box, int maxValue)
+    {
+        if (maxValue == int.MaxValue)
+        {
+            return;
+        }
+
+        if (!int.TryParse(box.Text.Trim(), out var value) || value < 1 || value > maxValue)
+        {
+            box.Text = maxValue.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+
+    private static bool IsModeAllowedByProductEdition(IperfMode mode)
+    {
+        if (!WinPerfProductEdition.SupportsUdp &&
+            mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
+        {
+            return false;
+        }
+
+        if (!WinPerfProductEdition.SupportsBidirectional &&
+            mode == IperfMode.TcpBidirectional)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private void AppMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (AppMenuButton.ContextMenu is null)
+        {
+            return;
+        }
+
+        AppMenuButton.ContextMenu.PlacementTarget = AppMenuButton;
+        AppMenuButton.ContextMenu.IsOpen = true;
+    }
+
+    private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
     {
         OpenSettingsWindow();
     }
 
-    private void EngineStatusText_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void UpdatesMenuItem_Click(object sender, RoutedEventArgs e)
     {
-        OpenSettingsWindow();
+        OpenSponsorProUpdatesWindow();
+    }
+
+    private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        OpenAboutWindow();
     }
 
     private void OpenSettingsWindow()
     {
-        var dialog = new SettingsWindow(_settings.IperfExecutablePath, _settings.Iperf2ExecutablePath, AppContext.BaseDirectory)
+        var originalSettings = CloneSettings(_settings);
+        var dialog = new SettingsWindow(
+            _settings.IperfExecutablePath,
+            _settings.Iperf2ExecutablePath,
+            AppContext.BaseDirectory,
+            _settings.LanguageCode)
         {
             Owner = this
         };
 
+        dialog.Applied += (_, args) =>
+        {
+            ApplyRuntimeSettings(
+                args.IperfExecutablePath,
+                args.Iperf2ExecutablePath,
+                args.LanguageCode);
+        };
+
         if (dialog.ShowDialog() == true)
         {
-            _settings.IperfExecutablePath = dialog.IperfExecutablePath;
-            _settings.Iperf2ExecutablePath = dialog.Iperf2ExecutablePath;
+            ApplyRuntimeSettings(
+                dialog.IperfExecutablePath,
+                dialog.Iperf2ExecutablePath,
+                dialog.SelectedLanguageCode);
             _settingsStore.Save(_settings);
+        }
+        else
+        {
+            _settings = originalSettings;
+            AppText.UseLanguage(_settings.LanguageCode);
+            ApplyLocalization();
             RefreshEngineStatus();
+            RefreshIntegrationStatus();
             UpdateDashboardCommandPreview();
         }
+    }
+
+    private void ApplyRuntimeSettings(
+        string? iperfExecutablePath,
+        string? iperf2ExecutablePath,
+        string? languageCode)
+    {
+        _settings.IperfExecutablePath = iperfExecutablePath;
+        _settings.Iperf2ExecutablePath = iperf2ExecutablePath;
+        _settings.LanguageCode = languageCode;
+        AppText.UseLanguage(_settings.LanguageCode);
+        ApplyLocalization();
+        RefreshEngineStatus();
+        RefreshIntegrationStatus();
+        UpdateDashboardCommandPreview();
+        UpdateServerModeCommandPreview();
+    }
+
+    private static WinPerfSettings CloneSettings(WinPerfSettings source)
+    {
+        return new WinPerfSettings
+        {
+            IperfExecutablePath = source.IperfExecutablePath,
+            Iperf2ExecutablePath = source.Iperf2ExecutablePath,
+            SelectedEngine = source.SelectedEngine,
+            LastServer = source.LastServer,
+            RecentServers = [.. source.RecentServers],
+            RecentCustomCommands = [.. source.RecentCustomCommands],
+            LanguageCode = source.LanguageCode,
+            DashboardEngineOutputHeight = source.DashboardEngineOutputHeight,
+            DashboardLeftRailWidth = source.DashboardLeftRailWidth
+        };
+    }
+
+    private void OpenAboutWindow()
+    {
+        var dialog = new AboutWindow(ResolveAppVersionText())
+        {
+            Owner = this
+        };
+
+        dialog.ShowDialog();
+    }
+
+    private void OpenSponsorProUpdatesWindow()
+    {
+        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Sponsor Pro / Updates"),
+                AppText.T("Sponsor Pro updates are available only in WinPerf Sponsor Pro."));
+            return;
+        }
+
+        var dialog = new SponsorProUpdatesWindow(ResolveAppVersionText())
+        {
+            Owner = this
+        };
+
+        dialog.ShowDialog();
+        RefreshIntegrationStatus();
+    }
+
+    private void ShowStartupUpdateResult()
+    {
+        if (WinPerfUpdateHelper.StartupResult == "success")
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Update installed"),
+                AppText.T("WinPerf was updated successfully."));
+        }
+        else if (WinPerfUpdateHelper.StartupResult == "failed")
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Update failed"),
+                AppText.T("Update installation failed. WinPerf was rolled back to the previous version."));
+        }
+        else if (WinPerfUpdateHelper.StartupResult == "recovery-required")
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Update recovery required"),
+                AppText.F("Update installation failed and automatic rollback needs manual recovery from {0}.", WinPerfUpdateHelper.StartupRecoveryDirectory ?? string.Empty));
+        }
+    }
+
+    private void ApplyLocalization()
+    {
+        AppText.ApplyTo(this);
+    }
+
+    private async void StartServerButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_serverRunCancellation is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            var options = BuildServerModeOptions();
+            var resolution = ResolveIntegration(options.Engine);
+
+            if (!resolution.IsConfigured || string.IsNullOrWhiteSpace(resolution.ExecutablePath))
+            {
+                ServerOutputText.Text = AppText.F(
+                    "{0} is not configured. Open Settings and select the executable first.",
+                    GetEngineExecutableDisplayName(options.Engine));
+                ServerModeStatusText.Text = AppText.T("Server cannot start: engine missing.");
+                return;
+            }
+
+            var command = IperfCommandBuilder.BuildServerCommand(resolution.ExecutablePath, options);
+            var commandDisplayText = string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+
+            _serverRunCancellation = new CancellationTokenSource();
+            _serverOutput.Clear();
+            SetServerModeRunState(isRunning: true, options);
+            AppendServerOutput(AppText.T("Running server command:"));
+            AppendServerOutput(commandDisplayText);
+            AppendServerOutput(string.Empty);
+
+            var result = await _processRunner.RunAsync(
+                command,
+                async (line, cancellationToken) =>
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        AppendServerOutput(line.Text);
+                    });
+                },
+                _serverRunCancellation.Token);
+
+            AppendServerOutput(string.Empty);
+            AppendServerOutput(AppText.F("Server process exited with code {0}.", result.ExitCode));
+            ServerModeStatusText.Text = result.ExitCode == 0
+                ? AppText.T("Server stopped.")
+                : AppText.F("Server stopped with exit code {0}.", result.ExitCode);
+        }
+        catch (OperationCanceledException)
+        {
+            AppendServerOutput(string.Empty);
+            AppendServerOutput(AppText.T("Server stopped by user."));
+            ServerModeStatusText.Text = AppText.T("Server stopped by user.");
+        }
+        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or NotSupportedException)
+        {
+            ServerOutputText.Text = AppText.T("Invalid server configuration:") + Environment.NewLine + ex.Message;
+            ServerModeStatusText.Text = AppText.T("Server configuration is invalid.");
+        }
+        catch (Exception ex)
+        {
+            AppendServerOutput(string.Empty);
+            AppendServerOutput(AppText.T("Failed to run server:"));
+            AppendServerOutput(ex.Message);
+            ServerModeStatusText.Text = AppText.T("Server failed to start or stopped unexpectedly.");
+        }
+        finally
+        {
+            _serverRunCancellation?.Dispose();
+            _serverRunCancellation = null;
+            SetServerModeRunState(isRunning: false, null);
+        }
+    }
+
+    private void StopServerButton_Click(object sender, RoutedEventArgs e)
+    {
+        _serverRunCancellation?.Cancel();
+    }
+
+    private void ServerModeInputChanged(object sender, RoutedEventArgs e)
+    {
+        if (ServerEngineBox is null ||
+            ServerPortBox is null ||
+            ServerOneOffBox is null ||
+            ServerOneOffUnavailableText is null)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(sender, ServerEngineBox))
+        {
+            NormalizeServerModeForSelectedEngine();
+        }
+        else
+        {
+            UpdateServerOneOffAvailability();
+        }
+
+        UpdateServerModeCommandPreview();
+    }
+
+    private void NormalizeServerModeForSelectedEngine()
+    {
+        var selectedEngine = GetSelectedServerEngine();
+
+        if (selectedEngine == IperfEngine.Iperf2)
+        {
+            ServerOneOffBox.IsChecked = false;
+        }
+
+        UpdateServerOneOffAvailability();
+
+        if (selectedEngine == IperfEngine.Iperf2 &&
+            string.Equals(ServerPortBox.Text.Trim(), "5201", StringComparison.Ordinal))
+        {
+            ServerPortBox.Text = "5001";
+        }
+        else if (selectedEngine == IperfEngine.Iperf3 &&
+                 string.Equals(ServerPortBox.Text.Trim(), "5001", StringComparison.Ordinal))
+        {
+            ServerPortBox.Text = "5201";
+        }
+    }
+
+    private IperfServerOptions BuildServerModeOptions()
+    {
+        return new IperfServerOptions
+        {
+            Engine = GetSelectedServerEngine(),
+            Protocol = GetSelectedServerProtocol(),
+            Port = ParsePositiveInt(ServerPortBox, "Server port"),
+            AddressFamily = IperfAddressFamily.IPv4,
+            OneOff = ServerOneOffBox.IsChecked == true
+        };
+    }
+
+    private void UpdateServerModeCommandPreview()
+    {
+        if (ServerOutputText is null)
+        {
+            return;
+        }
+
+        if (_serverRunCancellation is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            var options = BuildServerModeOptions();
+            var resolution = ResolveIntegration(options.Engine);
+            var executablePath = resolution.IsConfigured && !string.IsNullOrWhiteSpace(resolution.ExecutablePath)
+                ? resolution.ExecutablePath
+                : GetEngineExecutableDisplayName(options.Engine);
+            var command = IperfCommandBuilder.BuildServerCommand(executablePath, options);
+
+            ServerOutputText.Text =
+                AppText.T("Server command preview:") + Environment.NewLine +
+                string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+            ServerModeStatusText.Text = AppText.T("Stopped. Ready to start local server.");
+            SetServerModeStatusChip(isRunning: false, isError: false);
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or InvalidOperationException or NotSupportedException)
+        {
+            ServerOutputText.Text =
+                AppText.T("Server command preview unavailable:") + Environment.NewLine +
+                ex.Message;
+            ServerModeStatusText.Text = AppText.T("Server configuration is invalid.");
+            SetServerModeStatusChip(isRunning: false, isError: true);
+        }
+    }
+
+    private void SetServerModeRunState(bool isRunning, IperfServerOptions? options)
+    {
+        StartServerButton.IsEnabled = !isRunning;
+        StopServerButton.IsEnabled = isRunning;
+        ServerEngineBox.IsEnabled = !isRunning;
+        ServerProtocolBox.IsEnabled = !isRunning;
+        ServerPortBox.IsEnabled = !isRunning;
+        UpdateServerOneOffAvailability();
+
+        if (isRunning && options is not null)
+        {
+            ServerModeStatusText.Text =
+                $"{GetEngineDisplayName(options.Engine)} {options.Protocol.ToString().ToUpperInvariant()} server listening on port {options.Port}.";
+            SetServerModeStatusChip(isRunning: true, isError: false);
+        }
+        else
+        {
+            SetServerModeStatusChip(isRunning: false, isError: false);
+        }
+    }
+
+    private void UpdateServerOneOffAvailability()
+    {
+        if (ServerOneOffBox is null || ServerOneOffUnavailableText is null)
+        {
+            return;
+        }
+
+        var isIperf3 = GetSelectedServerEngine() == IperfEngine.Iperf3;
+
+        ServerOneOffBox.Visibility = isIperf3 ? Visibility.Visible : Visibility.Collapsed;
+        ServerOneOffUnavailableText.Visibility = isIperf3 ? Visibility.Collapsed : Visibility.Visible;
+        ServerOneOffBox.IsEnabled = _serverRunCancellation is null && isIperf3;
+
+        if (!isIperf3)
+        {
+            ServerOneOffBox.IsChecked = false;
+        }
+    }
+
+    private void SetServerModeStatusChip(bool isRunning, bool isError)
+    {
+        if (isRunning)
+        {
+            ServerModeStatusChipText.Text = AppText.T("Running");
+            SetIntegrationChipState(ServerModeStatusChip, ServerModeStatusChipText, isReady: true);
+            return;
+        }
+
+        if (isError)
+        {
+            ServerModeStatusChipText.Text = AppText.T("Invalid");
+            SetIntegrationChipState(ServerModeStatusChip, ServerModeStatusChipText, isReady: false);
+            return;
+        }
+
+        ServerModeStatusChipText.Text = AppText.T("Stopped");
+        ServerModeStatusChip.Background = GetThemeBrush("PanelSoft", Brushes.DarkSlateBlue);
+        ServerModeStatusChip.BorderBrush = GetThemeBrush("BorderSoft", Brushes.SlateBlue);
+        ServerModeStatusChipText.Foreground = GetThemeBrush("TextMuted", Brushes.LightSlateGray);
+    }
+
+    private void AppendServerOutput(string text)
+    {
+        _serverOutput.AppendLine(text);
+
+        const int maxChars = 12000;
+
+        if (_serverOutput.Length > maxChars)
+        {
+            _serverOutput.Remove(0, _serverOutput.Length - maxChars);
+        }
+
+        ServerOutputText.Text = _serverOutput.ToString();
+        ServerOutputText.ScrollToEnd();
     }
 
     private void ApplyDashboardLayout()
@@ -228,7 +875,7 @@ public partial class MainWindow : Window
             !double.IsInfinity(height) &&
             height >= EngineOutputRow.MinHeight)
         {
-            EngineOutputRow.Height = new GridLength(height, GridUnitType.Pixel);
+            EngineOutputRow.Height = new GridLength(ClampDashboardEngineOutputHeight(height), GridUnitType.Pixel);
             LiveThroughputRow.Height = new GridLength(1, GridUnitType.Star);
         }
 
@@ -243,40 +890,64 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ApplyUnifiedCompactLayout()
+    {
+        LeftRailColumn.MinWidth = 280;
+        LeftRailColumn.MaxWidth = 500;
+
+        if (GetSavedDashboardLeftRailWidth() is not double savedLeftRailWidth)
+        {
+            LeftRailColumn.Width = new GridLength(360);
+        }
+        else
+        {
+            LeftRailColumn.Width = new GridLength(
+                Math.Clamp(savedLeftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
+        }
+
+        DashboardContentPanel.Margin = new Thickness(18);
+        MetricsRow.Height = new GridLength(150);
+        LiveThroughputRow.MinHeight = 260;
+        EngineOutputRow.MinHeight = 110;
+        EngineOutputRow.MaxHeight = MaxDashboardEngineOutputHeight;
+
+        if (GetSavedDashboardEngineOutputHeight() is not double savedEngineOutputHeight)
+        {
+            EngineOutputRow.Height = new GridLength(DefaultDashboardEngineOutputHeight);
+        }
+        else
+        {
+            EngineOutputRow.Height = new GridLength(ClampDashboardEngineOutputHeight(savedEngineOutputHeight));
+        }
+
+        MinWidth = 760;
+        MinHeight = 520;
+    }
+
     private double? GetSavedDashboardEngineOutputHeight()
     {
-        return IsCompactUiDensity()
-            ? _settings.CompactDashboardEngineOutputHeight ?? _settings.DashboardEngineOutputHeight
-            : _settings.ComfortableDashboardEngineOutputHeight ?? _settings.DashboardEngineOutputHeight;
+        return _settings.DashboardEngineOutputHeight;
     }
 
     private double? GetSavedDashboardLeftRailWidth()
     {
-        return IsCompactUiDensity()
-            ? _settings.CompactDashboardLeftRailWidth ?? _settings.DashboardLeftRailWidth
-            : _settings.ComfortableDashboardLeftRailWidth ?? _settings.DashboardLeftRailWidth;
+        return _settings.DashboardLeftRailWidth;
     }
 
     private void SetSavedDashboardEngineOutputHeight(double height)
     {
-        if (IsCompactUiDensity())
-        {
-            _settings.CompactDashboardEngineOutputHeight = height;
-            return;
-        }
+        var clampedHeight = ClampDashboardEngineOutputHeight(height);
+        _settings.DashboardEngineOutputHeight = clampedHeight;
+    }
 
-        _settings.ComfortableDashboardEngineOutputHeight = height;
+    private double ClampDashboardEngineOutputHeight(double height)
+    {
+        return Math.Clamp(height, EngineOutputRow.MinHeight, MaxDashboardEngineOutputHeight);
     }
 
     private void SetSavedDashboardLeftRailWidth(double width)
     {
-        if (IsCompactUiDensity())
-        {
-            _settings.CompactDashboardLeftRailWidth = width;
-            return;
-        }
-
-        _settings.ComfortableDashboardLeftRailWidth = width;
+        _settings.DashboardLeftRailWidth = width;
     }
 
     private void SaveDashboardLayout()
@@ -306,6 +977,93 @@ public partial class MainWindow : Window
 
     }
 
+    private static IperfRunOutcome LocalizeOutcome(IperfRunOutcome outcome)
+    {
+        return outcome with
+        {
+            Message = LocalizeOutcomeMessage(outcome.Message)
+        };
+    }
+
+    private static string LocalizeOutcomeMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return message;
+        }
+
+        if (string.Equals(message, "Test completed.", StringComparison.Ordinal))
+        {
+            return AppText.T("Test completed.");
+        }
+
+        if (string.Equals(message, "Test completed with warning.", StringComparison.Ordinal))
+        {
+            return AppText.T("Test completed with warning.");
+        }
+
+        if (string.Equals(message, "Test failed.", StringComparison.Ordinal))
+        {
+            return AppText.T("Test failed.");
+        }
+
+        const string missingDllMessage =
+            "Test failed: the iperf executable could not start because a required Windows DLL is missing. Re-import the portable engine from its full folder so WinPerf can copy the companion .dll files.";
+        if (string.Equals(message, missingDllMessage, StringComparison.Ordinal))
+        {
+            return AppText.T(missingDllMessage);
+        }
+
+        const string processExitPrefix = "Test failed: process exited with code ";
+        if (message.StartsWith(processExitPrefix, StringComparison.Ordinal) &&
+            message.EndsWith(".", StringComparison.Ordinal))
+        {
+            return AppText.F(
+                "Test failed: process exited with code {0}.",
+                message[processExitPrefix.Length..^1]);
+        }
+
+        const string warningPrefix = "Test completed with warning: ";
+        if (message.StartsWith(warningPrefix, StringComparison.Ordinal))
+        {
+            return AppText.F(
+                "Test completed with warning: {0}",
+                message[warningPrefix.Length..]);
+        }
+
+        const string failedPrefix = "Test failed: ";
+        if (message.StartsWith(failedPrefix, StringComparison.Ordinal))
+        {
+            return AppText.F("Test failed: {0}", message[failedPrefix.Length..]);
+        }
+
+        return AppText.T(message);
+    }
+
+    private void UpdateRunOutcomeStatus(IperfRunOutcome outcome)
+    {
+        if (outcome.Kind == IperfRunOutcomeKind.Completed)
+        {
+            return;
+        }
+
+        LiveStatusText.Text = outcome.Kind switch
+        {
+            IperfRunOutcomeKind.CompletedWithWarning =>
+                AppText.T("Test completed with warning."),
+            IperfRunOutcomeKind.Failed =>
+                AppText.T("Test failed."),
+            _ =>
+                LiveStatusText.Text
+        };
+
+        var separator = string.IsNullOrWhiteSpace(LastSummaryText.Text)
+            ? string.Empty
+            : Environment.NewLine;
+
+        LastSummaryText.Text += separator + outcome.Message;
+    }
+
     private void UpdateLastSummary(IperfTestOptions options, int exitCode)
     {
         var lines = new List<string>
@@ -313,227 +1071,613 @@ public partial class MainWindow : Window
             $"{GetEngineDisplayName(options.Engine)} · {FormatModeLabel(options.Mode)} · {options.Server}:{options.Port}"
         };
 
-        if (_throughputSamples.Count > 0)
+        var isIperf2Udp =
+            options.Engine == IperfEngine.Iperf2 &&
+            options.Mode is (
+                IperfMode.UdpUpload or
+                IperfMode.UdpDownload);
+
+        var udpServerReport =
+            isIperf2Udp
+                ? _iperf2UdpServerReport
+                : null;
+
+        if (udpServerReport?.MegabitsPerSecond is double receivedMegabits)
+        {
+            var sentSuffix = _throughputSamples.Count > 0
+                ? " · " + AppText.F("sent avg {0}", FormatMegabits(_throughputSamples.Average()))
+                : string.Empty;
+
+            lines.Add(
+                AppText.F("Received {0}{1}", FormatMegabits(receivedMegabits), sentSuffix));
+        }
+        else if (isIperf2Udp)
+        {
+            lines.Add(
+                AppText.F(
+                    "Server result unavailable ({0}/{1} streams).",
+                    _iperf2UdpServerReportCount,
+                    options.Streams));
+        }
+        else if (_throughputSamples.Count > 0)
         {
             var current = _throughputSamples[^1];
             var min = _throughputSamples.Min();
             var avg = _throughputSamples.Average();
             var max = _throughputSamples.Max();
 
-            if (options.Mode == IperfMode.TcpBidirectional && _reverseThroughputSamples.Count > 0)
+            if (options.Mode == IperfMode.TcpBidirectional &&
+                _reverseThroughputSamples.Count > 0)
             {
                 var reverseCurrent = _reverseThroughputSamples[^1];
                 var reverseMin = _reverseThroughputSamples.Min();
                 var reverseAvg = _reverseThroughputSamples.Average();
                 var reverseMax = _reverseThroughputSamples.Max();
 
-                lines.Add($"Upload {FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
-                lines.Add($"Download {FormatMegabits(reverseCurrent)} · min {FormatMegabits(reverseMin)} · avg {FormatMegabits(reverseAvg)} · max {FormatMegabits(reverseMax)}");
+                lines.Add(
+                    AppText.F(
+                        "Upload last {0} · min {1} · avg {2} · max {3}",
+                        FormatMegabits(current),
+                        FormatMegabits(min),
+                        FormatMegabits(avg),
+                        FormatMegabits(max)));
+                lines.Add(
+                    AppText.F(
+                        "Download last {0} · min {1} · avg {2} · max {3}",
+                        FormatMegabits(reverseCurrent),
+                        FormatMegabits(reverseMin),
+                        FormatMegabits(reverseAvg),
+                        FormatMegabits(reverseMax)));
             }
             else
             {
                 lines.Add(
-                    $"{FormatMegabits(current)} · min {FormatMegabits(min)} · avg {FormatMegabits(avg)} · max {FormatMegabits(max)}");
+                    AppText.F(
+                        "Last {0} · min {1} · avg {2} · max {3}",
+                        FormatMegabits(current),
+                        FormatMegabits(min),
+                        FormatMegabits(avg),
+                        FormatMegabits(max)));
             }
         }
         else
         {
-            lines.Add("No throughput samples.");
+            lines.Add(AppText.T("No throughput samples."));
         }
 
         if (options.Mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
         {
             var udpParts = new List<string>();
 
-            if (!string.IsNullOrWhiteSpace(JitterValueText.Text) &&
-                !string.Equals(JitterValueText.Text, "n/a", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(JitterValueText.Text, "-- ms", StringComparison.OrdinalIgnoreCase))
+            if (udpServerReport is not null)
             {
-                udpParts.Add("jitter " + JitterValueText.Text);
-            }
+                if (udpServerReport.JitterMs is double jitterMs)
+                {
+                    udpParts.Add(
+                        AppText.F(
+                            "jitter {0} ms",
+                            jitterMs.ToString(
+                                "0.000",
+                                CultureInfo.InvariantCulture)));
+                }
 
-            if (!string.IsNullOrWhiteSpace(LossValueText.Text) &&
-                !string.Equals(LossValueText.Text, "n/a", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(LossValueText.Text, "-- %", StringComparison.OrdinalIgnoreCase))
+                if (udpServerReport.EffectiveLostPercent is double lostPercent)
+                {
+                    var lossText =
+                        AppText.F(
+                            "loss {0} %",
+                            lostPercent.ToString(
+                                "0.0",
+                                CultureInfo.InvariantCulture));
+
+                    if (udpServerReport.LostDatagrams is long lost &&
+                        udpServerReport.TotalDatagrams is long total)
+                    {
+                        lossText += $" ({lost}/{total})";
+                    }
+
+                    udpParts.Add(lossText);
+                }
+            }
+            else if (!isIperf2Udp)
             {
-                udpParts.Add("loss " + LossValueText.Text);
+                if (!string.IsNullOrWhiteSpace(JitterValueText.Text) &&
+                    !string.Equals(
+                        JitterValueText.Text,
+                        "n/a",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(
+                        JitterValueText.Text,
+                        "-- ms",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    udpParts.Add(
+                        AppText.F("jitter {0}", JitterValueText.Text));
+                }
+
+                if (!string.IsNullOrWhiteSpace(LossValueText.Text) &&
+                    !string.Equals(
+                        LossValueText.Text,
+                        "n/a",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(
+                        LossValueText.Text,
+                        "-- %",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    udpParts.Add(
+                        AppText.F("loss {0}", LossValueText.Text));
+                }
             }
 
             if (udpParts.Count > 0)
             {
-                lines.Add(string.Join(" · ", udpParts));
+                lines.Add(
+                    string.Join(" · ", udpParts));
             }
         }
 
-        lines.Add($"{options.DurationSeconds}s · {options.Streams} stream(s) · {(exitCode == 0 ? "OK" : $"Exit {exitCode}")}");
+        var footerStatus = exitCode == 0
+            ? AppText.T("OK")
+            : AppText.F("Exit {0}", exitCode);
+        lines.Add(AppText.F("{0}s · {1} stream(s) · {2}", options.DurationSeconds, options.Streams, footerStatus));
 
         LastSummaryText.Text = string.Join(Environment.NewLine, lines);
+    }
+
+    private async Task SaveHistoryEntryAsync(
+        IperfTestOptions options,
+        IperfRunResult result,
+        IperfRunOutcome outcome,
+        int summaryExitCode,
+        string commandPreview)
+    {
+        try
+        {
+            var entry = BuildHistoryEntry(
+                options,
+                result,
+                outcome,
+                summaryExitCode,
+                commandPreview);
+
+            await _historyStore.AddAsync(entry, WinPerfProductEdition.MaxSavedHistoryResults);
+
+            if (HistoryContentPanel.Visibility == Visibility.Visible)
+            {
+                await RefreshHistoryPageAsync();
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            AppendEngineOutput(string.Empty);
+            AppendEngineOutput(AppText.F("History save failed: {0}", ex.Message));
+        }
+    }
+
+    private IperfHistoryEntry BuildHistoryEntry(
+        IperfTestOptions options,
+        IperfRunResult result,
+        IperfRunOutcome outcome,
+        int summaryExitCode,
+        string commandPreview)
+    {
+        var throughputSamples = _throughputSamples.ToList();
+        var reverseThroughputSamples = _reverseThroughputSamples.ToList();
+
+        double? averageMbps = throughputSamples.Count > 0
+            ? throughputSamples.Average()
+            : null;
+        double? minimumMbps = throughputSamples.Count > 0
+            ? throughputSamples.Min()
+            : null;
+        double? maximumMbps = throughputSamples.Count > 0
+            ? throughputSamples.Max()
+            : null;
+
+        if (options.Engine == IperfEngine.Iperf2 &&
+            options.Mode is IperfMode.UdpUpload or IperfMode.UdpDownload &&
+            _iperf2UdpServerReport?.MegabitsPerSecond is double receivedMbps)
+        {
+            averageMbps = receivedMbps;
+            minimumMbps ??= receivedMbps;
+            maximumMbps ??= receivedMbps;
+        }
+
+        return new IperfHistoryEntry
+        {
+            StartedAtUtc = result.StartedAtUtc,
+            FinishedAtUtc = result.FinishedAtUtc,
+            Engine = options.Engine,
+            Mode = options.Mode,
+            Server = options.Server,
+            Port = options.Port,
+            Streams = options.Streams,
+            DurationSeconds = options.DurationSeconds,
+            OmitSeconds = options.OmitSeconds,
+            UdpBandwidth = options.Mode is IperfMode.UdpUpload or IperfMode.UdpDownload
+                ? options.UdpBandwidth
+                : null,
+            ExitCode = summaryExitCode,
+            Succeeded = outcome.Kind != IperfRunOutcomeKind.Failed && summaryExitCode == 0,
+            AverageMbps = averageMbps,
+            MinimumMbps = minimumMbps,
+            MaximumMbps = maximumMbps,
+            ReverseAverageMbps = reverseThroughputSamples.Count > 0
+                ? reverseThroughputSamples.Average()
+                : null,
+            CommandPreview = commandPreview,
+            Summary = LastSummaryText.Text
+        };
+    }
+
+    private async Task RefreshHistoryPageAsync()
+    {
+        try
+        {
+            var document = await _historyStore.LoadAsync();
+            var entries = document.Entries
+                .Select(CreateHistoryListItem)
+                .ToList();
+
+            HistoryItemsControl.ItemsSource = entries;
+            HistoryEmptyText.Text = AppText.T("No saved history yet. Run a test and WinPerf will save the result here.");
+            HistoryEmptyText.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            HistoryStatusText.Text = entries.Count == 1
+                ? AppText.T("1 saved result")
+                : AppText.F("{0} saved results", entries.Count);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryItemsControl.ItemsSource = null;
+            HistoryEmptyText.Visibility = Visibility.Visible;
+            HistoryEmptyText.Text = AppText.T("History could not be loaded. Check the portable data folder.");
+            HistoryStatusText.Text = ex.Message;
+        }
+    }
+
+    private void HistoryDetailsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetHistoryListItem(sender, out var item))
+        {
+            return;
+        }
+
+        var dialog = new HistoryDetailWindow(item)
+        {
+            Owner = this
+        };
+
+        dialog.ShowDialog();
+    }
+
+    private void HistoryCopyCommandButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetHistoryListItem(sender, out var item))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(item.CommandPreview) ||
+            string.Equals(item.CommandPreview, AppText.T("Command unavailable."), StringComparison.OrdinalIgnoreCase))
+        {
+            HistoryStatusText.Text = AppText.T("No command saved for this result.");
+            return;
+        }
+
+        Clipboard.SetText(item.CommandPreview);
+        HistoryStatusText.Text = AppText.T("Command copied.");
+    }
+
+    private async void HistoryDeleteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetHistoryListItem(sender, out var item))
+        {
+            return;
+        }
+
+        if (!ConfirmDialogWindow.Confirm(
+                this,
+                AppText.T("Delete history result?"),
+                $"{AppText.T("Delete this saved result?")}\n\n{item.Title}\n{item.FinishedLocalText}",
+                AppText.T("Delete")))
+        {
+            return;
+        }
+
+        try
+        {
+            var deleted = await _historyStore.DeleteAsync(item.Id);
+            await RefreshHistoryPageAsync();
+            HistoryStatusText.Text = deleted ? AppText.T("Result deleted.") : AppText.T("Result was not found.");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryStatusText.Text = AppText.F("Delete failed: {0}", ex.Message);
+        }
+    }
+
+    private async void HistoryClearButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var document = await _historyStore.LoadAsync();
+            if (document.Entries.Count == 0)
+            {
+                HistoryStatusText.Text = AppText.T("History is already empty.");
+                return;
+            }
+
+            if (!ConfirmDialogWindow.Confirm(
+                    this,
+                    AppText.T("Clear all history?"),
+                    AppText.F("Delete all {0} saved history results from this portable runtime?", document.Entries.Count),
+                    AppText.T("Clear all")))
+            {
+                return;
+            }
+
+            await _historyStore.ClearAsync();
+            await RefreshHistoryPageAsync();
+            HistoryStatusText.Text = AppText.T("History cleared.");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryStatusText.Text = AppText.F("Clear failed: {0}", ex.Message);
+        }
+    }
+
+    private async void HistoryExportButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!WinPerfProductEdition.SupportsHistoryExportImport)
+        {
+            HistoryStatusText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
+        try
+        {
+            var document = await _historyStore.LoadAsync();
+            var dialog = new SaveFileDialog
+            {
+                Title = AppText.T("Export WinPerf history"),
+                FileName = $"WinPerf-history-{DateTime.Now:yyyyMMdd-HHmmss}.json",
+                DefaultExt = ".json",
+                Filter = "WinPerf history (*.json)|*.json|All files (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
+
+            var exportStore = new JsonIperfHistoryStore(dialog.FileName);
+            await exportStore.SaveAsync(document);
+            HistoryStatusText.Text = document.Entries.Count == 1
+                ? AppText.T("Exported 1 result.")
+                : AppText.F("Exported {0} results.", document.Entries.Count);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryStatusText.Text = AppText.F("Export failed: {0}", ex.Message);
+        }
+    }
+
+    private async void HistoryImportButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!WinPerfProductEdition.SupportsHistoryExportImport)
+        {
+            HistoryStatusText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
+        try
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = AppText.T("Import WinPerf history"),
+                DefaultExt = ".json",
+                Filter = "WinPerf history (*.json)|*.json|All files (*.*)|*.*",
+                CheckFileExists = true
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
+
+            var importStore = new JsonIperfHistoryStore(dialog.FileName);
+            var importedDocument = await importStore.LoadAsync();
+            var mergedCount = await _historyStore.MergeAsync(importedDocument, WinPerfProductEdition.MaxSavedHistoryResults);
+            await RefreshHistoryPageAsync();
+            HistoryStatusText.Text = importedDocument.Entries.Count == 1
+                ? AppText.F("Imported 1 result. History now has {0} results.", mergedCount)
+                : AppText.F("Imported {0} results. History now has {1} results.", importedDocument.Entries.Count, mergedCount);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
+        {
+            HistoryStatusText.Text = AppText.F("Import failed: {0}", ex.Message);
+        }
+    }
+
+    private static bool TryGetHistoryListItem(object sender, out HistoryListItem item)
+    {
+        if (sender is FrameworkElement { DataContext: HistoryListItem historyItem })
+        {
+            item = historyItem;
+            return true;
+        }
+
+        item = default!;
+        return false;
+    }
+
+    private HistoryListItem CreateHistoryListItem(IperfHistoryEntry entry)
+    {
+        var title = $"{GetEngineDisplayName(entry.Engine)} · {FormatModeLabel(entry.Mode)} · {entry.Server}:{entry.Port}";
+        var finishedLocalText = entry.FinishedAtUtc
+            .ToLocalTime()
+            .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture);
+        var statusText = entry.Succeeded ? AppText.T("OK") : AppText.F("Exit {0}", entry.ExitCode);
+        var statusBrush = (Brush)FindResource(entry.Succeeded ? "AccentGreen" : "MissingChipForeground");
+        var summary = BuildHistoryDisplaySummary(entry.Summary, title);
+        var commandPreview = string.IsNullOrWhiteSpace(entry.CommandPreview)
+            ? AppText.T("Command unavailable.")
+            : entry.CommandPreview;
+        var details = BuildHistoryDetails(entry);
+
+        return new HistoryListItem(
+            entry.Id,
+            title,
+            finishedLocalText,
+            statusText,
+            statusBrush,
+            summary,
+            commandPreview,
+            details,
+            AppText.T("Details"),
+            AppText.T("Copy command"),
+            AppText.T("Delete"));
+    }
+
+    private static string BuildHistoryDetails(IperfHistoryEntry entry)
+    {
+        var lines = new List<string>
+        {
+            $"{AppText.T("Engine")}: {GetEngineDisplayName(entry.Engine)}",
+            $"{AppText.T("Mode")}: {FormatModeLabel(entry.Mode)}",
+            $"{AppText.T("Server")}: {entry.Server}",
+            $"{AppText.T("Port")}: {entry.Port}",
+            $"{AppText.T("Streams")}: {entry.Streams}",
+            $"{AppText.T("Duration")}: {entry.DurationSeconds}s",
+            $"{AppText.T("Omit")}: {entry.OmitSeconds}s",
+            $"{AppText.T("Exit code")}: {entry.ExitCode}",
+            $"{AppText.T("Status")}: {(entry.Succeeded ? AppText.T("OK") : AppText.T("Failed"))}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(entry.UdpBandwidth))
+        {
+            lines.Add($"{AppText.T("UDP bandwidth")}: {entry.UdpBandwidth}");
+        }
+
+        if (entry.AverageMbps is double averageMbps)
+        {
+            lines.Add($"{AppText.T("Average")}: {FormatMegabits(averageMbps)}");
+        }
+
+        if (entry.MinimumMbps is double minimumMbps)
+        {
+            lines.Add($"{AppText.T("Minimum")}: {FormatMegabits(minimumMbps)}");
+        }
+
+        if (entry.MaximumMbps is double maximumMbps)
+        {
+            lines.Add($"{AppText.T("Maximum")}: {FormatMegabits(maximumMbps)}");
+        }
+
+        if (entry.ReverseAverageMbps is double reverseAverageMbps)
+        {
+            lines.Add($"{AppText.T("Reverse average")}: {FormatMegabits(reverseAverageMbps)}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string BuildHistoryDisplaySummary(string? summary, string title)
+    {
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return AppText.T("No summary saved.");
+        }
+
+        var lines = summary
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToList();
+
+        if (lines.Count > 0 && string.Equals(lines[0].Trim(), title, StringComparison.OrdinalIgnoreCase))
+        {
+            lines.RemoveAt(0);
+        }
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            lines[i] = AddHistoryMetricLabel(lines[i]);
+        }
+
+        return lines.Count == 0
+            ? AppText.T("No summary saved.")
+            : string.Join(Environment.NewLine, lines);
+    }
+
+    private static string AddHistoryMetricLabel(string line)
+    {
+        var trimmed = line.TrimStart();
+        var leadingWhitespace = line[..(line.Length - trimmed.Length)];
+
+        if (TryLocalizeStoredHistoryMetricPrefix(trimmed, out var localizedLine))
+        {
+            return leadingWhitespace + localizedLine;
+        }
+
+        return trimmed.Length > 0 &&
+               char.IsDigit(trimmed[0]) &&
+               trimmed.Contains(" Mbps", StringComparison.OrdinalIgnoreCase) &&
+               !trimmed.Contains(" avg ", StringComparison.OrdinalIgnoreCase)
+            ? line
+            : trimmed.Length > 0 &&
+              char.IsDigit(trimmed[0]) &&
+              trimmed.Contains(" Mbps", StringComparison.OrdinalIgnoreCase)
+                ? line[..(line.Length - trimmed.Length)] + AppText.F("Last {0}", trimmed)
+                : line;
+    }
+
+    private static bool TryLocalizeStoredHistoryMetricPrefix(string line, out string localizedLine)
+    {
+        localizedLine = line;
+
+        return TryReplacePrefix(line, "Last ", AppText.T("Last") + " ", out localizedLine) ||
+               TryReplacePrefix(line, "Upload last ", AppText.T("Upload last") + " ", out localizedLine) ||
+               TryReplacePrefix(line, "Download last ", AppText.T("Download last") + " ", out localizedLine);
+    }
+
+    private static bool TryReplacePrefix(string value, string prefix, string replacement, out string updated)
+    {
+        if (value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+            value.Contains(" Mbps", StringComparison.OrdinalIgnoreCase))
+        {
+            updated = replacement + value[prefix.Length..];
+            return true;
+        }
+
+        updated = value;
+        return false;
     }
 
     private static string FormatModeLabel(IperfMode mode)
     {
         return mode switch
         {
-            IperfMode.TcpUpload => "TCP Upload",
-            IperfMode.TcpDownload => "TCP Download",
-            IperfMode.TcpBidirectional => "TCP Bidirectional",
-            IperfMode.UdpUpload => "UDP Upload",
-            IperfMode.UdpDownload => "UDP Download",
+            IperfMode.TcpUpload => AppText.T("TCP Upload"),
+            IperfMode.TcpDownload => AppText.T("TCP Download"),
+            IperfMode.TcpBidirectional => AppText.T("TCP Bidirectional"),
+            IperfMode.UdpUpload => AppText.T("UDP Upload"),
+            IperfMode.UdpDownload => AppText.T("UDP Download"),
             _ => mode.ToString()
         };
     }
 
-    private void UiDensityButton_Click(object sender, RoutedEventArgs e)
+    private static string ModeTag(IperfMode mode)
     {
-        if (UiDensityButton.ContextMenu is null)
+        return mode switch
         {
-            return;
-        }
-
-        UiDensityButton.ContextMenu.PlacementTarget = UiDensityButton;
-        UiDensityButton.ContextMenu.IsOpen = true;
-    }
-
-    private void CompactUiDensityMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        SetUiDensity(UiDensityCompact);
-    }
-
-    private void ComfortableUiDensityMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        SetUiDensity(UiDensityComfortable);
-    }
-
-    private void SetUiDensity(string density)
-    {
-        density = NormalizeUiDensity(density);
-
-        if (string.Equals(NormalizeUiDensity(_settings.UiDensity), density, StringComparison.Ordinal))
-        {
-            UpdateUiDensityMenuUx(
-                string.Equals(density, UiDensityCompact, StringComparison.Ordinal));
-            return;
-        }
-
-        CaptureDashboardLayout();
-
-        _settings.UiDensity = density;
-        ApplyUiDensity(resizeWindow: false);
-        _settingsStore.Save(_settings);
-    }
-
-    private bool IsCompactUiDensity()
-    {
-        return string.Equals(
-            NormalizeUiDensity(_settings.UiDensity),
-            UiDensityCompact,
-            StringComparison.Ordinal);
-    }
-
-    private void ApplyUiDensity(bool resizeWindow)
-    {
-        var density = NormalizeUiDensity(_settings.UiDensity);
-        _settings.UiDensity = density;
-
-        var isCompact = string.Equals(density, UiDensityCompact, StringComparison.Ordinal);
-        var scale = isCompact ? 0.92 : 1.0;
-
-        DashboardBodyGrid.LayoutTransform = isCompact
-            ? new ScaleTransform(scale, scale)
-            : null;
-
-        LeftRailColumn.MinWidth = isCompact ? 280 : 320;
-        LeftRailColumn.MaxWidth = isCompact ? 500 : 560;
-
-        var leftRailTarget = isCompact ? 360 : 410;
-        var leftRailWidth = LeftRailColumn.Width.IsAbsolute
-            ? LeftRailColumn.Width.Value
-            : leftRailTarget;
-
-        if (isCompact)
-        {
-            leftRailWidth = Math.Min(leftRailWidth, leftRailTarget);
-        }
-        else if (leftRailWidth < 380)
-        {
-            leftRailWidth = leftRailTarget;
-        }
-
-        if (GetSavedDashboardLeftRailWidth() is not double savedLeftRailWidth)
-        {
-            LeftRailColumn.Width = new GridLength(
-                Math.Clamp(leftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
-        }
-        else
-        {
-            LeftRailColumn.Width = new GridLength(
-                Math.Clamp(savedLeftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
-        }
-
-        DashboardContentPanel.Margin = isCompact
-            ? new Thickness(18)
-            : new Thickness(26);
-
-        MetricsRow.Height = new GridLength(isCompact ? 150 : 170);
-        LiveThroughputRow.MinHeight = isCompact ? 180 : 220;
-        EngineOutputRow.MinHeight = isCompact ? 80 : 95;
-
-        if (GetSavedDashboardEngineOutputHeight() is not double savedEngineOutputHeight)
-        {
-            EngineOutputRow.Height = new GridLength(isCompact ? 120 : 150);
-        }
-        else
-        {
-            EngineOutputRow.Height = new GridLength(
-                Math.Max(EngineOutputRow.MinHeight, savedEngineOutputHeight));
-        }
-
-        MinWidth = isCompact ? 760 : 820;
-        MinHeight = isCompact ? 520 : 560;
-
-        UpdateUiDensityMenuUx(isCompact);
-
-        if (resizeWindow && WindowState == WindowState.Normal)
-        {
-            Width = Math.Max(Width, MinWidth);
-            Height = Math.Max(Height, MinHeight);
-        }
-
-        RenderThroughputChart();
-    }
-
-    private void UpdateUiDensityMenuUx(bool isCompact)
-    {
-        UiDensityButton.Content = isCompact
-            ? "UI: Compact ▾"
-            : "UI: Comfortable ▾";
-
-        UiDensityButton.ToolTip = isCompact
-            ? "Active UI density: Compact. Click to choose UI density."
-            : "Active UI density: Comfortable. Click to choose UI density.";
-
-        ApplyUiDensityMenuItemState(CompactUiDensityMenuItem, isCompact, "Compact");
-        ApplyUiDensityMenuItemState(ComfortableUiDensityMenuItem, !isCompact, "Comfortable");
-    }
-
-    private void ApplyUiDensityMenuItemState(MenuItem menuItem, bool isActive, string label)
-    {
-        menuItem.IsCheckable = false;
-        menuItem.IsChecked = false;
-        menuItem.Header = isActive
-            ? $"✓ {label}"
-            : label;
-
-        menuItem.Foreground = FindResource(isActive ? "AccentGreen" : "TextMain") as Brush ?? Brushes.White;
-        menuItem.FontWeight = isActive ? FontWeights.Bold : FontWeights.SemiBold;
-        menuItem.Opacity = isActive ? 1.0 : 0.78;
-    }
-
-    private static string NormalizeUiDensity(string? value)
-    {
-        return string.Equals(value, UiDensityComfortable, StringComparison.OrdinalIgnoreCase)
-            ? UiDensityComfortable
-            : UiDensityCompact;
+            IperfMode.TcpUpload => "tcp-upload",
+            IperfMode.TcpDownload => "tcp-download",
+            IperfMode.TcpBidirectional => "tcp-bidirectional",
+            IperfMode.UdpUpload => "udp-upload",
+            IperfMode.UdpDownload => "udp-download",
+            _ => "tcp-upload"
+        };
     }
 
     private static string ResolveAppVersionText()
@@ -550,7 +1694,7 @@ public partial class MainWindow : Window
             version = version[..metadataIndex];
         }
 
-        return $"WinPerf v{version}";
+        return $"{WinPerfProductEdition.EditionName} v{version}";
     }
 
     private static IperfEngine ParseStoredEngine(string? value)
@@ -575,16 +1719,131 @@ public partial class MainWindow : Window
         if (_engineResolution.IsConfigured)
         {
             var source = string.IsNullOrWhiteSpace(_engineResolution.Source)
-                ? "Configured"
-                : _engineResolution.Source;
+                ? AppText.T("Configured")
+                : AppText.T(_engineResolution.Source);
 
-            EngineStatusText.Text = $"Engine  ●  {GetEngineDisplayName(selectedEngine)}  ●  Ready  ●  {source}";
+            EngineStatusText.Text = AppText.F(
+                "Engine  ●  {0}  ●  {1}  ●  {2}",
+                GetEngineDisplayName(selectedEngine),
+                AppText.T("Ready"),
+                source);
             EngineStatusText.ToolTip = _engineResolution.ExecutablePath;
             return;
         }
 
-        EngineStatusText.Text = $"Engine  ●  {GetEngineDisplayName(selectedEngine)}  ●  Not configured";
+        EngineStatusText.Text = AppText.F(
+            "Engine  ●  {0}  ●  {1}",
+            GetEngineDisplayName(selectedEngine),
+            AppText.T("Not configured"));
         EngineStatusText.ToolTip = _engineResolution.Message;
+    }
+
+    private void RefreshIntegrationStatus()
+    {
+        var iperf3 = ResolveIntegration(IperfEngine.Iperf3);
+        var iperf2 = ResolveIntegration(IperfEngine.Iperf2);
+
+        UpdateIntegrationRow(
+            Iperf3IntegrationStatusText,
+            Iperf3IntegrationStatusChip,
+            Iperf3IntegrationDetailText,
+            Iperf3IntegrationPathText,
+            "iperf3 throughput engine",
+            iperf3);
+
+        UpdateIntegrationRow(
+            Iperf2IntegrationStatusText,
+            Iperf2IntegrationStatusChip,
+            Iperf2IntegrationDetailText,
+            Iperf2IntegrationPathText,
+            "iperf2 compatibility engine",
+            iperf2);
+    }
+
+    private IperfExecutableResolution ResolveIntegration(IperfEngine engine)
+    {
+        return _executableResolver.Resolve(AppContext.BaseDirectory, new IperfEngineSettings
+        {
+            Engine = engine,
+            ExecutablePath = _settings.IperfExecutablePath,
+            Iperf3ExecutablePath = _settings.IperfExecutablePath,
+            Iperf2ExecutablePath = _settings.Iperf2ExecutablePath
+        });
+    }
+
+    private void UpdateIntegrationRow(
+        TextBlock statusText,
+        Border statusChip,
+        TextBlock detailText,
+        TextBlock pathText,
+        string description,
+        IperfExecutableResolution resolution)
+    {
+        if (resolution.IsConfigured)
+        {
+            var source = string.IsNullOrWhiteSpace(resolution.Source)
+                ? AppText.T("Configured")
+                : AppText.T(resolution.Source);
+
+            statusText.Text = AppText.T("Ready");
+            SetIntegrationChipState(statusChip, statusText, isReady: true);
+            var displayPath = FormatIntegrationPath(resolution.ExecutablePath);
+            detailText.Text = source;
+            detailText.ToolTip = $"{AppText.T(description)}: {displayPath}";
+            pathText.Text = displayPath;
+            pathText.ToolTip = resolution.ExecutablePath;
+            return;
+        }
+
+        statusText.Text = AppText.T("Missing");
+        SetIntegrationChipState(statusChip, statusText, isReady: false);
+        detailText.Text = AppText.F("{0} not configured", AppText.T(description));
+        detailText.ToolTip = resolution.Message;
+        pathText.Text = resolution.Message;
+        pathText.ToolTip = resolution.Message;
+    }
+
+    private void SetIntegrationChipState(Border chip, TextBlock text, bool isReady)
+    {
+        if (isReady)
+        {
+            chip.Background = GetThemeBrush("SuccessChipBackground", Brushes.DarkGreen);
+            chip.BorderBrush = GetThemeBrush("AccentGreen", Brushes.LightGreen);
+            text.Foreground = GetThemeBrush("AccentGreen", Brushes.LightGreen);
+            return;
+        }
+
+        chip.Background = GetThemeBrush("MissingChipBackground", Brushes.DarkRed);
+        chip.BorderBrush = GetThemeBrush("MissingChipBorder", Brushes.IndianRed);
+        text.Foreground = GetThemeBrush("MissingChipForeground", Brushes.LightCoral);
+    }
+
+    private Brush GetThemeBrush(string resourceKey, Brush fallback)
+    {
+        return FindResource(resourceKey) as Brush ?? fallback;
+    }
+
+    private static string FormatIntegrationPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return AppText.T("Not configured");
+        }
+
+        var appDirectory = AppContext.BaseDirectory.TrimEnd(
+            System.IO.Path.DirectorySeparatorChar,
+            System.IO.Path.AltDirectorySeparatorChar);
+
+        if (path.StartsWith(appDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            var relative = path[appDirectory.Length..].TrimStart(
+                System.IO.Path.DirectorySeparatorChar,
+                System.IO.Path.AltDirectorySeparatorChar);
+
+            return relative.Replace(System.IO.Path.DirectorySeparatorChar, '\\');
+        }
+
+        return path;
     }
 
     private void CommandMenuButton_Click(object sender, RoutedEventArgs e)
@@ -600,11 +1859,29 @@ public partial class MainWindow : Window
 
     private async void AdvancedCommandMenuItem_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsAdvancedCommands)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                WinPerfProductEdition.EditionName,
+                AppText.T("Available in WinPerf Sponsor Pro."));
+            return;
+        }
+
         await OpenAdvancedCommandWindowAsync();
     }
 
     private void CustomCommandMenuItem_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsCustomCommands)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                WinPerfProductEdition.EditionName,
+                AppText.T("Available in WinPerf Sponsor Pro."));
+            return;
+        }
+
         OpenCustomCommandWindow();
     }
 
@@ -643,7 +1920,7 @@ public partial class MainWindow : Window
 
     private IperfTestOptions BuildDashboardTestOptions()
     {
-        return new IperfTestOptions
+        var options = new IperfTestOptions
         {
             Engine = GetSelectedEngine(),
             Server = GetServerText(),
@@ -652,15 +1929,26 @@ public partial class MainWindow : Window
             DurationSeconds = ParsePositiveInt(DurationBox, "Duration"),
             OmitSeconds = ParseNonNegativeInt(OmitSecondsBox, "Omit"),
             Mode = GetSelectedMode(),
-            AddressFamily = IperfAddressFamily.IPv4
+            AddressFamily = IperfAddressFamily.IPv4,
+            UdpBandwidth = NormalizeUdpBandwidth(UdpBandwidthBox.Text)
         };
+
+        ValidateProductEditionTestOptions(options);
+        return options;
     }
 
     private string BuildDashboardCommandArgumentsPreview()
     {
-        var options = BuildDashboardTestOptions();
-        var command = IperfCommandBuilder.BuildClientCommand(GetEngineExecutableDisplayName(options.Engine), options);
-        return string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+        try
+        {
+            var options = BuildDashboardTestOptions();
+            var command = IperfCommandBuilder.BuildClientCommand(GetEngineExecutableDisplayName(options.Engine), options);
+            return string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or InvalidOperationException or NotSupportedException)
+        {
+            return string.Empty;
+        }
     }
 
     private IperfTestOptions BuildCustomCommandOptions(string commandArguments)
@@ -668,7 +1956,7 @@ public partial class MainWindow : Window
         var args = SplitCommandLine(commandArguments);
         var mode = InferCustomCommandMode(args);
 
-        return new IperfTestOptions
+        var options = new IperfTestOptions
         {
             Engine = GetSelectedEngine(),
             Server = TryGetArgumentValue(args, "-c") ?? GetServerText(),
@@ -682,6 +1970,34 @@ public partial class MainWindow : Window
                 : IperfAddressFamily.IPv4,
             UdpBandwidth = TryGetArgumentValue(args, "-b") ?? "0"
         };
+
+        ValidateProductEditionTestOptions(options);
+        return options;
+    }
+
+    private static void ValidateProductEditionTestOptions(IperfTestOptions options)
+    {
+        if (!WinPerfProductEdition.SupportsIperf2 && options.Engine == IperfEngine.Iperf2)
+        {
+            throw new InvalidOperationException(AppText.T("iperf2 is available in WinPerf Sponsor Pro."));
+        }
+
+        if (!IsModeAllowedByProductEdition(options.Mode))
+        {
+            throw new InvalidOperationException(AppText.T("This test mode is available in WinPerf Sponsor Pro."));
+        }
+
+        if (options.Streams > WinPerfProductEdition.MaxStreams)
+        {
+            throw new InvalidOperationException(
+                AppText.F("WinPerf Free allows up to {0} stream.", WinPerfProductEdition.MaxStreams));
+        }
+
+        if (options.DurationSeconds > WinPerfProductEdition.MaxDurationSeconds)
+        {
+            throw new InvalidOperationException(
+                AppText.F("WinPerf Free allows tests up to {0} seconds.", WinPerfProductEdition.MaxDurationSeconds));
+        }
     }
 
     private static IperfMode InferCustomCommandMode(IReadOnlyList<string> args)
@@ -813,18 +2129,18 @@ public partial class MainWindow : Window
             if (DashboardProfileBox.SelectedItem is SavedIperfProfile selectedProfile)
             {
                 ApplyProfileToDashboard(selectedProfile);
-                SetDashboardProfileStatus($"Loaded profile '{selectedProfile.Name}'.");
+                SetDashboardProfileStatus(AppText.F("Loaded profile '{0}'.", selectedProfile.Name));
             }
             else
             {
-                SetDashboardProfileStatus("No saved profiles found.");
+                SetDashboardProfileStatus(AppText.T("No saved profiles found."));
             }
         }
         catch (Exception ex)
         {
             _profilesDocument = new SavedIperfProfilesDocument();
             RefreshDashboardProfileList(null);
-            SetDashboardProfileStatus($"Profile load failed: {ex.Message}");
+            SetDashboardProfileStatus(AppText.F("Profile load failed: {0}", ex.Message));
         }
     }
 
@@ -850,11 +2166,11 @@ public partial class MainWindow : Window
         try
         {
             await _profileStore.SaveAsync(_profilesDocument);
-            SetDashboardProfileStatus($"Selected profile '{selectedProfile.Name}'.");
+            SetDashboardProfileStatus(AppText.F("Selected profile '{0}'.", selectedProfile.Name));
         }
         catch (Exception ex)
         {
-            SetDashboardProfileStatus($"Profile selection was not saved: {ex.Message}");
+            SetDashboardProfileStatus(AppText.F("Profile selection was not saved: {0}", ex.Message));
         }
     }
 
@@ -905,6 +2221,7 @@ public partial class MainWindow : Window
             StreamsBox.Text = profile.Streams.ToString();
             DurationBox.Text = profile.DurationSeconds.ToString();
             OmitSecondsBox.Text = profile.OmitSeconds?.ToString() ?? "0";
+            UdpBandwidthBox.Text = NormalizeUdpBandwidth(profile.UdpBandwidth);
             SelectMode(profile.ToIperfMode());
         }
         finally
@@ -912,16 +2229,21 @@ public partial class MainWindow : Window
             _isApplyingDashboardProfile = false;
         }
 
+        NormalizeDashboardForProductEdition();
+        UpdateUdpBandwidthVisibility();
         UpdateDashboardCommandPreview();
     }
 
     private void SelectMode(IperfMode mode)
     {
-        var label = FormatModeLabel(mode);
+        var tag = ModeTag(mode);
 
         for (var i = 0; i < ModeBox.Items.Count; i++)
         {
-            if ((ModeBox.Items[i] as ComboBoxItem)?.Content?.ToString() == label)
+            if (string.Equals(
+                    (ModeBox.Items[i] as ComboBoxItem)?.Tag?.ToString(),
+                    tag,
+                    StringComparison.Ordinal))
             {
                 ModeBox.SelectedIndex = i;
                 return;
@@ -943,8 +2265,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        NormalizeDashboardForProductEdition();
+        UpdateUdpBandwidthVisibility();
+
         if (NormalizeUnsupportedDashboardModeForSelectedEngine())
         {
+            UpdateUdpBandwidthVisibility();
             _activeCustomCommandArguments = null;
             Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
             return;
@@ -952,6 +2278,49 @@ public partial class MainWindow : Window
 
         _activeCustomCommandArguments = null;
         Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
+    }
+
+    private void UpdateUdpBandwidthVisibility()
+    {
+        if (UdpBandwidthPanel is null ||
+            UdpBandwidthBox is null ||
+            ModeBox is null)
+        {
+            return;
+        }
+
+        if (!WinPerfProductEdition.SupportsUdp)
+        {
+            UdpBandwidthPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var isUdp = GetSelectedMode() is
+            IperfMode.UdpUpload or
+            IperfMode.UdpDownload;
+
+        UdpBandwidthPanel.Visibility = isUdp
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (isUdp)
+        {
+            UdpBandwidthBox.Text =
+                NormalizeUdpBandwidth(UdpBandwidthBox.Text);
+        }
+    }
+
+    private static string NormalizeUdpBandwidth(string? value)
+    {
+        var normalized = value?.Trim();
+
+        return string.IsNullOrWhiteSpace(normalized) ||
+               string.Equals(
+                   normalized,
+                   "0",
+                   StringComparison.OrdinalIgnoreCase)
+            ? "10M"
+            : normalized;
     }
 
     private void SetCommandOverride(string source, string arguments)
@@ -1004,18 +2373,18 @@ public partial class MainWindow : Window
         }
 
         var source = string.IsNullOrWhiteSpace(_activeCommandOverrideSource)
-            ? "Command"
-            : _activeCommandOverrideSource;
+            ? AppText.T("Command")
+            : AppText.T(_activeCommandOverrideSource);
 
-        CommandOverrideBadgeText.Text = $"{source} command override active";
-        CommandOverridePanel.ToolTip = "Start will run these generated/custom arguments instead of the dashboard fields.";
+        CommandOverrideBadgeText.Text = AppText.F("{0} command override active", source);
+        CommandOverridePanel.ToolTip = AppText.T("Start will run these generated/custom arguments instead of the dashboard fields.");
     }
 
     private string GetCommandOverridePreviewTitle()
     {
         return string.Equals(_activeCommandOverrideSource, AdvancedCommandOverrideSource, StringComparison.Ordinal)
-            ? "Advanced command preview:"
-            : "Custom command preview:";
+            ? AppText.T("Advanced command preview:")
+            : AppText.T("Custom command preview:");
     }
 
     private void UpdateDashboardCommandPreview()
@@ -1043,14 +2412,15 @@ public partial class MainWindow : Window
             var command = IperfCommandBuilder.BuildClientCommand(executablePath, BuildDashboardTestOptions());
 
             EngineOutputText.Text =
-                "Command preview:" + Environment.NewLine +
+                AppText.T("Command preview:") + Environment.NewLine +
                 string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
         {
             EngineOutputText.Text =
-                "Command preview unavailable:" + Environment.NewLine +
-                ex.Message;
+                string.IsNullOrWhiteSpace(GetServerText())
+                    ? AppText.T("Enter a server to preview the iperf command.")
+                    : AppText.T("Command preview unavailable:") + Environment.NewLine + ex.Message;
         }
     }
 
@@ -1072,7 +2442,7 @@ public partial class MainWindow : Window
 
         ServerBox.Text = !string.IsNullOrWhiteSpace(_settings.LastServer)
             ? _settings.LastServer
-            : servers.FirstOrDefault() ?? "10.100.100.1";
+            : servers.FirstOrDefault() ?? string.Empty;
     }
 
     private void SaveRecentServer(string server)
@@ -1132,7 +2502,7 @@ public partial class MainWindow : Window
 
         ServerBox.Text = _settings.LastServer
             ?? servers.FirstOrDefault()
-            ?? "10.100.100.1";
+            ?? string.Empty;
     }
 
     private IperfEngine GetSelectedEngine()
@@ -1143,6 +2513,28 @@ public partial class MainWindow : Window
         {
             "iperf2" => IperfEngine.Iperf2,
             _ => IperfEngine.Iperf3
+        };
+    }
+
+    private IperfEngine GetSelectedServerEngine()
+    {
+        var selectedText = (ServerEngineBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+
+        return selectedText switch
+        {
+            "iperf2" => IperfEngine.Iperf2,
+            _ => IperfEngine.Iperf3
+        };
+    }
+
+    private IperfServerProtocol GetSelectedServerProtocol()
+    {
+        var selectedText = (ServerProtocolBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+
+        return selectedText switch
+        {
+            "UDP" => IperfServerProtocol.Udp,
+            _ => IperfServerProtocol.Tcp
         };
     }
 
@@ -1189,6 +2581,7 @@ public partial class MainWindow : Window
 
         ClearCommandOverride(updatePreview: false);
         RefreshEngineStatus();
+        RefreshIntegrationStatus();
         Dispatcher.BeginInvoke(UpdateDashboardCommandPreview, DispatcherPriority.Background);
     }
 
@@ -1229,15 +2622,15 @@ public partial class MainWindow : Window
 
     private IperfMode GetSelectedMode()
     {
-        var selectedText = (ModeBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+        var selectedTag = (ModeBox.SelectedItem as ComboBoxItem)?.Tag?.ToString();
 
-        return selectedText switch
+        return selectedTag switch
         {
-            "TCP Upload" => IperfMode.TcpUpload,
-            "TCP Download" => IperfMode.TcpDownload,
-            "TCP Bidirectional" => IperfMode.TcpBidirectional,
-            "UDP Upload" => IperfMode.UdpUpload,
-            "UDP Download" => IperfMode.UdpDownload,
+            "tcp-upload" => IperfMode.TcpUpload,
+            "tcp-download" => IperfMode.TcpDownload,
+            "tcp-bidirectional" => IperfMode.TcpBidirectional,
+            "udp-upload" => IperfMode.UdpUpload,
+            "udp-download" => IperfMode.UdpDownload,
             _ => IperfMode.TcpUpload
         };
     }
@@ -1267,7 +2660,10 @@ public partial class MainWindow : Window
         StartButton.IsEnabled = !isRunning;
         StopButton.IsEnabled = isRunning;
         EngineBox.IsEnabled = !isRunning;
-        CommandMenuButton.IsEnabled = !isRunning;
+        CommandMenuButton.IsEnabled =
+            !isRunning &&
+            (WinPerfProductEdition.SupportsAdvancedCommands ||
+             WinPerfProductEdition.SupportsCustomCommands);
         RemoveServerButton.IsEnabled = !isRunning;
     }
 
@@ -1275,6 +2671,14 @@ public partial class MainWindow : Window
     {
         if (options.Engine == IperfEngine.Iperf2)
         {
+            if (Iperf2TextParser.TryParseUdpServerReport(
+                    text,
+                    out _))
+            {
+                AppendEngineOutput(text);
+                return true;
+            }
+
             var preferIperf2SumLine = options.Streams > 1;
             if (Iperf2TextParser.TryParseIntervalSample(text, out var iperf2Sample, preferIperf2SumLine, options.DurationSeconds))
             {
@@ -1315,6 +2719,111 @@ public partial class MainWindow : Window
         return false;
     }
 
+    private int ReconcileFinalIperf2UdpServerReport(
+        IperfTestOptions options,
+        IperfRunResult result)
+    {
+        if (options.Engine != IperfEngine.Iperf2 ||
+            options.Mode is not (
+                IperfMode.UdpUpload or
+                IperfMode.UdpDownload))
+        {
+            return 0;
+        }
+
+        var reports = new List<IperfIntervalSample>();
+
+        foreach (var line in result.Output)
+        {
+            if (line.Stream != IperfOutputStream.StandardOutput)
+            {
+                continue;
+            }
+
+            if (line.Text
+                .TrimStart()
+                .StartsWith(
+                    "[SUM]",
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (Iperf2TextParser.TryParseUdpServerReport(
+                    line.Text,
+                    out var parsedReport))
+            {
+                reports.Add(parsedReport);
+            }
+        }
+
+        _iperf2UdpServerReportCount = reports.Count;
+
+        if (!Iperf2TextParser.TryAggregateUdpServerReports(
+                reports,
+                options.Streams,
+                out var aggregate))
+        {
+            _iperf2UdpServerReport = null;
+            ApplyMissingIperf2UdpServerReport(
+                reports.Count,
+                options.Streams);
+
+            return reports.Count;
+        }
+
+        _iperf2UdpServerReport = aggregate;
+        ApplyIperf2UdpServerReport(aggregate);
+
+        return reports.Count;
+    }
+
+    private void ApplyMissingIperf2UdpServerReport(
+        int receivedReportCount,
+        int expectedReportCount)
+    {
+        ThroughputValueText.Text = AppText.T("unavailable");
+        ThroughputCaptionText.Text = AppText.T("Server result missing");
+        JitterValueText.Text = AppText.T("unavailable");
+        LossValueText.Text = AppText.T("unavailable");
+        LiveStatusText.Text = AppText.F(
+            "Incomplete server report: {0}/{1} streams",
+            receivedReportCount,
+            expectedReportCount);
+    }
+
+    private void ApplyIperf2UdpServerReport(
+        IperfIntervalSample report)
+    {
+        if (report.MegabitsPerSecond is double receivedMegabits)
+        {
+            ThroughputValueText.Text =
+                FormatMegabits(receivedMegabits);
+            ThroughputCaptionText.Text = AppText.T("Server received total");
+            LiveStatusText.Text = AppText.F(
+                "Server received total {0} · chart shows sent rate",
+                FormatMegabits(receivedMegabits));
+        }
+
+        if (report.JitterMs is double jitterMs)
+        {
+            JitterValueText.Text =
+                jitterMs.ToString(
+                    "0.000",
+                    CultureInfo.InvariantCulture) +
+                " ms";
+        }
+
+        if (report.EffectiveLostPercent is double lostPercent)
+        {
+            LossValueText.Text =
+                lostPercent.ToString(
+                    "0.0",
+                    CultureInfo.InvariantCulture) +
+                " %";
+        }
+    }
+
     private void AppendEngineOutput(string text)
     {
         _engineOutput.AppendLine(text);
@@ -1332,12 +2841,29 @@ public partial class MainWindow : Window
 
     private void ResetLiveMetrics(IperfMode mode)
     {
-        ThroughputValueText.Text = "0 Mbps";
+        _iperf2UdpServerReport = null;
+        _iperf2UdpServerReportCount = 0;
+
+        var isIperf2Udp =
+            _activeEngine == IperfEngine.Iperf2 &&
+            mode is (
+                IperfMode.UdpUpload or
+                IperfMode.UdpDownload);
+
+        ThroughputValueText.Text =
+            isIperf2Udp
+                ? AppText.T("pending")
+                : "0 Mbps";
+
+        ThroughputCaptionText.Text =
+            isIperf2Udp
+                ? AppText.T("Awaiting server result")
+                : AppText.T("Live total average");
 
         if (mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
         {
-            JitterValueText.Text = "pending";
-            LossValueText.Text = "pending";
+            JitterValueText.Text = AppText.T("pending");
+            LossValueText.Text = AppText.T("pending");
         }
         else
         {
@@ -1345,7 +2871,7 @@ public partial class MainWindow : Window
             LossValueText.Text = "n/a";
         }
 
-        LiveStatusText.Text = "Waiting for samples...";
+        LiveStatusText.Text = AppText.T("Waiting for samples...");
         ShowWaitingChartPlaceholder();
 
         _throughputSamples.Clear();
@@ -1359,10 +2885,22 @@ public partial class MainWindow : Window
     {
         if (sample.MegabitsPerSecond is double megabitsPerSecond)
         {
-            ThroughputValueText.Text = _activeMode == IperfMode.TcpBidirectional &&
-                                       sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecond
-                ? FormatBidirectionalMegabits(megabitsPerSecond, reverseMegabitsPerSecond)
-                : FormatMegabits(megabitsPerSecond);
+            var keepIperf2UdpResultPending =
+                _activeEngine == IperfEngine.Iperf2 &&
+                _activeMode is (
+                    IperfMode.UdpUpload or
+                    IperfMode.UdpDownload);
+
+            if (!keepIperf2UdpResultPending)
+            {
+                ThroughputValueText.Text =
+                    _activeMode == IperfMode.TcpBidirectional &&
+                    sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecond
+                        ? FormatBidirectionalMegabits(
+                            megabitsPerSecond,
+                            reverseMegabitsPerSecond)
+                        : FormatMegabits(megabitsPerSecond);
+            }
 
             AddThroughputSample(
                 megabitsPerSecond,
@@ -1380,7 +2918,7 @@ public partial class MainWindow : Window
             JitterValueText.Text = "n/a";
         }
 
-        if (sample.LostPercent is double lostPercent)
+        if (sample.EffectiveLostPercent is double lostPercent)
         {
             LossValueText.Text = lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %";
         }
@@ -1390,8 +2928,8 @@ public partial class MainWindow : Window
         }
 
         LiveStatusText.Text = sample.Seconds is double seconds
-            ? "Last sample " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
-            : "Receiving samples...";
+            ? AppText.F("Last sample {0}s", seconds.ToString("0.0", CultureInfo.InvariantCulture))
+            : AppText.T("Receiving samples...");
     }
 
     private void HandleOmittedWarmupSample(IperfIntervalSample sample)
@@ -1403,12 +2941,12 @@ public partial class MainWindow : Window
             : _omittedWarmupIntervalsReceived;
 
         var throughputSuffix = sample.MegabitsPerSecond is double megabitsPerSecond
-            ? " · " + FormatMegabits(megabitsPerSecond) + " ignored"
+            ? " · " + AppText.F("{0} ignored", FormatMegabits(megabitsPerSecond))
             : string.Empty;
 
         LiveStatusText.Text = _activeOmitSeconds > 0
-            ? $"Warm-up {elapsed}/{_activeOmitSeconds}s omitted{throughputSuffix}"
-            : $"Warm-up sample omitted{throughputSuffix}";
+            ? AppText.F("Warm-up {0}/{1}s omitted{2}", elapsed, _activeOmitSeconds, throughputSuffix)
+            : AppText.F("Warm-up sample omitted{0}", throughputSuffix);
 
         if (_activeOmitSeconds > 0)
         {
@@ -1420,7 +2958,7 @@ public partial class MainWindow : Window
              _omittedWarmupIntervalsReceived % 5 == 0 ||
              elapsed >= _activeOmitSeconds))
         {
-            AppendEngineOutput($"Warm-up {elapsed}/{_activeOmitSeconds}s omitted{throughputSuffix}.");
+            AppendEngineOutput(AppText.F("Warm-up {0}/{1}s omitted{2}.", elapsed, _activeOmitSeconds, throughputSuffix));
         }
     }
 
@@ -1431,7 +2969,7 @@ public partial class MainWindow : Window
 
     private void ShowWaitingChartPlaceholder()
     {
-        ThroughputChartPlaceholder.Text = "Waiting for throughput samples...";
+        ThroughputChartPlaceholder.Text = AppText.T("Waiting for throughput samples...");
         ThroughputChartPlaceholder.Foreground = TryFindResource("TextMuted") as Brush ?? Brushes.LightSlateGray;
         ThroughputChartPlaceholder.Visibility = Visibility.Visible;
     }
@@ -1439,13 +2977,13 @@ public partial class MainWindow : Window
     private void ShowWarmupChartPlaceholder(int elapsedSeconds, int totalSeconds, double? ignoredMegabitsPerSecond)
     {
         var throughputText = ignoredMegabitsPerSecond is double mbps
-            ? Environment.NewLine + FormatMegabits(mbps) + " ignored"
+            ? Environment.NewLine + AppText.F("{0} ignored", FormatMegabits(mbps))
             : string.Empty;
 
         ThroughputChartPlaceholder.Text =
-            $"Warm-up {elapsedSeconds}/{totalSeconds}s" +
+            AppText.F("Warm-up {0}/{1}s", elapsedSeconds, totalSeconds) +
             Environment.NewLine +
-            "Ignoring warm-up samples. Live chart starts after warm-up." +
+            AppText.T("Ignoring warm-up samples. Live chart starts after warm-up.") +
             throughputText;
 
         ThroughputChartPlaceholder.Foreground = TryFindResource("AccentAmber") as Brush ?? Brushes.Orange;
@@ -1572,7 +3110,7 @@ public partial class MainWindow : Window
         var accentBrush = TryFindResource("Accent") as Brush ?? Brushes.DeepSkyBlue;
 
         DrawChartText(
-            "Bandwidth",
+            AppText.T("Total bandwidth"),
             plotLeft + 8,
             5,
             14,
@@ -1733,7 +3271,7 @@ public partial class MainWindow : Window
         }
 
         DrawChartText("Mbps", 8, plotTop - 20, 10, FontWeights.SemiBold, axisBrush);
-        DrawChartText("Time (sec)", plotLeft + plotWidth - 62, plotTop + plotHeight + 8, 10, FontWeights.SemiBold, axisBrush);
+        DrawChartText(AppText.T("Time (sec)"), plotLeft + plotWidth - 62, plotTop + plotHeight + 8, 10, FontWeights.SemiBold, axisBrush);
     }
 
     private void DrawReverseThroughputLine(
@@ -1775,7 +3313,7 @@ public partial class MainWindow : Window
         });
 
         DrawChartText(
-            "Download",
+            AppText.T("Download"),
             plotLeft + 8,
             20,
             11,
@@ -1842,7 +3380,7 @@ public partial class MainWindow : Window
         });
 
         DrawChartText(
-            "Streams scale 0-" + FormatMegabits(streamAxisMax),
+            BuildPerStreamScaleLabel(streamAxisMax, streamCount),
             plotLeft + 8,
             streamBandTop + 4,
             10,
@@ -1906,6 +3444,33 @@ public partial class MainWindow : Window
                 Opacity = dashed ? 0.66 : 0.82
             });
         }
+    }
+
+    private string BuildPerStreamScaleLabel(double streamAxisMax, int streamCount)
+    {
+        var latestStreams =
+            _streamThroughputSamples.LastOrDefault(sample => sample.Count > 0) ??
+            _reverseStreamThroughputSamples.LastOrDefault(sample => sample.Count > 0);
+
+        var streamValues = latestStreams?
+            .Where(value => value > 0)
+            .ToArray();
+
+        if (streamValues is null || streamValues.Length == 0)
+        {
+            return AppText.F(
+                "Per-stream: {0} streams · scale 0-{1}",
+                streamCount.ToString(CultureInfo.InvariantCulture),
+                FormatMegabits(streamAxisMax));
+        }
+
+        return AppText.F(
+            "Per-stream: {0} streams · avg {1} · min {2} · max {3} · scale 0-{4}",
+            streamValues.Length.ToString(CultureInfo.InvariantCulture),
+            FormatMegabits(streamValues.Average()),
+            FormatMegabits(streamValues.Min()),
+            FormatMegabits(streamValues.Max()),
+            FormatMegabits(streamAxisMax));
     }
 
     private static Brush CreateStreamBrush(int streamIndex)
@@ -1975,16 +3540,20 @@ public partial class MainWindow : Window
             var reverseCurrent = _reverseThroughputSamples[^1];
             var reverseAvg = _reverseThroughputSamples.Average();
 
-            return "↑ " + FormatMegabits(current)
-                + " · ↓ " + FormatMegabits(reverseCurrent)
-                + "   ↑ avg " + FormatMegabits(avg)
-                + " · ↓ avg " + FormatMegabits(reverseAvg);
+            return AppText.F(
+                "↑ {0} · ↓ {1}   ↑ avg {2} · ↓ avg {3}",
+                FormatMegabits(current),
+                FormatMegabits(reverseCurrent),
+                FormatMegabits(avg),
+                FormatMegabits(reverseAvg));
         }
 
-        return FormatMegabits(current)
-            + "   min " + FormatMegabits(min)
-            + " · avg " + FormatMegabits(avg)
-            + " · max " + FormatMegabits(max);
+        return AppText.F(
+            "total {0}   min {1} · avg {2} · max {3}",
+            FormatMegabits(current),
+            FormatMegabits(min),
+            FormatMegabits(avg),
+            FormatMegabits(max));
     }
 
     private void DrawChartText(
@@ -2036,7 +3605,7 @@ public partial class MainWindow : Window
 
     private string FormatEndSummarySample(IperfIntervalSample sample)
     {
-        var parts = new List<string> { "Test completed" };
+        var parts = new List<string> { AppText.T("Test completed") };
 
         var uploadMegabitsPerSecond = sample.MegabitsPerSecond;
         var downloadMegabitsPerSecond = sample.ReverseMegabitsPerSecond;
@@ -2052,8 +3621,8 @@ public partial class MainWindow : Window
             uploadMegabitsPerSecond is double upload &&
             downloadMegabitsPerSecond is double download)
         {
-            parts.Add("upload " + FormatMegabits(upload));
-            parts.Add("download " + FormatMegabits(download));
+            parts.Add(AppText.F("upload {0}", FormatMegabits(upload)));
+            parts.Add(AppText.F("download {0}", FormatMegabits(download)));
         }
         else if (uploadMegabitsPerSecond is double megabitsPerSecond)
         {
@@ -2061,17 +3630,17 @@ public partial class MainWindow : Window
         }
         else if (downloadMegabitsPerSecond is double reverseMegabitsPerSecond)
         {
-            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecond));
+            parts.Add(AppText.F("download {0}", FormatMegabits(reverseMegabitsPerSecond)));
         }
 
         if (sample.JitterMs is double jitterMs)
         {
-            parts.Add("jitter " + jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+            parts.Add(AppText.F("jitter {0} ms", jitterMs.ToString("0.00", CultureInfo.InvariantCulture)));
         }
 
         if (sample.LostPercent is double lostPercent)
         {
-            parts.Add("loss " + lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %");
+            parts.Add(AppText.F("loss {0} %", lostPercent.ToString("0.0", CultureInfo.InvariantCulture)));
         }
 
         return string.Join(" · ", parts) + ".";
@@ -2083,14 +3652,14 @@ public partial class MainWindow : Window
         var parts = new List<string>();
 
         parts.Add(sample.Seconds is double seconds
-            ? "Interval " + seconds.ToString("0.0", CultureInfo.InvariantCulture) + "s"
-            : "Interval");
+            ? AppText.F("Interval {0}s", seconds.ToString("0.0", CultureInfo.InvariantCulture))
+            : AppText.T("Interval"));
 
         if (sample.MegabitsPerSecond is double megabitsPerSecond &&
             sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecond)
         {
-            parts.Add("upload " + FormatMegabits(megabitsPerSecond));
-            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecond));
+            parts.Add(AppText.F("upload {0}", FormatMegabits(megabitsPerSecond)));
+            parts.Add(AppText.F("download {0}", FormatMegabits(reverseMegabitsPerSecond)));
         }
         else if (sample.MegabitsPerSecond is double megabitsPerSecondOnly)
         {
@@ -2098,17 +3667,17 @@ public partial class MainWindow : Window
         }
         else if (sample.ReverseMegabitsPerSecond is double reverseMegabitsPerSecondOnly)
         {
-            parts.Add("download " + FormatMegabits(reverseMegabitsPerSecondOnly));
+            parts.Add(AppText.F("download {0}", FormatMegabits(reverseMegabitsPerSecondOnly)));
         }
 
         if (sample.JitterMs is double jitterMs)
         {
-            parts.Add("jitter " + jitterMs.ToString("0.00", CultureInfo.InvariantCulture) + " ms");
+            parts.Add(AppText.F("jitter {0} ms", jitterMs.ToString("0.00", CultureInfo.InvariantCulture)));
         }
 
         if (sample.LostPercent is double lostPercent)
         {
-            parts.Add("loss " + lostPercent.ToString("0.0", CultureInfo.InvariantCulture) + " %");
+            parts.Add(AppText.F("loss {0} %", lostPercent.ToString("0.0", CultureInfo.InvariantCulture)));
         }
 
         return string.Join(" · ", parts);
@@ -2138,11 +3707,11 @@ public partial class MainWindow : Window
 
             message = eventName?.ToLowerInvariant() switch
             {
-                "start" => "Test started.",
-                "end" => "Test completed.",
-                "error" => "iperf3 error: " + GetJsonEventDataText(root),
-                null or "" => "iperf3 event received.",
-                _ => "iperf3 event: " + eventName
+                "start" => AppText.T("Test started."),
+                "end" => AppText.T("Test completed."),
+                "error" => AppText.F("iperf3 error: {0}", GetJsonEventDataText(root)),
+                null or "" => AppText.T("iperf3 event received."),
+                _ => AppText.F("iperf3 event: {0}", eventName)
             };
 
             return true;
@@ -2157,11 +3726,31 @@ public partial class MainWindow : Window
     {
         if (!root.TryGetProperty("data", out var data))
         {
-            return "unknown error";
+            return AppText.T("unknown error");
         }
 
         return data.ValueKind == JsonValueKind.String
-            ? data.GetString() ?? "unknown error"
+            ? data.GetString() ?? AppText.T("unknown error")
             : data.ToString();
     }
+
+    private enum ActivePage
+    {
+        Dashboard,
+        ServerMode,
+        History
+    }
+
+    public sealed record HistoryListItem(
+        Guid Id,
+        string Title,
+        string FinishedLocalText,
+        string StatusText,
+        Brush StatusBrush,
+        string Summary,
+        string CommandPreview,
+        string Details,
+        string DetailsButtonText,
+        string CopyCommandButtonText,
+        string DeleteButtonText);
 }

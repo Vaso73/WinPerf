@@ -221,4 +221,68 @@ public sealed class IperfCommandBuilderTests
                 "iperf3.exe",
                 new IperfTestOptions { Server = "10.0.0.1", Port = port }));
     }
+
+    [Fact]
+    public void BuildServerCommand_BuildsIperf3TcpServer()
+    {
+        var command = IperfCommandBuilder.BuildServerCommand(
+            "iperf3.exe",
+            new IperfServerOptions
+            {
+                Engine = IperfEngine.Iperf3,
+                Protocol = IperfServerProtocol.Tcp,
+                Port = 5201,
+                AddressFamily = IperfAddressFamily.IPv4
+            });
+
+        Assert.Equal("iperf3.exe", command.ExecutablePath);
+        Assert.Equal(["-s", "-p", "5201", "-4"], command.Arguments);
+    }
+
+    [Fact]
+    public void BuildServerCommand_BuildsIperf3OneOffServer()
+    {
+        var command = IperfCommandBuilder.BuildServerCommand(
+            "iperf3.exe",
+            new IperfServerOptions
+            {
+                Engine = IperfEngine.Iperf3,
+                Port = 5201,
+                OneOff = true
+            });
+
+        Assert.Equal(["-s", "-p", "5201", "-4", "--one-off"], command.Arguments);
+    }
+
+    [Fact]
+    public void BuildServerCommand_BuildsIperf2UdpServer()
+    {
+        var command = IperfCommandBuilder.BuildServerCommand(
+            "iperf.exe",
+            new IperfServerOptions
+            {
+                Engine = IperfEngine.Iperf2,
+                Protocol = IperfServerProtocol.Udp,
+                Port = 5001
+            });
+
+        Assert.Equal("iperf.exe", command.ExecutablePath);
+        Assert.Equal(["-s", "-p", "5001", "-u", "-i", "1", "-f", "m"], command.Arguments);
+    }
+
+    [Fact]
+    public void BuildServerCommand_RejectsIperf2OneOffServer()
+    {
+        var ex = Assert.Throws<NotSupportedException>(() =>
+            IperfCommandBuilder.BuildServerCommand(
+                "iperf.exe",
+                new IperfServerOptions
+                {
+                    Engine = IperfEngine.Iperf2,
+                    Port = 5001,
+                    OneOff = true
+                }));
+
+        Assert.Contains("One-off server mode is not supported for iperf2", ex.Message);
+    }
 }

@@ -2,6 +2,21 @@ namespace WinPerf.Core.Iperf;
 
 public static class IperfCommandBuilder
 {
+    public static IperfCommand BuildServerCommand(string executablePath, IperfServerOptions options)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
+        ArgumentNullException.ThrowIfNull(options);
+
+        ValidateServerOptions(options);
+
+        return options.Engine switch
+        {
+            IperfEngine.Iperf3 => BuildIperf3ServerCommand(executablePath, options),
+            IperfEngine.Iperf2 => BuildIperf2ServerCommand(executablePath, options),
+            _ => throw new ArgumentOutOfRangeException(nameof(options.Engine), options.Engine, "Unsupported iperf engine.")
+        };
+    }
+
     public static IperfCommand BuildClientCommand(string executablePath, IperfTestOptions options)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
@@ -74,6 +89,54 @@ public static class IperfCommandBuilder
         return new IperfCommand(executablePath, args);
     }
 
+    private static IperfCommand BuildIperf3ServerCommand(string executablePath, IperfServerOptions options)
+    {
+        var args = new List<string>
+        {
+            "-s",
+            "-p",
+            options.Port.ToString()
+        };
+
+        AddAddressFamily(args, options.AddressFamily);
+
+        if (options.OneOff)
+        {
+            args.Add("--one-off");
+        }
+
+        return new IperfCommand(executablePath, args);
+    }
+
+    private static IperfCommand BuildIperf2ServerCommand(string executablePath, IperfServerOptions options)
+    {
+        ValidateIperf2AddressFamily(options.AddressFamily);
+
+        if (options.OneOff)
+        {
+            throw new NotSupportedException("One-off server mode is not supported for iperf2 in this WinPerf version.");
+        }
+
+        var args = new List<string>
+        {
+            "-s",
+            "-p",
+            options.Port.ToString()
+        };
+
+        if (options.Protocol == IperfServerProtocol.Udp)
+        {
+            args.Add("-u");
+        }
+
+        args.Add("-i");
+        args.Add("1");
+        args.Add("-f");
+        args.Add("m");
+
+        return new IperfCommand(executablePath, args);
+    }
+
     private static IperfCommand BuildIperf2ClientCommand(string executablePath, IperfTestOptions options)
     {
         var args = new List<string>
@@ -139,6 +202,15 @@ public static class IperfCommandBuilder
 
         if (options.OmitSeconds >= options.DurationSeconds)
             throw new ArgumentOutOfRangeException(nameof(options.OmitSeconds), "Omit seconds must be less than duration.");
+    }
+
+    private static void ValidateServerOptions(IperfServerOptions options)
+    {
+        if (options.Port is < 1 or > 65535)
+            throw new ArgumentOutOfRangeException(nameof(options.Port), "Port must be between 1 and 65535.");
+
+        if (!Enum.IsDefined(options.Protocol))
+            throw new ArgumentOutOfRangeException(nameof(options.Protocol), options.Protocol, "Unsupported server protocol.");
     }
 
     private static void ValidateIperf2AddressFamily(IperfAddressFamily addressFamily)

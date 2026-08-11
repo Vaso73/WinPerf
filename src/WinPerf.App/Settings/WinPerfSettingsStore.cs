@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using WinPerf.Core.Product;
 
 namespace WinPerf.App.Settings;
 
@@ -28,7 +29,7 @@ public sealed class WinPerfSettingsStore
 
     private static string GetDefaultSettingsDirectory()
     {
-        return Path.Combine(AppContext.BaseDirectory, "data");
+        return Path.Combine(AppContext.BaseDirectory, WinPerfProductEdition.DataDirectoryName);
     }
 
     private static string GetLegacySettingsPath()
