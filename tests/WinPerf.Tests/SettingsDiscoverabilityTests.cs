@@ -10,36 +10,38 @@ public sealed class SettingsDiscoverabilityTests
     private static readonly string SettingsWindowXamlPath = Path.Combine(AppDirectory, "SettingsWindow.xaml");
 
     [Fact]
-    public void MainWindow_AppSectionShowsSettingsAndAppActions()
+    public void MainWindow_TitleBarShowsCompactAppMenuWithSettingsAndAppActions()
     {
         var xaml = File.ReadAllText(MainWindowXamlPath);
 
-        Assert.Contains("x:Name=\"AppMenuSection\"", xaml);
         Assert.Contains("x:Name=\"AppMenuButton\"", xaml);
-        Assert.Contains("Content=\"App ▾\"", xaml);
+        Assert.Contains("Content=\"⋯\"", xaml);
         Assert.Contains("x:Name=\"AppContextMenu\"", xaml);
         Assert.Contains("x:Name=\"SettingsMenuItem\"", xaml);
         Assert.Contains("Header=\"Settings\"", xaml);
         Assert.Contains("Header=\"Sponsor Pro / Updates\"", xaml);
         Assert.Contains("Header=\"About WinPerf\"", xaml);
-        Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", xaml);
+        Assert.Contains("Style=\"{StaticResource ShellMenuButton}\"", xaml);
         Assert.Contains("ToolTip=\"Open app settings, updates and information\"", xaml);
         Assert.Contains("Click=\"AppMenuButton_Click\"", xaml);
         Assert.Contains("x:Name=\"CompactIntegrationsCard\"", xaml);
         Assert.DoesNotContain("UiDensityButton", xaml);
         Assert.DoesNotContain("UI: Compact", xaml);
+        Assert.DoesNotContain("x:Name=\"AppMenuSection\"", xaml);
+        Assert.DoesNotContain("Style=\"{StaticResource SidebarAppButton}\"", xaml);
 
-        var appSection = xaml.IndexOf("x:Name=\"AppMenuSection\"", StringComparison.Ordinal);
+        var shellTitleBar = xaml.IndexOf("Style=\"{StaticResource ShellTitleBar}\"", StringComparison.Ordinal);
         var appMenuButton = xaml.IndexOf("x:Name=\"AppMenuButton\"", StringComparison.Ordinal);
+        var minimizeButton = xaml.IndexOf("x:Name=\"MinimizeButton\"", StringComparison.Ordinal);
         var integrationsCard = xaml.IndexOf("x:Name=\"CompactIntegrationsCard\"", StringComparison.Ordinal);
         var configColumn = xaml.IndexOf("x:Name=\"ConfigColumn\"", StringComparison.Ordinal);
 
-        Assert.True(appSection >= 0);
+        Assert.True(shellTitleBar >= 0);
         Assert.True(appMenuButton >= 0);
-        Assert.True(appMenuButton > appSection);
-        Assert.True(integrationsCard > appMenuButton);
+        Assert.True(minimizeButton > appMenuButton);
+        Assert.True(appMenuButton > shellTitleBar);
+        Assert.True(integrationsCard > shellTitleBar);
         Assert.True(configColumn > integrationsCard);
-        Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", xaml);
         Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}Style=\\\"\\{StaticResource StatusPillButton\\}\\\"", xaml);
     }
 

@@ -25,12 +25,16 @@ public sealed class ButtonChromeStyleTests
     }
 
     [Fact]
-    public void AppMenuButtonsInheritRoundedSecondaryChrome()
+    public void AppMenuButtonUsesCompactTitleBarChrome()
     {
-        Assert.Contains("x:Key=\"SidebarAppButton\"", ThemeXaml);
-        Assert.Contains("BasedOn=\"{StaticResource SecondaryButton}\"", ThemeXaml);
-        Assert.Contains("Property=\"MinHeight\" Value=\"30\"", ThemeXaml);
+        Assert.Contains("x:Key=\"ShellMenuButton\"", ThemeXaml);
+        Assert.Contains("BasedOn=\"{StaticResource ShellTitleButton}\"", ThemeXaml);
+        Assert.Contains("Property=\"Width\" Value=\"34\"", ThemeXaml);
+        Assert.Contains("Property=\"Height\" Value=\"26\"", ThemeXaml);
+        Assert.Contains("Property=\"Margin\" Value=\"0,6,6,6\"", ThemeXaml);
+        Assert.Contains("CornerRadius=\"7\"", ThemeXaml);
         Assert.Contains("x:Name=\"AppMenuButton\"", MainWindowXaml);
+        Assert.Contains("Style=\"{StaticResource ShellMenuButton}\"", MainWindowXaml);
         Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}Background=\\\"#172A44\\\"", MainWindowXaml);
     }
 

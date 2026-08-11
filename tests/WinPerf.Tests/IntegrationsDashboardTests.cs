@@ -23,13 +23,13 @@ public sealed class IntegrationsDashboardTests
         Assert.DoesNotContain("UpdaterIntegrationStatusText", xaml);
         Assert.DoesNotContain("Text=\"Sponsor Pro core\"", xaml);
 
-        var appSection = xaml.IndexOf("x:Name=\"AppMenuSection\"", StringComparison.Ordinal);
         var integrations = xaml.IndexOf("x:Name=\"CompactIntegrationsCard\"", StringComparison.Ordinal);
         var config = xaml.IndexOf("x:Name=\"ConfigColumn\"", StringComparison.Ordinal);
         var results = xaml.IndexOf("x:Name=\"ResultsGrid\"", StringComparison.Ordinal);
 
-        Assert.True(appSection >= 0);
-        Assert.True(integrations > appSection);
+        Assert.DoesNotContain("x:Name=\"AppMenuSection\"", xaml);
+        Assert.DoesNotContain("SidebarAppButton", xaml);
+        Assert.True(integrations >= 0);
         Assert.True(config > integrations);
         Assert.True(results > config);
         Assert.DoesNotContain("x:Name=\"IntegrationsCard\"", xaml);

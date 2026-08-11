@@ -33,18 +33,19 @@ public sealed class DashboardControlLayoutPolishTests
     }
 
     [Fact]
-    public void AppMenu_UsesSingleDropdownForAppActions()
+    public void AppMenu_UsesTitleBarDropdownForAppActions()
     {
-        Assert.Contains("x:Name=\"AppMenuSection\"", MainWindowXaml);
         Assert.Contains("x:Name=\"AppMenuButton\"", MainWindowXaml);
-        Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", MainWindowXaml);
+        Assert.Contains("Content=\"⋯\"", MainWindowXaml);
+        Assert.Contains("Style=\"{StaticResource ShellMenuButton}\"", MainWindowXaml);
         Assert.Contains("x:Name=\"AppContextMenu\"", MainWindowXaml);
         Assert.Contains("x:Name=\"SettingsMenuItem\"", MainWindowXaml);
         Assert.Contains("x:Name=\"UpdatesMenuItem\"", MainWindowXaml);
         Assert.Contains("x:Name=\"AboutMenuItem\"", MainWindowXaml);
         Assert.Contains("private void AppMenuButton_Click", MainWindowSource);
+        Assert.DoesNotContain("x:Name=\"AppMenuSection\"", MainWindowXaml);
+        Assert.DoesNotContain("SidebarAppButton", MainWindowXaml);
         Assert.DoesNotContain("UiDensityButton", MainWindowXaml);
-        Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", MainWindowXaml);
     }
 
     [Fact]

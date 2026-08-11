@@ -99,11 +99,13 @@ public sealed class UnifiedCompactLayoutTests
         var xaml = ReadXaml("MainWindow.xaml");
 
         Assert.Contains("x:Name=\"AppMenuButton\"", xaml);
-        Assert.Contains("Content=\"App ▾\"", xaml);
+        Assert.Contains("Content=\"⋯\"", xaml);
         Assert.Contains("x:Name=\"AppContextMenu\"", xaml);
         Assert.Contains("x:Name=\"SettingsMenuItem\"", xaml);
         Assert.Contains("x:Name=\"UpdatesMenuItem\"", xaml);
         Assert.Contains("x:Name=\"AboutMenuItem\"", xaml);
+        Assert.Contains("Style=\"{StaticResource ShellMenuButton}\"", xaml);
+        Assert.DoesNotContain("x:Name=\"AppMenuSection\"", xaml);
         Assert.DoesNotContain("UiDensityButton", xaml);
         Assert.DoesNotContain("CompactUiDensityMenuItem", xaml);
         Assert.DoesNotContain("ComfortableUiDensityMenuItem", xaml);

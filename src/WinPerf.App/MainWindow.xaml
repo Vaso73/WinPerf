@@ -41,6 +41,27 @@
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Right"
                                 shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="AppMenuButton"
+                                Content="⋯"
+                                Style="{StaticResource ShellMenuButton}"
+                                ToolTip="Open app settings, updates and information"
+                                Click="AppMenuButton_Click">
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="AppContextMenu"
+                                             Width="210"
+                                             Padding="4">
+                                    <MenuItem x:Name="SettingsMenuItem"
+                                              Header="Settings"
+                                              Click="SettingsMenuItem_Click" />
+                                    <MenuItem x:Name="UpdatesMenuItem"
+                                              Header="Sponsor Pro / Updates"
+                                              Click="UpdatesMenuItem_Click" />
+                                    <MenuItem x:Name="AboutMenuItem"
+                                              Header="About WinPerf"
+                                              Click="AboutMenuItem_Click" />
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
                         <Button x:Name="MinimizeButton"
                                 Content="—"
                                 Style="{StaticResource ShellTitleButton}"
@@ -93,33 +114,9 @@
                         <TextBlock Text="History" Foreground="{StaticResource TextMuted}" />
                     </Border>
 
-                    <StackPanel x:Name="AppMenuSection" Margin="0,10,0,8">
-                        <Button x:Name="AppMenuButton"
-                                Content="App ▾"
-                                Style="{StaticResource SidebarAppButton}"
-                                ToolTip="Open app settings, updates and information"
-                                Click="AppMenuButton_Click">
-                            <Button.ContextMenu>
-                                <ContextMenu x:Name="AppContextMenu"
-                                             Width="210"
-                                             Padding="4">
-                                    <MenuItem x:Name="SettingsMenuItem"
-                                              Header="Settings"
-                                              Click="SettingsMenuItem_Click" />
-                                    <MenuItem x:Name="UpdatesMenuItem"
-                                              Header="Sponsor Pro / Updates"
-                                              Click="UpdatesMenuItem_Click" />
-                                    <MenuItem x:Name="AboutMenuItem"
-                                              Header="About WinPerf"
-                                              Click="AboutMenuItem_Click" />
-                                </ContextMenu>
-                            </Button.ContextMenu>
-                        </Button>
-                    </StackPanel>
-
                     <Border x:Name="CompactIntegrationsCard"
                             Style="{StaticResource Card}"
-                            Margin="0,4,0,8"
+                            Margin="0,10,0,8"
                             Padding="12">
                         <StackPanel>
                             <DockPanel Margin="0,0,0,8">
