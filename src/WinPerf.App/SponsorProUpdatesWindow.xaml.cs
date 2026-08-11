@@ -1,10 +1,12 @@
 using System.Diagnostics;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using WinPerf.App.Settings;
 using WinPerf.App.Updates;
+using WinPerf.Core.Product;
 using WinPerf.Core.Updates;
 
 namespace WinPerf.App;
@@ -30,6 +32,7 @@ public partial class SponsorProUpdatesWindow : Window
         SetChip(UpdateCoreStatusChip, UpdateCoreStatusText, ChipState.Ready, AppText.T("Ready"));
         RefreshSponsorProStatus();
         ResetUpdateState();
+        ApplyEditionBoundary();
 
         Closed += (_, _) =>
         {
@@ -41,6 +44,17 @@ public partial class SponsorProUpdatesWindow : Window
     private void RefreshSponsorProStatus()
     {
         _session = _sessionStore.Load();
+
+        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            AccountBadgeText.Text = "GH";
+            AccountTitleText.Text = WinPerfProductEdition.EditionName;
+            AccountStatusText.Text = AppText.T("Sponsor Pro updates are available only in WinPerf Sponsor Pro.");
+            SponsorProAccountButton.Content = AppText.T("Sign in with GitHub");
+            SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Missing, AppText.T("Free"));
+            StatusText.Text = AppText.T("This edition does not use the private Sponsor Pro update channel.");
+            return;
+        }
 
         if (_session?.IsUsable == true)
         {
@@ -76,9 +90,28 @@ public partial class SponsorProUpdatesWindow : Window
         SetChip(UpdateStateChip, UpdateStateText, ChipState.Idle, AppText.T("Idle"));
     }
 
+    private void ApplyEditionBoundary()
+    {
+        if (WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            return;
+        }
+
+        SponsorProAccountButton.IsEnabled = false;
+        CheckUpdatesButton.IsEnabled = false;
+        InstallUpdateButton.IsEnabled = false;
+        LatestVersionText.Text = AppText.T("Sponsor Pro updates are available only in WinPerf Sponsor Pro.");
+        SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, AppText.T("Free"));
+    }
+
     private async void SponsorProAccountButton_Click(object sender, RoutedEventArgs e)
     {
         RefreshSponsorProStatus();
+        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            return;
+        }
+
         if (_session?.IsUsable == true)
         {
             SignOutOfSponsorPro();
@@ -115,6 +148,16 @@ public partial class SponsorProUpdatesWindow : Window
         {
             StatusText.Text = AppText.T("Sponsor Pro login was cancelled.");
         }
+        catch (WinPerfUpdateServiceException ex) when (ex.ErrorCode == "product_not_found")
+        {
+            SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Missing, AppText.T("Error"));
+            StatusText.Text = AppText.T("WinPerf is not enabled on the Sponsor Pro update server yet.");
+        }
+        catch (WinPerfUpdateServiceException ex)
+        {
+            SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Missing, AppText.T("Error"));
+            StatusText.Text = AppText.F("Sponsor Pro login failed: {0}", ex.ErrorCode ?? ex.Message);
+        }
         catch (Exception)
         {
             StatusText.Text = AppText.T("Sponsor Pro login failed. Check your connection and try again.");
@@ -122,7 +165,7 @@ public partial class SponsorProUpdatesWindow : Window
         finally
         {
             SetBusy(false);
-            RefreshSponsorProStatus();
+            ApplyEditionBoundary();
         }
     }
 
@@ -140,6 +183,12 @@ public partial class SponsorProUpdatesWindow : Window
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
     {
         RefreshSponsorProStatus();
+        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            StatusText.Text = AppText.T("This edition does not use the private Sponsor Pro update channel.");
+            return;
+        }
+
         if (_session?.IsUsable != true)
         {
             StatusText.Text = AppText.T("Sign in with GitHub Sponsor Pro before checking for updates.");
@@ -173,9 +222,9 @@ public partial class SponsorProUpdatesWindow : Window
             {
                 _availableManifest = result.Manifest;
                 LatestVersionText.Text = $"v{result.LatestVersion} · {result.Manifest.AssetName}";
-                InstallUpdateButton.IsEnabled = false;
+                InstallUpdateButton.IsEnabled = true;
                 SetChip(UpdateStateChip, UpdateStateText, ChipState.Ready, AppText.T("Available"));
-                StatusText.Text = AppText.T("Update found. Install button will be enabled after helper launcher/startup wiring.");
+                StatusText.Text = AppText.T("Update found. You can install it now.");
                 return;
             }
 
@@ -203,6 +252,77 @@ public partial class SponsorProUpdatesWindow : Window
         }
     }
 
+    private async void InstallUpdateButton_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshSponsorProStatus();
+        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            StatusText.Text = AppText.T("This edition does not use the private Sponsor Pro update channel.");
+            return;
+        }
+
+        if (_session?.IsUsable != true)
+        {
+            StatusText.Text = AppText.T("Sign in with GitHub Sponsor Pro before installing updates.");
+            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, AppText.T("Login"));
+            return;
+        }
+
+        if (_availableManifest is null)
+        {
+            StatusText.Text = AppText.T("Check for updates before installing.");
+            return;
+        }
+
+        if (!ConfirmDialogWindow.Confirm(
+                this,
+                AppText.T("Install WinPerf update?"),
+                AppText.T("WinPerf will close, replace only WinPerf.exe, and restart. Portable data, tools, language packs, profiles and history stay in place."),
+                AppText.T("Install update")))
+        {
+            return;
+        }
+
+        var cancellationToken = BeginOperation();
+        SetBusy(true);
+        StatusText.Text = AppText.T("Preparing Sponsor Pro update download...");
+
+        try
+        {
+            using var service = new WinPerfUpdateService();
+            var ticket = await service.RequestDownloadTicketAsync(_session, _availableManifest, cancellationToken);
+            StatusText.Text = AppText.T("Downloading and validating WinPerf update...");
+            var staged = await service.DownloadAndStageAsync(
+                ticket,
+                _availableManifest,
+                WinPerfUpdateHelper.UpdatesRoot,
+                cancellationToken);
+
+            StatusText.Text = AppText.T("Starting update helper. WinPerf will restart after installation.");
+            WinPerfUpdateHelper.Launch(staged, AppContext.BaseDirectory);
+            Application.Current.Shutdown();
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = AppText.T("Update installation was cancelled.");
+        }
+        catch (HttpRequestException)
+        {
+            _sessionStore.Clear();
+            RefreshSponsorProStatus();
+            StatusText.Text = AppText.T("Sponsor Pro session expired. Sign in again and retry the update.");
+        }
+        catch (Exception)
+        {
+            StatusText.Text = AppText.T("Update installation failed. WinPerf.exe was not changed.");
+        }
+        finally
+        {
+            SetBusy(false);
+            ApplyEditionBoundary();
+        }
+    }
+
     private CancellationToken BeginOperation()
     {
         _operationCancellation?.Cancel();
@@ -214,9 +334,12 @@ public partial class SponsorProUpdatesWindow : Window
     private void SetBusy(bool busy)
     {
         BusyProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
-        SponsorProAccountButton.IsEnabled = !busy;
-        CheckUpdatesButton.IsEnabled = !busy;
-        InstallUpdateButton.IsEnabled = false;
+        SponsorProAccountButton.IsEnabled = !busy && WinPerfProductEdition.SupportsSponsorProUpdates;
+        CheckUpdatesButton.IsEnabled = !busy && WinPerfProductEdition.SupportsSponsorProUpdates;
+        InstallUpdateButton.IsEnabled = !busy
+            && WinPerfProductEdition.SupportsSponsorProUpdates
+            && _availableManifest is not null
+            && _session?.IsUsable == true;
     }
 
     private void SetChip(Border chip, TextBlock text, ChipState state, string label)

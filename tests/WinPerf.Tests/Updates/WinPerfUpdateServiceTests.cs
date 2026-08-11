@@ -93,6 +93,20 @@ public sealed class WinPerfUpdateServiceTests
             JsonDocument.Parse(requestBody!).RootElement.GetProperty("productId").GetString());
     }
 
+    [Fact]
+    public async Task StartLoginAsync_PreservesServerErrorCode()
+    {
+        using var service = new WinPerfUpdateService(
+            new HttpClient(new DelegateHandler(_ =>
+                JsonResponse("{\"error\":\"product_not_found\"}", HttpStatusCode.ServiceUnavailable))),
+            new Uri("https://updates.example"));
+
+        var error = await Assert.ThrowsAsync<WinPerfUpdateServiceException>(() => service.StartLoginAsync());
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, error.StatusCode);
+        Assert.Equal("product_not_found", error.ErrorCode);
+    }
+
     [Theory]
     [InlineData("https://example.com/login/oauth/authorize", "/v1/auth/github/poll")]
     [InlineData("https://github.com/login/oauth/authorize", "https://evil.example/v1/auth/github/poll")]
@@ -286,7 +300,9 @@ public sealed class WinPerfUpdateServiceTests
         return path;
     }
 
-    private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
+    private static HttpResponseMessage JsonResponse(
+        string json,
+        HttpStatusCode statusCode = HttpStatusCode.OK) => new(statusCode)
     {
         Content = new StringContent(json, Encoding.UTF8, "application/json")
     };

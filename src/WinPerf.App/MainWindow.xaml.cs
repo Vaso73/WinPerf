@@ -10,8 +10,10 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WinPerf.App.Settings;
+using WinPerf.App.Updates;
 using WinPerf.Core.History;
 using WinPerf.Core.Iperf;
+using WinPerf.Core.Product;
 using WinPerf.Core.Profiles;
 using WinPerf.Core.Updates;
 
@@ -80,6 +82,7 @@ public partial class MainWindow : Window
             ApplyUnifiedCompactLayout();
             ApplyDashboardLayout();
             await LoadDashboardProfilesAsync();
+            ShowStartupUpdateResult();
         };
         Closing += (_, _) => SaveDashboardLayout();
     }
@@ -422,6 +425,15 @@ public partial class MainWindow : Window
 
     private void OpenSponsorProUpdatesWindow()
     {
+        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Sponsor Pro / Updates"),
+                AppText.T("Sponsor Pro updates are available only in WinPerf Sponsor Pro."));
+            return;
+        }
+
         var dialog = new SponsorProUpdatesWindow(ResolveAppVersionText())
         {
             Owner = this
@@ -429,6 +441,31 @@ public partial class MainWindow : Window
 
         dialog.ShowDialog();
         RefreshIntegrationStatus();
+    }
+
+    private void ShowStartupUpdateResult()
+    {
+        if (WinPerfUpdateHelper.StartupResult == "success")
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Update installed"),
+                AppText.T("WinPerf was updated successfully."));
+        }
+        else if (WinPerfUpdateHelper.StartupResult == "failed")
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Update failed"),
+                AppText.T("Update installation failed. WinPerf was rolled back to the previous version."));
+        }
+        else if (WinPerfUpdateHelper.StartupResult == "recovery-required")
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Update recovery required"),
+                AppText.F("Update installation failed and automatic rollback needs manual recovery from {0}.", WinPerfUpdateHelper.StartupRecoveryDirectory ?? string.Empty));
+        }
     }
 
     private void ApplyLocalization()

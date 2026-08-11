@@ -256,7 +256,7 @@
                                             Width="150"
                                             Margin="8,0,0,0"
                                             IsEnabled="False"
-                                            ToolTip="Installer launcher/startup wiring is the next updater slice." />
+                                            Click="InstallUpdateButton_Click" />
                                 </StackPanel>
                             </Grid>
                         </Border>

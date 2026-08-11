@@ -1,6 +1,7 @@
 using System.Windows;
 using WinPerf.App.Settings;
 using WinPerf.App.Updates;
+using WinPerf.Core.Product;
 using WinPerf.Core.Updates;
 
 namespace WinPerf.App;
@@ -17,12 +18,23 @@ public partial class AboutWindow : Window
         AppText.ApplyTo(this);
         _versionText = versionText;
         VersionText.Text = versionText;
+        EditionText.Text = WinPerfProductEdition.EditionName;
+        CheckForUpdatesButton.IsEnabled = WinPerfProductEdition.SupportsSponsorProUpdates;
         RefreshSponsorProStatus();
     }
 
     private void RefreshSponsorProStatus()
     {
         var session = _sessionStore.Load();
+        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            AccountTitleText.Text = WinPerfProductEdition.EditionName;
+            AccountStatusText.Text = AppText.T("Sponsor Pro updates are available only in WinPerf Sponsor Pro.");
+            SponsorProAccountButton.Content = AppText.T("Sponsor Pro / Updates");
+            StatusText.Text = AppText.T("This edition does not use the private Sponsor Pro update channel.");
+            return;
+        }
+
         if (session?.IsUsable == true)
         {
             var login = string.IsNullOrWhiteSpace(session.GithubLogin)
@@ -57,6 +69,15 @@ public partial class AboutWindow : Window
 
     private void OpenSponsorProUpdatesWindow()
     {
+        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                AppText.T("Sponsor Pro / Updates"),
+                AppText.T("Sponsor Pro updates are available only in WinPerf Sponsor Pro."));
+            return;
+        }
+
         var dialog = new SponsorProUpdatesWindow(_versionText)
         {
             Owner = this

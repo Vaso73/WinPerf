@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
@@ -66,6 +67,14 @@ public sealed record StagedWinPerfUpdate(
     string StagingDirectory,
     string ExecutablePath,
     IReadOnlyList<string> RelativeFiles);
+
+public sealed class WinPerfUpdateServiceException(
+    string message,
+    HttpStatusCode? statusCode,
+    string? errorCode) : HttpRequestException(message, null, statusCode)
+{
+    public string? ErrorCode { get; } = errorCode;
+}
 
 public sealed class WinPerfUpdateService : IDisposable
 {
@@ -168,7 +177,11 @@ public sealed class WinPerfUpdateService : IDisposable
         using var response = await _client
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await CreateServiceExceptionAsync(response, cancellationToken).ConfigureAwait(false);
+        }
 
         var payload = await ReadJsonAsync(response, cancellationToken).ConfigureAwait(false);
         var authSessionId = Text(payload, "authSessionId");
@@ -294,7 +307,11 @@ public sealed class WinPerfUpdateService : IDisposable
         using var response = await _client
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await CreateServiceExceptionAsync(response, cancellationToken).ConfigureAwait(false);
+        }
 
         var payload = await ReadJsonAsync(response, cancellationToken).ConfigureAwait(false);
 
@@ -475,6 +492,38 @@ public sealed class WinPerfUpdateService : IDisposable
         }
 
         return document.RootElement.Clone();
+    }
+
+    private static async Task<WinPerfUpdateServiceException> CreateServiceExceptionAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        var errorCode = $"http_{(int)response.StatusCode}";
+
+        try
+        {
+            if (response.Content.Headers.ContentLength <= MaximumJsonBytes)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+                if (bytes.Length <= MaximumJsonBytes)
+                {
+                    using var document = JsonDocument.Parse(bytes);
+                    if (document.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        var serviceError = TextOrNull(document.RootElement, "error");
+                        if (!string.IsNullOrWhiteSpace(serviceError))
+                        {
+                            errorCode = serviceError;
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return new WinPerfUpdateServiceException(errorCode, response.StatusCode, errorCode);
     }
 
     private Uri RequireSameOriginUri(string value)

@@ -23,6 +23,7 @@ public sealed class SponsorProUpdatesWindowTests
         Assert.Contains("sponsor-pro / WinPerf.zip", xaml);
         Assert.Contains("x:Name=\"CheckUpdatesButton\"", xaml);
         Assert.Contains("x:Name=\"InstallUpdateButton\"", xaml);
+        Assert.Contains("Click=\"InstallUpdateButton_Click\"", xaml);
     }
 
     [Fact]
@@ -37,7 +38,31 @@ public sealed class SponsorProUpdatesWindowTests
         Assert.Contains("StartLoginAsync", code);
         Assert.Contains("PollLoginAsync", code);
         Assert.Contains("CheckAsync(ParseVersion(_versionText)", code);
+        Assert.Contains("RequestDownloadTicketAsync", code);
+        Assert.Contains("DownloadAndStageAsync", code);
+        Assert.Contains("WinPerfUpdateHelper.Launch", code);
+        Assert.Contains("WinPerfProductEdition.SupportsSponsorProUpdates", code);
+        Assert.Contains("WinPerf is not enabled on the Sponsor Pro update server yet.", code);
+        Assert.DoesNotContain("Installer launcher/startup wiring is the next updater slice.", code);
         Assert.Contains("WindowPlacementStore.Track(this, \"SponsorProUpdatesWindow\");", code);
         Assert.Contains("Signed out locally. Your GitHub browser session is unchanged.", code);
+    }
+
+    [Fact]
+    public void AppStartup_RoutesUpdateHelperBeforeOpeningMainWindow()
+    {
+        var appXaml = File.ReadAllText(Path.Combine(AppDirectory, "App.xaml"));
+        var appCode = File.ReadAllText(Path.Combine(AppDirectory, "App.xaml.cs"));
+        var helperCode = File.ReadAllText(Path.Combine(AppDirectory, "Updates", "WinPerfUpdateHelper.cs"));
+
+        Assert.Contains("Startup=\"Application_Startup\"", appXaml);
+        Assert.DoesNotContain("StartupUri=\"MainWindow.xaml\"", appXaml);
+        Assert.Contains("WinPerfUpdateHelper.IsApplyRequest(e.Args)", appCode);
+        Assert.Contains("WinPerfUpdateHelper.RunApply(e.Args)", appCode);
+        Assert.Contains("WinPerfUpdateHelper.ScheduleCleanup(e.Args)", appCode);
+        Assert.Contains("new MainWindow().Show();", appCode);
+        Assert.Contains("--winperf-cleanup-update-helper", helperCode);
+        Assert.Contains("WinPerf.UpdateHelper.exe", helperCode);
+        Assert.Contains("new WinPerfUpdateInstaller().Apply", helperCode);
     }
 }
