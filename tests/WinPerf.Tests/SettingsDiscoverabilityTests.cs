@@ -77,12 +77,23 @@ public sealed class SettingsDiscoverabilityTests
     {
         var xaml = File.ReadAllText(SettingsWindowXamlPath);
 
-        Assert.Contains("<ColumnDefinition Width=\"120\" />", SliceAround(xaml, "Portable data folder"));
-        Assert.Contains("<ColumnDefinition Width=\"120\" />", SliceAround(xaml, "Portable iperf3 engine folder"));
-        Assert.Contains("<ColumnDefinition Width=\"120\" />", SliceAround(xaml, "Portable iperf2 engine folder"));
+        Assert.Contains("Text=\"Portable folders\"", xaml);
+        Assert.Contains("<ColumnDefinition Width=\"104\" />", SliceAround(xaml, "Portable folders"));
         Assert.Contains("Content=\"Open data\"", xaml);
         Assert.Contains("Content=\"Open iperf3\"", xaml);
         Assert.Contains("Content=\"Open iperf2\"", xaml);
+    }
+
+    [Fact]
+    public void SettingsWindow_UsesCompactEngineRowsInsteadOfLargeFallbackCards()
+    {
+        var xaml = File.ReadAllText(SettingsWindowXamlPath);
+
+        Assert.Contains("Text=\"Engines\"", xaml);
+        Assert.Contains("iperf3 executable · fallback tools\\iperf3\\iperf3.exe", xaml);
+        Assert.Contains("iperf2 executable · fallback tools\\iperf2\\iperf.exe or iperf2.exe", xaml);
+        Assert.DoesNotContain("Text=\"iperf3 fallback\"", xaml);
+        Assert.DoesNotContain("Text=\"iperf2 fallback\"", xaml);
     }
 
     private static string SliceAround(string text, string marker)
@@ -91,7 +102,7 @@ public sealed class SettingsDiscoverabilityTests
         Assert.True(index >= 0);
 
         var start = Math.Max(0, index - 700);
-        var length = Math.Min(text.Length - start, 1200);
+        var length = Math.Min(text.Length - start, 2200);
 
         return text.Substring(start, length);
     }
