@@ -48,4 +48,26 @@ public sealed class ThemeShellColorResourceTests
             Assert.Contains("Style=\"{StaticResource ShellTitleBar}\"", xaml);
         }
     }
+
+    [Fact]
+    public void Theme_DefinesSharedBaseStylesBeforeTheyAreReferenced()
+    {
+        var theme = File.ReadAllText(Path.Combine(AppDirectory, "ResourceDictionaries", "Theme.xaml"));
+
+        AssertDefinedBeforeUse(theme, "x:Key=\"TextBlockBase\"", "BasedOn=\"{StaticResource TextBlockBase}\"");
+        AssertDefinedBeforeUse(theme, "x:Key=\"ShellTitleButton\"", "BasedOn=\"{StaticResource ShellTitleButton}\"");
+        AssertDefinedBeforeUse(theme, "x:Key=\"CardBase\"", "BasedOn=\"{StaticResource CardBase}\"");
+        AssertDefinedBeforeUse(theme, "x:Key=\"PrimaryButtonBase\"", "BasedOn=\"{StaticResource PrimaryButtonBase}\"");
+        AssertDefinedBeforeUse(theme, "x:Key=\"SecondaryButtonBase\"", "BasedOn=\"{StaticResource SecondaryButtonBase}\"");
+    }
+
+    private static void AssertDefinedBeforeUse(string text, string definition, string usage)
+    {
+        var definitionIndex = text.IndexOf(definition, StringComparison.Ordinal);
+        var usageIndex = text.IndexOf(usage, StringComparison.Ordinal);
+
+        Assert.True(definitionIndex >= 0, $"Missing definition: {definition}");
+        Assert.True(usageIndex >= 0, $"Missing usage: {usage}");
+        Assert.True(definitionIndex < usageIndex, $"{definition} must be defined before {usage}.");
+    }
 }

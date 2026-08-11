@@ -18,6 +18,13 @@
     <SolidColorBrush x:Key="MissingChipBorder" Color="#EF4444" />
     <SolidColorBrush x:Key="MissingChipForeground" Color="#FCA5A5" />
 
+    <Style x:Key="TextBlockBase" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource TextBlockBase}" />
+
     <Style x:Key="ShellWindowBorder" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource Bg}" />
         <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
@@ -103,13 +110,6 @@
             </Setter.Value>
         </Setter>
     </Style>
-
-    <Style x:Key="TextBlockBase" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource TextMain}" />
-        <Setter Property="FontFamily" Value="Segoe UI" />
-    </Style>
-
-    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource TextBlockBase}" />
 
     <Style x:Key="TextBoxBase" TargetType="TextBox">
         <Setter Property="Background" Value="#0B1628" />
