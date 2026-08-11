@@ -101,18 +101,24 @@
                                FontSize="11"
                                Margin="0,3,0,28" />
 
-                    <Border Background="{StaticResource PanelSoft}" CornerRadius="12" Padding="10" Margin="0,0,0,8">
-                        <TextBlock Text="Dashboard" FontWeight="SemiBold" />
-                    </Border>
-                    <Border CornerRadius="12" Padding="10" Margin="0,0,0,8">
-                        <TextBlock Text="Speed Test" Foreground="{StaticResource TextMuted}" />
-                    </Border>
-                    <Border CornerRadius="12" Padding="10" Margin="0,0,0,8">
-                        <TextBlock Text="Server Mode" Foreground="{StaticResource TextMuted}" />
-                    </Border>
-                    <Border CornerRadius="12" Padding="10" Margin="0,0,0,8">
-                        <TextBlock Text="History" Foreground="{StaticResource TextMuted}" />
-                    </Border>
+                    <Button x:Name="DashboardNavButton"
+                            Content="Dashboard"
+                            Style="{StaticResource SidebarNavSelectedButton}"
+                            Click="DashboardNavButton_Click" />
+                    <Button x:Name="SpeedTestNavButton"
+                            Content="Speed Test"
+                            Style="{StaticResource SidebarNavButton}"
+                            IsEnabled="False"
+                            ToolTip="Speed Test page will be added later." />
+                    <Button x:Name="ServerModeNavButton"
+                            Content="Server Mode"
+                            Style="{StaticResource SidebarNavButton}"
+                            Click="ServerModeNavButton_Click" />
+                    <Button x:Name="HistoryNavButton"
+                            Content="History"
+                            Style="{StaticResource SidebarNavButton}"
+                            IsEnabled="False"
+                            ToolTip="History page will be added later." />
 
                     <Border x:Name="CompactIntegrationsCard"
                             Style="{StaticResource Card}"
@@ -603,6 +609,174 @@
                         </Grid>
                     </Border>
                 </Grid>
+        </Grid>
+
+        <Grid x:Name="ServerModeContentPanel"
+              Grid.Column="2"
+              Margin="18"
+              Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" Margin="0,0,0,22">
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="Server Mode"
+                               FontSize="28"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Run a local iperf server for LAN, routed, VPN or public-client testing."
+                               Foreground="{StaticResource TextMuted}"
+                               FontSize="11"
+                               Margin="0,3,0,0" />
+                </StackPanel>
+            </DockPanel>
+
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="14" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Style="{StaticResource Card}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Grid.Row="0">
+                            <StackPanel DockPanel.Dock="Left">
+                                <TextBlock Text="Local server"
+                                           FontSize="11"
+                                           FontWeight="SemiBold" />
+                                <TextBlock x:Name="ServerModeStatusText"
+                                           Text="Stopped"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Margin="0,4,0,0" />
+                            </StackPanel>
+                            <Border x:Name="ServerModeStatusChip"
+                                    DockPanel.Dock="Right"
+                                    Style="{StaticResource CompactStatusChip}">
+                                <TextBlock x:Name="ServerModeStatusChipText"
+                                           Text="Stopped"
+                                           Foreground="{StaticResource TextMuted}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                        </DockPanel>
+
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Engine" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                <ComboBox x:Name="ServerEngineBox"
+                                          SelectedIndex="0"
+                                          Margin="0,3,0,0"
+                                          SelectionChanged="ServerModeInputChanged">
+                                    <ComboBoxItem Content="iperf3" />
+                                    <ComboBoxItem Content="iperf2" />
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Protocol" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                <ComboBox x:Name="ServerProtocolBox"
+                                          SelectedIndex="0"
+                                          Margin="0,3,0,0"
+                                          SelectionChanged="ServerModeInputChanged">
+                                    <ComboBoxItem Content="TCP" />
+                                    <ComboBoxItem Content="UDP" />
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="11" />
+                                <TextBox x:Name="ServerPortBox"
+                                         Text="5201"
+                                         Margin="0,3,0,0"
+                                         TextChanged="ServerModeInputChanged"
+                                         KeyUp="ServerModeInputChanged"
+                                         LostFocus="ServerModeInputChanged" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="ServerOneOffBox"
+                                      Grid.Column="6"
+                                      Content="Stop after one client (--one-off, iperf3)"
+                                      VerticalAlignment="Bottom"
+                                      Checked="ServerModeInputChanged"
+                                      Unchecked="ServerModeInputChanged" />
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+
+                            <Button x:Name="StartServerButton"
+                                    Grid.Column="0"
+                                    Content="Start server"
+                                    Style="{StaticResource PrimaryButton}"
+                                    MinHeight="36"
+                                    Click="StartServerButton_Click" />
+                            <Button x:Name="StopServerButton"
+                                    Grid.Column="2"
+                                    Content="Stop server"
+                                    Style="{StaticResource SecondaryButton}"
+                                    MinHeight="36"
+                                    IsEnabled="False"
+                                    Click="StopServerButton_Click" />
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Style="{StaticResource Card}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Server Output"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,8" />
+
+                        <TextBox x:Name="ServerOutputText"
+                                 Grid.Row="1"
+                                 Text="Server command preview will appear here."
+                                 Foreground="{StaticResource TextMuted}"
+                                 Background="{StaticResource PanelDark}"
+                                 BorderBrush="{StaticResource BorderSoft}"
+                                 BorderThickness="1"
+                                 Padding="8"
+                                 FontFamily="Consolas"
+                                 FontSize="11"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 HorizontalScrollBarVisibility="Disabled"
+                                 VerticalScrollBarVisibility="Auto" />
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
         </Grid>
 

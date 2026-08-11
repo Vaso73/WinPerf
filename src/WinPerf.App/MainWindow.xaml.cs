@@ -24,7 +24,9 @@ public partial class MainWindow : Window
     private WinPerfSettings _settings = new();
     private IperfExecutableResolution _engineResolution = new(false, null, "NotConfigured", "iperf3.exe is not configured.");
     private CancellationTokenSource? _currentRunCancellation;
+    private CancellationTokenSource? _serverRunCancellation;
     private readonly StringBuilder _engineOutput = new();
+    private readonly StringBuilder _serverOutput = new();
     private readonly List<double> _throughputSamples = new();
     private readonly List<IReadOnlyList<double>> _streamThroughputSamples = new();
     private readonly List<double> _reverseThroughputSamples = new();
@@ -61,9 +63,11 @@ public partial class MainWindow : Window
         PopulateRecentServers();
         ApplyUnifiedCompactLayout();
         ApplyDashboardLayout();
+        ShowDashboardPage();
         UpdateUdpBandwidthVisibility();
         UpdateCommandOverrideUx();
         UpdateDashboardCommandPreview();
+        UpdateServerModeCommandPreview();
 
         Loaded += async (_, _) =>
         {
@@ -240,6 +244,43 @@ public partial class MainWindow : Window
         _currentRunCancellation?.Cancel();
     }
 
+    private void DashboardNavButton_Click(object sender, RoutedEventArgs e)
+    {
+        ShowDashboardPage();
+    }
+
+    private void ServerModeNavButton_Click(object sender, RoutedEventArgs e)
+    {
+        ShowServerModePage();
+    }
+
+    private void ShowDashboardPage()
+    {
+        DashboardContentPanel.Visibility = Visibility.Visible;
+        ServerModeContentPanel.Visibility = Visibility.Collapsed;
+        SetSidebarNavigation(isServerMode: false);
+        RefreshEngineStatus();
+    }
+
+    private void ShowServerModePage()
+    {
+        DashboardContentPanel.Visibility = Visibility.Collapsed;
+        ServerModeContentPanel.Visibility = Visibility.Visible;
+        SetSidebarNavigation(isServerMode: true);
+        UpdateServerModeCommandPreview();
+    }
+
+    private void SetSidebarNavigation(bool isServerMode)
+    {
+        if (DashboardNavButton is null || ServerModeNavButton is null)
+        {
+            return;
+        }
+
+        DashboardNavButton.Style = FindResource(isServerMode ? "SidebarNavButton" : "SidebarNavSelectedButton") as Style;
+        ServerModeNavButton.Style = FindResource(isServerMode ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
+    }
+
     private void AppMenuButton_Click(object sender, RoutedEventArgs e)
     {
         if (AppMenuButton.ContextMenu is null)
@@ -303,6 +344,237 @@ public partial class MainWindow : Window
 
         dialog.ShowDialog();
         RefreshIntegrationStatus();
+    }
+
+    private async void StartServerButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_serverRunCancellation is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            var options = BuildServerModeOptions();
+            var resolution = ResolveIntegration(options.Engine);
+
+            if (!resolution.IsConfigured || string.IsNullOrWhiteSpace(resolution.ExecutablePath))
+            {
+                ServerOutputText.Text = $"{GetEngineExecutableDisplayName(options.Engine)} is not configured. Open Settings and select the executable first.";
+                ServerModeStatusText.Text = "Server cannot start: engine missing.";
+                return;
+            }
+
+            var command = IperfCommandBuilder.BuildServerCommand(resolution.ExecutablePath, options);
+            var commandDisplayText = string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+
+            _serverRunCancellation = new CancellationTokenSource();
+            _serverOutput.Clear();
+            SetServerModeRunState(isRunning: true, options);
+            AppendServerOutput("Running server command:");
+            AppendServerOutput(commandDisplayText);
+            AppendServerOutput(string.Empty);
+
+            var result = await _processRunner.RunAsync(
+                command,
+                async (line, cancellationToken) =>
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        AppendServerOutput(line.Text);
+                    });
+                },
+                _serverRunCancellation.Token);
+
+            AppendServerOutput(string.Empty);
+            AppendServerOutput($"Server process exited with code {result.ExitCode}.");
+            ServerModeStatusText.Text = result.ExitCode == 0
+                ? "Server stopped."
+                : $"Server stopped with exit code {result.ExitCode}.";
+        }
+        catch (OperationCanceledException)
+        {
+            AppendServerOutput(string.Empty);
+            AppendServerOutput("Server stopped by user.");
+            ServerModeStatusText.Text = "Server stopped by user.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or NotSupportedException)
+        {
+            ServerOutputText.Text = "Invalid server configuration:" + Environment.NewLine + ex.Message;
+            ServerModeStatusText.Text = "Server configuration is invalid.";
+        }
+        catch (Exception ex)
+        {
+            AppendServerOutput(string.Empty);
+            AppendServerOutput("Failed to run server:");
+            AppendServerOutput(ex.Message);
+            ServerModeStatusText.Text = "Server failed to start or stopped unexpectedly.";
+        }
+        finally
+        {
+            _serverRunCancellation?.Dispose();
+            _serverRunCancellation = null;
+            SetServerModeRunState(isRunning: false, null);
+        }
+    }
+
+    private void StopServerButton_Click(object sender, RoutedEventArgs e)
+    {
+        _serverRunCancellation?.Cancel();
+    }
+
+    private void ServerModeInputChanged(object sender, RoutedEventArgs e)
+    {
+        if (ServerEngineBox is null ||
+            ServerPortBox is null ||
+            ServerOneOffBox is null)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(sender, ServerEngineBox))
+        {
+            NormalizeServerModeForSelectedEngine();
+        }
+        else
+        {
+            ServerOneOffBox.IsEnabled =
+                _serverRunCancellation is null &&
+                GetSelectedServerEngine() == IperfEngine.Iperf3;
+        }
+
+        UpdateServerModeCommandPreview();
+    }
+
+    private void NormalizeServerModeForSelectedEngine()
+    {
+        var selectedEngine = GetSelectedServerEngine();
+
+        ServerOneOffBox.IsEnabled = selectedEngine == IperfEngine.Iperf3;
+
+        if (selectedEngine == IperfEngine.Iperf2)
+        {
+            ServerOneOffBox.IsChecked = false;
+        }
+
+        if (selectedEngine == IperfEngine.Iperf2 &&
+            string.Equals(ServerPortBox.Text.Trim(), "5201", StringComparison.Ordinal))
+        {
+            ServerPortBox.Text = "5001";
+        }
+        else if (selectedEngine == IperfEngine.Iperf3 &&
+                 string.Equals(ServerPortBox.Text.Trim(), "5001", StringComparison.Ordinal))
+        {
+            ServerPortBox.Text = "5201";
+        }
+    }
+
+    private IperfServerOptions BuildServerModeOptions()
+    {
+        return new IperfServerOptions
+        {
+            Engine = GetSelectedServerEngine(),
+            Protocol = GetSelectedServerProtocol(),
+            Port = ParsePositiveInt(ServerPortBox, "Server port"),
+            AddressFamily = IperfAddressFamily.IPv4,
+            OneOff = ServerOneOffBox.IsChecked == true
+        };
+    }
+
+    private void UpdateServerModeCommandPreview()
+    {
+        if (ServerOutputText is null)
+        {
+            return;
+        }
+
+        if (_serverRunCancellation is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            var options = BuildServerModeOptions();
+            var resolution = ResolveIntegration(options.Engine);
+            var executablePath = resolution.IsConfigured && !string.IsNullOrWhiteSpace(resolution.ExecutablePath)
+                ? resolution.ExecutablePath
+                : GetEngineExecutableDisplayName(options.Engine);
+            var command = IperfCommandBuilder.BuildServerCommand(executablePath, options);
+
+            ServerOutputText.Text =
+                "Server command preview:" + Environment.NewLine +
+                string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+            ServerModeStatusText.Text = "Stopped. Ready to start local server.";
+            SetServerModeStatusChip(isRunning: false, isError: false);
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
+        {
+            ServerOutputText.Text =
+                "Server command preview unavailable:" + Environment.NewLine +
+                ex.Message;
+            ServerModeStatusText.Text = "Server configuration is invalid.";
+            SetServerModeStatusChip(isRunning: false, isError: true);
+        }
+    }
+
+    private void SetServerModeRunState(bool isRunning, IperfServerOptions? options)
+    {
+        StartServerButton.IsEnabled = !isRunning;
+        StopServerButton.IsEnabled = isRunning;
+        ServerEngineBox.IsEnabled = !isRunning;
+        ServerProtocolBox.IsEnabled = !isRunning;
+        ServerPortBox.IsEnabled = !isRunning;
+        ServerOneOffBox.IsEnabled = !isRunning && GetSelectedServerEngine() == IperfEngine.Iperf3;
+        DashboardNavButton.IsEnabled = !isRunning;
+
+        if (isRunning && options is not null)
+        {
+            ServerModeStatusText.Text =
+                $"{GetEngineDisplayName(options.Engine)} {options.Protocol.ToString().ToUpperInvariant()} server listening on port {options.Port}.";
+            SetServerModeStatusChip(isRunning: true, isError: false);
+        }
+        else
+        {
+            SetServerModeStatusChip(isRunning: false, isError: false);
+        }
+    }
+
+    private void SetServerModeStatusChip(bool isRunning, bool isError)
+    {
+        if (isRunning)
+        {
+            ServerModeStatusChipText.Text = "Running";
+            SetIntegrationChipState(ServerModeStatusChip, ServerModeStatusChipText, isReady: true);
+            return;
+        }
+
+        if (isError)
+        {
+            ServerModeStatusChipText.Text = "Invalid";
+            SetIntegrationChipState(ServerModeStatusChip, ServerModeStatusChipText, isReady: false);
+            return;
+        }
+
+        ServerModeStatusChipText.Text = "Stopped";
+        ServerModeStatusChip.Background = GetThemeBrush("PanelSoft", Brushes.DarkSlateBlue);
+        ServerModeStatusChip.BorderBrush = GetThemeBrush("BorderSoft", Brushes.SlateBlue);
+        ServerModeStatusChipText.Foreground = GetThemeBrush("TextMuted", Brushes.LightSlateGray);
+    }
+
+    private void AppendServerOutput(string text)
+    {
+        _serverOutput.AppendLine(text);
+
+        const int maxChars = 12000;
+
+        if (_serverOutput.Length > maxChars)
+        {
+            _serverOutput.Remove(0, _serverOutput.Length - maxChars);
+        }
+
+        ServerOutputText.Text = _serverOutput.ToString();
+        ServerOutputText.ScrollToEnd();
     }
 
     private void ApplyDashboardLayout()
@@ -1357,6 +1629,28 @@ public partial class MainWindow : Window
         {
             "iperf2" => IperfEngine.Iperf2,
             _ => IperfEngine.Iperf3
+        };
+    }
+
+    private IperfEngine GetSelectedServerEngine()
+    {
+        var selectedText = (ServerEngineBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+
+        return selectedText switch
+        {
+            "iperf2" => IperfEngine.Iperf2,
+            _ => IperfEngine.Iperf3
+        };
+    }
+
+    private IperfServerProtocol GetSelectedServerProtocol()
+    {
+        var selectedText = (ServerProtocolBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+
+        return selectedText switch
+        {
+            "UDP" => IperfServerProtocol.Udp,
+            _ => IperfServerProtocol.Tcp
         };
     }
 
