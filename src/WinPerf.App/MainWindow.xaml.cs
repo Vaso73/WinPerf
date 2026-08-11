@@ -363,18 +363,17 @@ public partial class MainWindow : Window
 
     private double? GetSavedDashboardEngineOutputHeight()
     {
-        return _settings.CompactDashboardEngineOutputHeight ?? _settings.DashboardEngineOutputHeight;
+        return _settings.DashboardEngineOutputHeight;
     }
 
     private double? GetSavedDashboardLeftRailWidth()
     {
-        return _settings.CompactDashboardLeftRailWidth ?? _settings.DashboardLeftRailWidth;
+        return _settings.DashboardLeftRailWidth;
     }
 
     private void SetSavedDashboardEngineOutputHeight(double height)
     {
         var clampedHeight = ClampDashboardEngineOutputHeight(height);
-        _settings.CompactDashboardEngineOutputHeight = clampedHeight;
         _settings.DashboardEngineOutputHeight = clampedHeight;
     }
 
@@ -385,7 +384,6 @@ public partial class MainWindow : Window
 
     private void SetSavedDashboardLeftRailWidth(double width)
     {
-        _settings.CompactDashboardLeftRailWidth = width;
         _settings.DashboardLeftRailWidth = width;
     }
 
@@ -713,15 +711,20 @@ public partial class MainWindow : Window
     {
         if (isReady)
         {
-            chip.Background = new SolidColorBrush(Color.FromRgb(0x12, 0x3B, 0x2A));
-            chip.BorderBrush = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
-            text.Foreground = FindResource("AccentGreen") as Brush ?? Brushes.LightGreen;
+            chip.Background = GetThemeBrush("SuccessChipBackground", Brushes.DarkGreen);
+            chip.BorderBrush = GetThemeBrush("AccentGreen", Brushes.LightGreen);
+            text.Foreground = GetThemeBrush("AccentGreen", Brushes.LightGreen);
             return;
         }
 
-        chip.Background = new SolidColorBrush(Color.FromRgb(0x4C, 0x1D, 0x1D));
-        chip.BorderBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
-        text.Foreground = new SolidColorBrush(Color.FromRgb(0xFC, 0xA5, 0xA5));
+        chip.Background = GetThemeBrush("MissingChipBackground", Brushes.DarkRed);
+        chip.BorderBrush = GetThemeBrush("MissingChipBorder", Brushes.IndianRed);
+        text.Foreground = GetThemeBrush("MissingChipForeground", Brushes.LightCoral);
+    }
+
+    private Brush GetThemeBrush(string resourceKey, Brush fallback)
+    {
+        return FindResource(resourceKey) as Brush ?? fallback;
     }
 
     private static string FormatIntegrationPath(string? path)

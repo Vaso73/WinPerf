@@ -225,22 +225,27 @@ public partial class SponsorProUpdatesWindow : Window
         var (background, border, foreground) = state switch
         {
             ChipState.Ready => (
-                Color.FromRgb(0x12, 0x3B, 0x2A),
-                Color.FromRgb(0x22, 0xC5, 0x5E),
-                Color.FromRgb(0x22, 0xC5, 0x5E)),
+                GetThemeBrush("SuccessChipBackground", Brushes.DarkGreen),
+                GetThemeBrush("AccentGreen", Brushes.LightGreen),
+                GetThemeBrush("AccentGreen", Brushes.LightGreen)),
             ChipState.Missing => (
-                Color.FromRgb(0x4C, 0x1D, 0x1D),
-                Color.FromRgb(0xEF, 0x44, 0x44),
-                Color.FromRgb(0xFC, 0xA5, 0xA5)),
+                GetThemeBrush("MissingChipBackground", Brushes.DarkRed),
+                GetThemeBrush("MissingChipBorder", Brushes.IndianRed),
+                GetThemeBrush("MissingChipForeground", Brushes.LightCoral)),
             _ => (
-                Color.FromRgb(0x13, 0x23, 0x3A),
-                Color.FromRgb(0x20, 0x35, 0x54),
-                Color.FromRgb(0x94, 0xA3, 0xB8))
+                GetThemeBrush("PanelSoft", Brushes.DarkSlateGray),
+                GetThemeBrush("BorderSoft", Brushes.SlateGray),
+                GetThemeBrush("TextMuted", Brushes.LightSlateGray))
         };
 
-        chip.Background = new SolidColorBrush(background);
-        chip.BorderBrush = new SolidColorBrush(border);
-        text.Foreground = new SolidColorBrush(foreground);
+        chip.Background = background;
+        chip.BorderBrush = border;
+        text.Foreground = foreground;
+    }
+
+    private Brush GetThemeBrush(string resourceKey, Brush fallback)
+    {
+        return FindResource(resourceKey) as Brush ?? fallback;
     }
 
     private static Version ParseVersion(string versionText)

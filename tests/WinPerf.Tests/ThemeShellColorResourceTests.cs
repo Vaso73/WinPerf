@@ -15,8 +15,10 @@ public sealed class ThemeShellColorResourceTests
         Assert.Contains("x:Key=\"Accent\" Color=\"#38BDF8\"", theme);
         Assert.Contains("Value=\"{StaticResource PanelDark}\"", theme);
         Assert.Contains("Value=\"{StaticResource Accent}\"", theme);
-        Assert.Contains("Background=\"{StaticResource PanelDark}\"", theme);
-        Assert.Contains("BorderBrush=\"{StaticResource Accent}\"", theme);
+        Assert.Contains("x:Key=\"ShellWindowBorder\"", theme);
+        Assert.Contains("x:Key=\"ShellTitleBar\"", theme);
+        Assert.Contains("Property=\"Background\" Value=\"{StaticResource PanelDark}\"", theme);
+        Assert.Contains("Property=\"BorderBrush\" Value=\"{StaticResource Accent}\"", theme);
         Assert.DoesNotContain("Value=\"#07101D\"", theme);
         Assert.DoesNotContain("Value=\"#38BDF8\"", theme);
     }
@@ -41,9 +43,9 @@ public sealed class ThemeShellColorResourceTests
             Assert.DoesNotContain("Background=\"#08111F\"", xaml);
             Assert.DoesNotContain("Background=\"#07101D\"", xaml);
             Assert.DoesNotContain("BorderBrush=\"#38BDF8\"", xaml);
-            Assert.Contains("Background=\"{StaticResource Bg}\"", xaml);
-            Assert.Contains("Background=\"{StaticResource PanelDark}\"", xaml);
-            Assert.Contains("BorderBrush=\"{StaticResource Accent}\"", xaml);
+            Assert.Contains("<app:AppWindowChrome />", xaml);
+            Assert.Contains("Style=\"{StaticResource ShellWindowBorder}\"", xaml);
+            Assert.Contains("Style=\"{StaticResource ShellTitleBar}\"", xaml);
         }
     }
 }

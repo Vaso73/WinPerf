@@ -50,7 +50,7 @@ public sealed class DashboardControlLayoutPolishTests
     {
         Assert.Contains("Width=\"4\"", MainWindowXaml);
         Assert.Contains("Height=\"4\"", MainWindowXaml);
-        Assert.Contains("Background=\"#10243C\"", MainWindowXaml);
+        Assert.Contains("Background=\"{StaticResource SplitterBackground}\"", MainWindowXaml);
         Assert.Contains("Opacity=\"0.55\"", MainWindowXaml);
     }
 }

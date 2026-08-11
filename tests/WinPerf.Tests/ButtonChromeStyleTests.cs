@@ -27,16 +27,19 @@ public sealed class ButtonChromeStyleTests
     [Fact]
     public void AppMenuButtonsInheritRoundedSecondaryChrome()
     {
-        Assert.Contains("x:Key=\"SidebarAppButton\"", MainWindowXaml);
-        Assert.Contains("BasedOn=\"{StaticResource SecondaryButton}\"", MainWindowXaml);
-        Assert.Contains("Property=\"MinHeight\" Value=\"30\"", MainWindowXaml);
+        Assert.Contains("x:Key=\"SidebarAppButton\"", ThemeXaml);
+        Assert.Contains("BasedOn=\"{StaticResource SecondaryButton}\"", ThemeXaml);
+        Assert.Contains("Property=\"MinHeight\" Value=\"30\"", ThemeXaml);
         Assert.Contains("x:Name=\"AppMenuButton\"", MainWindowXaml);
         Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}Background=\\\"#172A44\\\"", MainWindowXaml);
     }
 
     [Fact]
-    public void ComboBoxesUseDarkCustomChromeInsteadOfWhiteWindowsDefault()
+    public void InputsAndComboBoxesUseDarkCustomChromeInsteadOfWhiteWindowsDefault()
     {
+        Assert.Contains("x:Key=\"TextBoxBase\"", ThemeXaml);
+        Assert.Contains("ControlTemplate TargetType=\"{x:Type TextBox}\"", ThemeXaml);
+        Assert.Contains("x:Name=\"PART_ContentHost\"", ThemeXaml);
         Assert.Contains("x:Key=\"ComboBoxBase\"", ThemeXaml);
         Assert.Contains("ControlTemplate TargetType=\"{x:Type ComboBox}\"", ThemeXaml);
         Assert.Contains("x:Name=\"PART_EditableTextBox\"", ThemeXaml);

@@ -9,14 +9,16 @@ public sealed class SponsorProUpdatesWindowTests
     public void SponsorProUpdatesWindow_ShowsAccountAndPrivateUpdateChannel()
     {
         var xaml = File.ReadAllText(Path.Combine(AppDirectory, "SponsorProUpdatesWindow.xaml"));
+        var theme = File.ReadAllText(Path.Combine(AppDirectory, "ResourceDictionaries", "Theme.xaml"));
 
         Assert.Contains("Title=\"Sponsor Pro / Updates\"", xaml);
         Assert.Contains("x:Name=\"SponsorAccountCard\"", xaml);
         Assert.Contains("x:Name=\"AccountStatusChip\"", xaml);
+        Assert.Contains("Style=\"{StaticResource StatusChip}\"", xaml);
         Assert.Contains("x:Name=\"SponsorProAccountButton\"", xaml);
         Assert.Contains("Content=\"Sign in with GitHub\"", xaml);
         Assert.Contains("x:Name=\"UpdateChannelCard\"", xaml);
-        Assert.Contains("x:Key=\"UpdateStatusChip\"", xaml);
+        Assert.Contains("x:Key=\"StatusChip\"", theme);
         Assert.Contains("Private Sponsor Pro updater", xaml);
         Assert.Contains("sponsor-pro / WinPerf.zip", xaml);
         Assert.Contains("x:Name=\"CheckUpdatesButton\"", xaml);

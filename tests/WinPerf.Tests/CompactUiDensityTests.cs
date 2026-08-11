@@ -8,6 +8,12 @@ public sealed class UnifiedCompactLayoutTests
             Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", fileName));
     }
 
+    private static string ReadTheme()
+    {
+        return File.ReadAllText(
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", "ResourceDictionaries", "Theme.xaml"));
+    }
+
     [Fact]
     public void MainWindow_UsesCompactDefaultSize()
     {
@@ -77,8 +83,14 @@ public sealed class UnifiedCompactLayoutTests
         Assert.DoesNotContain("CaptionHeight=\"42\"", combined);
         Assert.DoesNotContain("<RowDefinition Height=\"42\" />", combined);
         Assert.DoesNotContain("Width=\"46\"", combined);
-        Assert.Contains("CaptionHeight=\"38\"", combined);
-        Assert.Contains("Width=\"40\"", combined);
+        Assert.Equal(6, CountOccurrences(combined, "<app:AppWindowChrome />"));
+        Assert.Equal(6, CountOccurrences(combined, "Style=\"{StaticResource ShellTitleBar}\""));
+
+        var chrome = File.ReadAllText(
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", "AppWindowChrome.cs"));
+        var theme = ReadTheme();
+        Assert.Contains("CaptionHeight = 38", chrome);
+        Assert.Contains("Property=\"Width\" Value=\"40\"", theme);
     }
 
     [Fact]
@@ -97,5 +109,19 @@ public sealed class UnifiedCompactLayoutTests
         Assert.DoesNotContain("ComfortableUiDensityMenuItem", xaml);
         Assert.DoesNotContain("UI: Compact", xaml);
         Assert.DoesNotContain("UI: Comfortable", xaml);
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        var count = 0;
+        var index = 0;
+
+        while ((index = text.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
     }
 }

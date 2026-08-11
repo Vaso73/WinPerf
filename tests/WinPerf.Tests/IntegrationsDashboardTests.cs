@@ -9,9 +9,11 @@ public sealed class IntegrationsDashboardTests
     public void LeftRail_ShowsCompactLoadedIntegrationsCard()
     {
         var xaml = File.ReadAllText(Path.Combine(AppDirectory, "MainWindow.xaml"));
+        var theme = File.ReadAllText(Path.Combine(AppDirectory, "ResourceDictionaries", "Theme.xaml"));
 
         Assert.Contains("x:Name=\"CompactIntegrationsCard\"", xaml);
-        Assert.Contains("x:Key=\"IntegrationStatusChip\"", xaml);
+        Assert.Contains("x:Key=\"CompactStatusChip\"", theme);
+        Assert.Contains("Style=\"{StaticResource CompactStatusChip}\"", xaml);
         Assert.Contains("Text=\"Loaded\"", xaml);
         Assert.Contains("x:Name=\"Iperf3IntegrationStatusChip\"", xaml);
         Assert.Contains("x:Name=\"Iperf3IntegrationStatusText\"", xaml);
