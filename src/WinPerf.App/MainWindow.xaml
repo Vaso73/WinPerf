@@ -235,9 +235,9 @@
                                 <Button x:Name="RemoveServerButton"
                                           Grid.Column="2"
                                           Content="Remove"
-                                          Style="{StaticResource SecondaryButton}"
+                                          Style="{StaticResource CompactSecondaryButton}"
                                           Padding="6,0"
-                                          MinHeight="34"
+                                          MinHeight="30"
                                           FontSize="11"
                                           Click="RemoveServerButton_Click" />
                             </Grid>

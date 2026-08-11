@@ -26,6 +26,8 @@ public sealed class DashboardControlLayoutPolishTests
         Assert.Contains("x:Name=\"CommandMenuButton\"", MainWindowXaml);
         Assert.Contains("Content=\"Command ▾\"", MainWindowXaml);
         Assert.Contains("x:Name=\"RemoveServerButton\"", MainWindowXaml);
+        Assert.Contains("Style=\"{StaticResource CompactSecondaryButton}\"", SliceAround(MainWindowXaml, "x:Name=\"RemoveServerButton\""));
+        Assert.Contains("MinHeight=\"30\"", SliceAround(MainWindowXaml, "x:Name=\"RemoveServerButton\""));
         Assert.Contains("FontSize=\"11\"", MainWindowXaml);
         Assert.Contains("<ColumnDefinition Width=\"76\" />", MainWindowXaml);
     }
@@ -52,5 +54,16 @@ public sealed class DashboardControlLayoutPolishTests
         Assert.Contains("Height=\"4\"", MainWindowXaml);
         Assert.Contains("Background=\"{StaticResource SplitterBackground}\"", MainWindowXaml);
         Assert.Contains("Opacity=\"0.55\"", MainWindowXaml);
+    }
+
+    private static string SliceAround(string text, string marker)
+    {
+        var index = text.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(index >= 0);
+
+        var start = Math.Max(0, index - 300);
+        var length = Math.Min(text.Length - start, 900);
+
+        return text.Substring(start, length);
     }
 }

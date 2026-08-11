@@ -101,9 +101,8 @@
 
                             <ComboBox x:Name="CommandBox"
                                       Grid.Row="1"
-                                      Height="38"
-                                      MinHeight="32"
-                                      Padding="10,0,10,0"
+                                      MinHeight="30"
+                                      Padding="8,0"
                                       FontFamily="Consolas"
                                       FontSize="13"
                                       IsEditable="True"
