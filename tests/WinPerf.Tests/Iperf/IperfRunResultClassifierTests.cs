@@ -154,6 +154,20 @@ public sealed class IperfRunResultClassifierTests
     }
 
     [Fact]
+    public void Classify_WindowsMissingDllExitCode_ExplainsPortableImport()
+    {
+        var result = CreateResult(-1073741515);
+
+        var outcome = IperfRunResultClassifier.Classify(
+            IperfEngine.Iperf3,
+            result);
+
+        Assert.Equal(IperfRunOutcomeKind.Failed, outcome.Kind);
+        Assert.Contains("required Windows DLL is missing", outcome.Message);
+        Assert.Contains("Re-import the portable engine", outcome.Message);
+    }
+
+    [Fact]
     public void Classify_Iperf3ExitCodeZero_PreservesExistingBehaviour()
     {
         var result = CreateResult(

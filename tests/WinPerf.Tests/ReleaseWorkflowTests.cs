@@ -29,10 +29,12 @@ public sealed class ReleaseWorkflowTests
         Assert.Contains("dotnet test tests/WinPerf.Tests/WinPerf.Tests.csproj --configuration Release", workflow);
         Assert.Contains("dotnet publish src/WinPerf.App/WinPerf.App.csproj", workflow);
         Assert.Contains("--runtime win-x64", workflow);
-        Assert.Contains("--self-contained false", workflow);
+        Assert.Contains("--self-contained true", workflow);
+        Assert.DoesNotContain("--self-contained false", workflow);
         Assert.Contains("--output artifacts/publish/WinPerf-win-x64", workflow);
         Assert.Contains("WinPerf.exe", workflow);
         Assert.Contains("WinPerf.zip", workflow);
+        Assert.Contains("zip -9 ../../release/WinPerf.zip WinPerf.exe", workflow);
         Assert.Contains("gh release create", workflow);
         Assert.Contains("${GITHUB_REF_NAME}", workflow);
     }

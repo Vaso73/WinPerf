@@ -38,6 +38,37 @@ public static class PortableExecutableImporter
             File.Copy(sourcePath, targetPath, overwrite: true);
         }
 
+        CopySiblingDllDependencies(sourcePath, targetDirectory);
+
         return targetPath;
+    }
+
+    private static void CopySiblingDllDependencies(
+        string sourceExecutablePath,
+        string targetDirectory)
+    {
+        var sourceDirectory = Path.GetDirectoryName(sourceExecutablePath);
+
+        if (string.IsNullOrWhiteSpace(sourceDirectory))
+        {
+            return;
+        }
+
+        foreach (var sourceDllPath in Directory.EnumerateFiles(sourceDirectory, "*.dll"))
+        {
+            var targetDllPath = Path.Combine(
+                targetDirectory,
+                Path.GetFileName(sourceDllPath));
+
+            if (string.Equals(
+                    Path.GetFullPath(sourceDllPath),
+                    Path.GetFullPath(targetDllPath),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            File.Copy(sourceDllPath, targetDllPath, overwrite: true);
+        }
     }
 }

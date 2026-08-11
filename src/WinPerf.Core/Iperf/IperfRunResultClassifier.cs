@@ -2,6 +2,8 @@ namespace WinPerf.Core.Iperf;
 
 public static class IperfRunResultClassifier
 {
+    private const int WindowsStatusDllNotFound = unchecked((int)0xC0000135);
+
     public static IperfRunOutcome Classify(
         IperfEngine engine,
         IperfRunResult result,
@@ -11,6 +13,13 @@ public static class IperfRunResultClassifier
 
         if (result.ExitCode != 0)
         {
+            if (result.ExitCode == WindowsStatusDllNotFound)
+            {
+                return new IperfRunOutcome(
+                    IperfRunOutcomeKind.Failed,
+                    "Test failed: the iperf executable could not start because a required Windows DLL is missing. Re-import the portable engine from its full folder so WinPerf can copy the companion .dll files.");
+            }
+
             return new IperfRunOutcome(
                 IperfRunOutcomeKind.Failed,
                 $"Test failed: process exited with code {result.ExitCode}.");

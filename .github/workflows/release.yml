@@ -31,7 +31,7 @@ jobs:
           dotnet publish src/WinPerf.App/WinPerf.App.csproj \
             --configuration Release \
             --runtime win-x64 \
-            --self-contained false \
+            --self-contained true \
             --output artifacts/publish/WinPerf-win-x64
 
       - name: Package release ZIP

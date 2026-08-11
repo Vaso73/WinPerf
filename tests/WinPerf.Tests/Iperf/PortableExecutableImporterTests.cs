@@ -5,7 +5,7 @@ namespace WinPerf.Tests.Iperf;
 public sealed class PortableExecutableImporterTests
 {
     [Fact]
-    public void Import_CopiesOnlySelectedExecutableToCanonicalTarget()
+    public void Import_CopiesSelectedExecutableAndSiblingDllsToCanonicalTarget()
     {
         var root = CreateTemporaryDirectory();
 
@@ -16,19 +16,25 @@ public sealed class PortableExecutableImporterTests
             Directory.CreateDirectory(sourceDirectory);
 
             var source = Path.Combine(sourceDirectory, "iperf-2.2.1-win64.exe");
-            var unrelated = Path.Combine(sourceDirectory, "unrelated.dll");
+            var dependency = Path.Combine(sourceDirectory, "cygwin1.dll");
+            var unrelated = Path.Combine(sourceDirectory, "readme.txt");
             var target = Path.Combine(targetDirectory, "iperf.exe");
 
             File.WriteAllText(source, "selected executable");
-            File.WriteAllText(unrelated, "must not be copied");
+            File.WriteAllText(dependency, "runtime dependency");
+            File.WriteAllText(unrelated, "not a runtime dependency");
 
             var imported = PortableExecutableImporter.Import(source, target);
 
             Assert.Equal(Path.GetFullPath(target), imported);
             Assert.Equal("selected executable", File.ReadAllText(target));
-            Assert.False(File.Exists(Path.Combine(targetDirectory, "unrelated.dll")));
+            Assert.Equal(
+                "runtime dependency",
+                File.ReadAllText(Path.Combine(targetDirectory, "cygwin1.dll")));
+            Assert.False(File.Exists(Path.Combine(targetDirectory, "readme.txt")));
             Assert.Equal("selected executable", File.ReadAllText(source));
-            Assert.Equal("must not be copied", File.ReadAllText(unrelated));
+            Assert.Equal("runtime dependency", File.ReadAllText(dependency));
+            Assert.Equal("not a runtime dependency", File.ReadAllText(unrelated));
         }
         finally
         {
