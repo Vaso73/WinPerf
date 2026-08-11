@@ -6,8 +6,8 @@
         Icon="Assets/WinPerf.ico"
         Width="1080"
         Height="720"
-        MinWidth="820"
-        MinHeight="560"
+        MinWidth="760"
+        MinHeight="520"
         Background="{StaticResource Bg}"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
@@ -237,7 +237,7 @@
 
         <Grid x:Name="DashboardBodyGrid" Grid.Row="1">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="LeftRailColumn" Width="410" MinWidth="320" MaxWidth="560" />
+            <ColumnDefinition x:Name="LeftRailColumn" Width="360" MinWidth="280" MaxWidth="500" />
             <ColumnDefinition Width="8" />
             <ColumnDefinition Width="*" MinWidth="520" />
         </Grid.ColumnDefinitions>
@@ -271,48 +271,24 @@
                     </Border>
 
                     <StackPanel x:Name="AppMenuSection" Margin="0,10,0,8">
-                        <TextBlock Text="App"
-                                   Foreground="{StaticResource TextMuted}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,0,8" />
-
-                        <Button x:Name="SettingsButton"
-                                Content="Settings"
+                        <Button x:Name="AppMenuButton"
+                                Content="App ▾"
                                 Style="{StaticResource SidebarAppButton}"
-                                ToolTip="Open Settings"
-                                Click="SettingsButton_Click" />
-
-                        <Button x:Name="UpdatesButton"
-                                Content="Sponsor Pro / Updates"
-                                Style="{StaticResource SidebarAppButton}"
-                                ToolTip="Open Sponsor Pro and update status"
-                                Click="UpdatesButton_Click" />
-
-                        <Button x:Name="AboutButton"
-                                Content="About WinPerf"
-                                Style="{StaticResource SidebarAppButton}"
-                                ToolTip="Open app information"
-                                Click="AboutButton_Click" />
-
-                        <Button x:Name="UiDensityButton"
-                                Content="UI: Compact ▾"
-                                Style="{StaticResource SidebarAppButton}"
-                                ToolTip="Choose UI density"
-                                Click="UiDensityButton_Click">
+                                ToolTip="Open app settings, updates and information"
+                                Click="AppMenuButton_Click">
                             <Button.ContextMenu>
-                                <ContextMenu x:Name="UiDensityContextMenu"
-                                             Width="112"
-                                             Padding="2"
+                                <ContextMenu x:Name="AppContextMenu"
+                                             Width="210"
+                                             Padding="4"
                                              Background="{StaticResource PanelSoft}"
                                              BorderBrush="{StaticResource BorderSoft}"
                                              BorderThickness="1">
                                     <ContextMenu.Resources>
                                         <Style TargetType="{x:Type MenuItem}">
-                                            <Setter Property="FontSize" Value="11" />
+                                            <Setter Property="FontSize" Value="12" />
                                             <Setter Property="FontWeight" Value="SemiBold" />
-                                            <Setter Property="MinHeight" Value="22" />
-                                            <Setter Property="Padding" Value="4,2" />
+                                            <Setter Property="MinHeight" Value="28" />
+                                            <Setter Property="Padding" Value="10,4" />
                                             <Setter Property="Foreground" Value="{StaticResource TextMain}" />
                                             <Setter Property="Template">
                                                 <Setter.Value>
@@ -343,12 +319,15 @@
                                             </Setter>
                                         </Style>
                                     </ContextMenu.Resources>
-                                    <MenuItem x:Name="CompactUiDensityMenuItem"
-                                              Header="Compact"
-                                              Click="CompactUiDensityMenuItem_Click" />
-                                    <MenuItem x:Name="ComfortableUiDensityMenuItem"
-                                              Header="Comfortable"
-                                              Click="ComfortableUiDensityMenuItem_Click" />
+                                    <MenuItem x:Name="SettingsMenuItem"
+                                              Header="Settings"
+                                              Click="SettingsMenuItem_Click" />
+                                    <MenuItem x:Name="UpdatesMenuItem"
+                                              Header="Sponsor Pro / Updates"
+                                              Click="UpdatesMenuItem_Click" />
+                                    <MenuItem x:Name="AboutMenuItem"
+                                              Header="About WinPerf"
+                                              Click="AboutMenuItem_Click" />
                                 </ContextMenu>
                             </Button.ContextMenu>
                         </Button>
@@ -708,7 +687,7 @@
                       ShowsPreview="True"
                       ToolTip="Drag to resize left panel" />
 
-        <Grid x:Name="DashboardContentPanel" Grid.Column="2" Margin="26">
+        <Grid x:Name="DashboardContentPanel" Grid.Column="2" Margin="18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -731,10 +710,10 @@
                   Grid.Row="1"
                   Margin="0">
                     <Grid.RowDefinitions>
-                        <RowDefinition x:Name="MetricsRow" Height="170" />
-                        <RowDefinition x:Name="LiveThroughputRow" Height="*" MinHeight="220" />
+                        <RowDefinition x:Name="MetricsRow" Height="150" />
+                        <RowDefinition x:Name="LiveThroughputRow" Height="*" MinHeight="180" />
                         <RowDefinition Height="14" />
-                        <RowDefinition x:Name="EngineOutputRow" Height="150" MinHeight="95" />
+                        <RowDefinition x:Name="EngineOutputRow" Height="120" MinHeight="80" />
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0">

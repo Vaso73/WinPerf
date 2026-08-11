@@ -1,6 +1,6 @@
 namespace WinPerf.Tests;
 
-public sealed class CompactUiDensityTests
+public sealed class UnifiedCompactLayoutTests
 {
     private static string ReadXaml(string fileName)
     {
@@ -15,8 +15,13 @@ public sealed class CompactUiDensityTests
 
         Assert.Contains("Width=\"1080\"", xaml);
         Assert.Contains("Height=\"720\"", xaml);
-        Assert.Contains("MinWidth=\"820\"", xaml);
-        Assert.Contains("MinHeight=\"560\"", xaml);
+        Assert.Contains("MinWidth=\"760\"", xaml);
+        Assert.Contains("MinHeight=\"520\"", xaml);
+        Assert.Contains("x:Name=\"LeftRailColumn\" Width=\"360\" MinWidth=\"280\" MaxWidth=\"500\"", xaml);
+        Assert.Contains("x:Name=\"DashboardContentPanel\" Grid.Column=\"2\" Margin=\"18\"", xaml);
+        Assert.Contains("x:Name=\"MetricsRow\" Height=\"150\"", xaml);
+        Assert.Contains("x:Name=\"LiveThroughputRow\" Height=\"*\" MinHeight=\"180\"", xaml);
+        Assert.Contains("x:Name=\"EngineOutputRow\" Height=\"120\" MinHeight=\"80\"", xaml);
     }
 
     [Fact]
@@ -38,10 +43,10 @@ public sealed class CompactUiDensityTests
         Assert.Contains("MinWidth=\"640\"", custom);
         Assert.Contains("MinHeight=\"440\"", custom);
 
-        Assert.Contains("Width=\"820\"", settings);
-        Assert.Contains("Height=\"540\"", settings);
-        Assert.Contains("MinWidth=\"700\"", settings);
-        Assert.Contains("MinHeight=\"500\"", settings);
+        Assert.Contains("Width=\"720\"", settings);
+        Assert.Contains("Height=\"460\"", settings);
+        Assert.Contains("MinWidth=\"660\"", settings);
+        Assert.Contains("MinHeight=\"420\"", settings);
 
         Assert.Contains("Width=\"620\"", about);
         Assert.Contains("Height=\"500\"", about);
@@ -71,5 +76,23 @@ public sealed class CompactUiDensityTests
         Assert.DoesNotContain("Width=\"46\"", combined);
         Assert.Contains("CaptionHeight=\"38\"", combined);
         Assert.Contains("Width=\"40\"", combined);
+    }
+
+    [Fact]
+    public void MainWindow_UsesOneCleanAppMenuWithoutUiDensityChoices()
+    {
+        var xaml = ReadXaml("MainWindow.xaml");
+
+        Assert.Contains("x:Name=\"AppMenuButton\"", xaml);
+        Assert.Contains("Content=\"App ▾\"", xaml);
+        Assert.Contains("x:Name=\"AppContextMenu\"", xaml);
+        Assert.Contains("x:Name=\"SettingsMenuItem\"", xaml);
+        Assert.Contains("x:Name=\"UpdatesMenuItem\"", xaml);
+        Assert.Contains("x:Name=\"AboutMenuItem\"", xaml);
+        Assert.DoesNotContain("UiDensityButton", xaml);
+        Assert.DoesNotContain("CompactUiDensityMenuItem", xaml);
+        Assert.DoesNotContain("ComfortableUiDensityMenuItem", xaml);
+        Assert.DoesNotContain("UI: Compact", xaml);
+        Assert.DoesNotContain("UI: Comfortable", xaml);
     }
 }

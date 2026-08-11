@@ -31,15 +31,18 @@ public sealed class DashboardControlLayoutPolishTests
     }
 
     [Fact]
-    public void AppMenu_UsesDensityDropdown()
+    public void AppMenu_UsesSingleDropdownForAppActions()
     {
         Assert.Contains("x:Name=\"AppMenuSection\"", MainWindowXaml);
-        Assert.Contains("x:Name=\"UiDensityButton\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"AppMenuButton\"", MainWindowXaml);
         Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", MainWindowXaml);
-        Assert.Contains("x:Name=\"CompactUiDensityMenuItem\"", MainWindowXaml);
-        Assert.Contains("x:Name=\"ComfortableUiDensityMenuItem\"", MainWindowXaml);
-        Assert.Contains("UpdateUiDensityMenuUx(isCompact);", MainWindowSource);
-        Assert.DoesNotMatch("x:Name=\\\"UiDensityButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"AppContextMenu\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"SettingsMenuItem\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"UpdatesMenuItem\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"AboutMenuItem\"", MainWindowXaml);
+        Assert.Contains("private void AppMenuButton_Click", MainWindowSource);
+        Assert.DoesNotContain("UiDensityButton", MainWindowXaml);
+        Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", MainWindowXaml);
     }
 
     [Fact]

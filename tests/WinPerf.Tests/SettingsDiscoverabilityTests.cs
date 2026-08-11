@@ -15,28 +15,32 @@ public sealed class SettingsDiscoverabilityTests
         var xaml = File.ReadAllText(MainWindowXamlPath);
 
         Assert.Contains("x:Name=\"AppMenuSection\"", xaml);
-        Assert.Contains("x:Name=\"SettingsButton\"", xaml);
-        Assert.Contains("Content=\"Settings\"", xaml);
-        Assert.Contains("Content=\"Sponsor Pro / Updates\"", xaml);
-        Assert.Contains("Content=\"About WinPerf\"", xaml);
-        Assert.Contains("Content=\"UI: Compact ▾\"", xaml);
+        Assert.Contains("x:Name=\"AppMenuButton\"", xaml);
+        Assert.Contains("Content=\"App ▾\"", xaml);
+        Assert.Contains("x:Name=\"AppContextMenu\"", xaml);
+        Assert.Contains("x:Name=\"SettingsMenuItem\"", xaml);
+        Assert.Contains("Header=\"Settings\"", xaml);
+        Assert.Contains("Header=\"Sponsor Pro / Updates\"", xaml);
+        Assert.Contains("Header=\"About WinPerf\"", xaml);
         Assert.Contains("Style=\"{StaticResource SidebarAppButton}\"", xaml);
-        Assert.Contains("ToolTip=\"Open Settings\"", xaml);
-        Assert.Contains("Click=\"SettingsButton_Click\"", xaml);
+        Assert.Contains("ToolTip=\"Open app settings, updates and information\"", xaml);
+        Assert.Contains("Click=\"AppMenuButton_Click\"", xaml);
         Assert.Contains("x:Name=\"CompactIntegrationsCard\"", xaml);
+        Assert.DoesNotContain("UiDensityButton", xaml);
+        Assert.DoesNotContain("UI: Compact", xaml);
 
         var appSection = xaml.IndexOf("x:Name=\"AppMenuSection\"", StringComparison.Ordinal);
-        var settingsButton = xaml.IndexOf("x:Name=\"SettingsButton\"", StringComparison.Ordinal);
+        var appMenuButton = xaml.IndexOf("x:Name=\"AppMenuButton\"", StringComparison.Ordinal);
         var integrationsCard = xaml.IndexOf("x:Name=\"CompactIntegrationsCard\"", StringComparison.Ordinal);
         var configColumn = xaml.IndexOf("x:Name=\"ConfigColumn\"", StringComparison.Ordinal);
 
         Assert.True(appSection >= 0);
-        Assert.True(settingsButton >= 0);
-        Assert.True(settingsButton > appSection);
-        Assert.True(integrationsCard > settingsButton);
+        Assert.True(appMenuButton >= 0);
+        Assert.True(appMenuButton > appSection);
+        Assert.True(integrationsCard > appMenuButton);
         Assert.True(configColumn > integrationsCard);
-        Assert.DoesNotMatch("x:Name=\\\"SettingsButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", xaml);
-        Assert.DoesNotMatch("x:Name=\\\"SettingsButton\\\"[\\s\\S]{0,220}Style=\\\"\\{StaticResource StatusPillButton\\}\\\"", xaml);
+        Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}DockPanel.Dock=\\\"Right\\\"", xaml);
+        Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}Style=\\\"\\{StaticResource StatusPillButton\\}\\\"", xaml);
     }
 
     [Fact]
@@ -44,23 +48,25 @@ public sealed class SettingsDiscoverabilityTests
     {
         var code = File.ReadAllText(MainWindowCodePath);
 
-        var settingsButtonHandler = code.IndexOf("private void SettingsButton_Click", StringComparison.Ordinal);
-        var updatesButtonHandler = code.IndexOf("private void UpdatesButton_Click", StringComparison.Ordinal);
-        var aboutButtonHandler = code.IndexOf("private void AboutButton_Click", StringComparison.Ordinal);
+        var appMenuHandler = code.IndexOf("private void AppMenuButton_Click", StringComparison.Ordinal);
+        var settingsItemHandler = code.IndexOf("private void SettingsMenuItem_Click", StringComparison.Ordinal);
+        var updatesItemHandler = code.IndexOf("private void UpdatesMenuItem_Click", StringComparison.Ordinal);
+        var aboutItemHandler = code.IndexOf("private void AboutMenuItem_Click", StringComparison.Ordinal);
         var sharedHandler = code.IndexOf("private void OpenSettingsWindow", StringComparison.Ordinal);
         var aboutHandler = code.IndexOf("private void OpenAboutWindow", StringComparison.Ordinal);
         var updatesHandler = code.IndexOf("private void OpenSponsorProUpdatesWindow", StringComparison.Ordinal);
 
-        Assert.True(settingsButtonHandler >= 0);
-        Assert.True(updatesButtonHandler > settingsButtonHandler);
-        Assert.True(aboutButtonHandler > updatesButtonHandler);
-        Assert.True(sharedHandler > aboutButtonHandler);
+        Assert.True(appMenuHandler >= 0);
+        Assert.True(settingsItemHandler > appMenuHandler);
+        Assert.True(updatesItemHandler > settingsItemHandler);
+        Assert.True(aboutItemHandler > updatesItemHandler);
+        Assert.True(sharedHandler > aboutItemHandler);
         Assert.True(aboutHandler > sharedHandler);
         Assert.True(updatesHandler > aboutHandler);
 
-        Assert.True(code.IndexOf("OpenSettingsWindow();", settingsButtonHandler, StringComparison.Ordinal) > settingsButtonHandler);
-        Assert.True(code.IndexOf("OpenSponsorProUpdatesWindow();", updatesButtonHandler, StringComparison.Ordinal) > updatesButtonHandler);
-        Assert.True(code.IndexOf("OpenAboutWindow();", aboutButtonHandler, StringComparison.Ordinal) > aboutButtonHandler);
+        Assert.True(code.IndexOf("OpenSettingsWindow();", settingsItemHandler, StringComparison.Ordinal) > settingsItemHandler);
+        Assert.True(code.IndexOf("OpenSponsorProUpdatesWindow();", updatesItemHandler, StringComparison.Ordinal) > updatesItemHandler);
+        Assert.True(code.IndexOf("OpenAboutWindow();", aboutItemHandler, StringComparison.Ordinal) > aboutItemHandler);
         Assert.Contains("new SponsorProUpdatesWindow(ResolveAppVersionText())", code);
         Assert.Contains("new AboutWindow(ResolveAppVersionText())", code);
         Assert.DoesNotContain("EngineStatusText_MouseLeftButtonUp", code);
@@ -71,12 +77,12 @@ public sealed class SettingsDiscoverabilityTests
     {
         var xaml = File.ReadAllText(SettingsWindowXamlPath);
 
-        Assert.Contains("<ColumnDefinition Width=\"180\" />", SliceAround(xaml, "Portable data folder"));
-        Assert.Contains("<ColumnDefinition Width=\"180\" />", SliceAround(xaml, "Portable iperf3 engine folder"));
-        Assert.Contains("<ColumnDefinition Width=\"180\" />", SliceAround(xaml, "Portable iperf2 engine folder"));
-        Assert.Contains("Content=\"Open data folder\"", xaml);
-        Assert.Contains("Content=\"Open iperf3 folder\"", xaml);
-        Assert.Contains("Content=\"Open iperf2 folder\"", xaml);
+        Assert.Contains("<ColumnDefinition Width=\"120\" />", SliceAround(xaml, "Portable data folder"));
+        Assert.Contains("<ColumnDefinition Width=\"120\" />", SliceAround(xaml, "Portable iperf3 engine folder"));
+        Assert.Contains("<ColumnDefinition Width=\"120\" />", SliceAround(xaml, "Portable iperf2 engine folder"));
+        Assert.Contains("Content=\"Open data\"", xaml);
+        Assert.Contains("Content=\"Open iperf3\"", xaml);
+        Assert.Contains("Content=\"Open iperf2\"", xaml);
     }
 
     private static string SliceAround(string text, string marker)

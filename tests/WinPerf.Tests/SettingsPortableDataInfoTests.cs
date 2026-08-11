@@ -16,7 +16,7 @@ public sealed class SettingsPortableDataInfoTests
         Assert.Contains("Portable data folder", xaml);
         Assert.Contains("x:Name=\"DataDirectoryText\"", xaml);
         Assert.Contains("x:Name=\"OpenDataDirectoryButton\"", xaml);
-        Assert.Contains("Content=\"Open data folder\"", xaml);
+        Assert.Contains("Content=\"Open data\"", xaml);
         Assert.Contains("Click=\"OpenDataDirectoryButton_Click\"", xaml);
     }
 

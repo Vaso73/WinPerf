@@ -44,8 +44,6 @@ public partial class MainWindow : Window
 
     private const string AdvancedCommandOverrideSource = "Advanced";
     private const string CustomCommandOverrideSource = "Custom";
-    private const string UiDensityComfortable = "Comfortable";
-    private const string UiDensityCompact = "Compact";
     private const int MaxRecentServers = 20;
     private const int MaxThroughputSamples = 60;
 
@@ -59,8 +57,8 @@ public partial class MainWindow : Window
         RefreshEngineStatus();
         RefreshIntegrationStatus();
         PopulateRecentServers();
+        ApplyUnifiedCompactLayout();
         ApplyDashboardLayout();
-        ApplyUiDensity(resizeWindow: false);
         UpdateUdpBandwidthVisibility();
         UpdateCommandOverrideUx();
         UpdateDashboardCommandPreview();
@@ -235,17 +233,28 @@ public partial class MainWindow : Window
         _currentRunCancellation?.Cancel();
     }
 
-    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    private void AppMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (AppMenuButton.ContextMenu is null)
+        {
+            return;
+        }
+
+        AppMenuButton.ContextMenu.PlacementTarget = AppMenuButton;
+        AppMenuButton.ContextMenu.IsOpen = true;
+    }
+
+    private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
     {
         OpenSettingsWindow();
     }
 
-    private void UpdatesButton_Click(object sender, RoutedEventArgs e)
+    private void UpdatesMenuItem_Click(object sender, RoutedEventArgs e)
     {
         OpenSponsorProUpdatesWindow();
     }
 
-    private void AboutButton_Click(object sender, RoutedEventArgs e)
+    private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
     {
         OpenAboutWindow();
     }
@@ -311,40 +320,60 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ApplyUnifiedCompactLayout()
+    {
+        LeftRailColumn.MinWidth = 280;
+        LeftRailColumn.MaxWidth = 500;
+
+        if (GetSavedDashboardLeftRailWidth() is not double savedLeftRailWidth)
+        {
+            LeftRailColumn.Width = new GridLength(360);
+        }
+        else
+        {
+            LeftRailColumn.Width = new GridLength(
+                Math.Clamp(savedLeftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
+        }
+
+        DashboardContentPanel.Margin = new Thickness(18);
+        MetricsRow.Height = new GridLength(150);
+        LiveThroughputRow.MinHeight = 180;
+        EngineOutputRow.MinHeight = 80;
+
+        if (GetSavedDashboardEngineOutputHeight() is not double savedEngineOutputHeight)
+        {
+            EngineOutputRow.Height = new GridLength(120);
+        }
+        else
+        {
+            EngineOutputRow.Height = new GridLength(
+                Math.Max(EngineOutputRow.MinHeight, savedEngineOutputHeight));
+        }
+
+        MinWidth = 760;
+        MinHeight = 520;
+    }
+
     private double? GetSavedDashboardEngineOutputHeight()
     {
-        return IsCompactUiDensity()
-            ? _settings.CompactDashboardEngineOutputHeight ?? _settings.DashboardEngineOutputHeight
-            : _settings.ComfortableDashboardEngineOutputHeight ?? _settings.DashboardEngineOutputHeight;
+        return _settings.CompactDashboardEngineOutputHeight ?? _settings.DashboardEngineOutputHeight;
     }
 
     private double? GetSavedDashboardLeftRailWidth()
     {
-        return IsCompactUiDensity()
-            ? _settings.CompactDashboardLeftRailWidth ?? _settings.DashboardLeftRailWidth
-            : _settings.ComfortableDashboardLeftRailWidth ?? _settings.DashboardLeftRailWidth;
+        return _settings.CompactDashboardLeftRailWidth ?? _settings.DashboardLeftRailWidth;
     }
 
     private void SetSavedDashboardEngineOutputHeight(double height)
     {
-        if (IsCompactUiDensity())
-        {
-            _settings.CompactDashboardEngineOutputHeight = height;
-            return;
-        }
-
-        _settings.ComfortableDashboardEngineOutputHeight = height;
+        _settings.CompactDashboardEngineOutputHeight = height;
+        _settings.DashboardEngineOutputHeight = height;
     }
 
     private void SetSavedDashboardLeftRailWidth(double width)
     {
-        if (IsCompactUiDensity())
-        {
-            _settings.CompactDashboardLeftRailWidth = width;
-            return;
-        }
-
-        _settings.ComfortableDashboardLeftRailWidth = width;
+        _settings.CompactDashboardLeftRailWidth = width;
+        _settings.DashboardLeftRailWidth = width;
     }
 
     private void SaveDashboardLayout()
@@ -549,159 +578,6 @@ public partial class MainWindow : Window
             IperfMode.UdpDownload => "UDP Download",
             _ => mode.ToString()
         };
-    }
-
-    private void UiDensityButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (UiDensityButton.ContextMenu is null)
-        {
-            return;
-        }
-
-        UiDensityButton.ContextMenu.PlacementTarget = UiDensityButton;
-        UiDensityButton.ContextMenu.IsOpen = true;
-    }
-
-    private void CompactUiDensityMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        SetUiDensity(UiDensityCompact);
-    }
-
-    private void ComfortableUiDensityMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        SetUiDensity(UiDensityComfortable);
-    }
-
-    private void SetUiDensity(string density)
-    {
-        density = NormalizeUiDensity(density);
-
-        if (string.Equals(NormalizeUiDensity(_settings.UiDensity), density, StringComparison.Ordinal))
-        {
-            UpdateUiDensityMenuUx(
-                string.Equals(density, UiDensityCompact, StringComparison.Ordinal));
-            return;
-        }
-
-        CaptureDashboardLayout();
-
-        _settings.UiDensity = density;
-        ApplyUiDensity(resizeWindow: false);
-        _settingsStore.Save(_settings);
-    }
-
-    private bool IsCompactUiDensity()
-    {
-        return string.Equals(
-            NormalizeUiDensity(_settings.UiDensity),
-            UiDensityCompact,
-            StringComparison.Ordinal);
-    }
-
-    private void ApplyUiDensity(bool resizeWindow)
-    {
-        var density = NormalizeUiDensity(_settings.UiDensity);
-        _settings.UiDensity = density;
-
-        var isCompact = string.Equals(density, UiDensityCompact, StringComparison.Ordinal);
-        var scale = isCompact ? 0.92 : 1.0;
-
-        DashboardBodyGrid.LayoutTransform = isCompact
-            ? new ScaleTransform(scale, scale)
-            : null;
-
-        LeftRailColumn.MinWidth = isCompact ? 280 : 320;
-        LeftRailColumn.MaxWidth = isCompact ? 500 : 560;
-
-        var leftRailTarget = isCompact ? 360 : 410;
-        var leftRailWidth = LeftRailColumn.Width.IsAbsolute
-            ? LeftRailColumn.Width.Value
-            : leftRailTarget;
-
-        if (isCompact)
-        {
-            leftRailWidth = Math.Min(leftRailWidth, leftRailTarget);
-        }
-        else if (leftRailWidth < 380)
-        {
-            leftRailWidth = leftRailTarget;
-        }
-
-        if (GetSavedDashboardLeftRailWidth() is not double savedLeftRailWidth)
-        {
-            LeftRailColumn.Width = new GridLength(
-                Math.Clamp(leftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
-        }
-        else
-        {
-            LeftRailColumn.Width = new GridLength(
-                Math.Clamp(savedLeftRailWidth, LeftRailColumn.MinWidth, LeftRailColumn.MaxWidth));
-        }
-
-        DashboardContentPanel.Margin = isCompact
-            ? new Thickness(18)
-            : new Thickness(26);
-
-        MetricsRow.Height = new GridLength(isCompact ? 150 : 170);
-        LiveThroughputRow.MinHeight = isCompact ? 180 : 220;
-        EngineOutputRow.MinHeight = isCompact ? 80 : 95;
-
-        if (GetSavedDashboardEngineOutputHeight() is not double savedEngineOutputHeight)
-        {
-            EngineOutputRow.Height = new GridLength(isCompact ? 120 : 150);
-        }
-        else
-        {
-            EngineOutputRow.Height = new GridLength(
-                Math.Max(EngineOutputRow.MinHeight, savedEngineOutputHeight));
-        }
-
-        MinWidth = isCompact ? 760 : 820;
-        MinHeight = isCompact ? 520 : 560;
-
-        UpdateUiDensityMenuUx(isCompact);
-
-        if (resizeWindow && WindowState == WindowState.Normal)
-        {
-            Width = Math.Max(Width, MinWidth);
-            Height = Math.Max(Height, MinHeight);
-        }
-
-        RenderThroughputChart();
-    }
-
-    private void UpdateUiDensityMenuUx(bool isCompact)
-    {
-        UiDensityButton.Content = isCompact
-            ? "UI: Compact ▾"
-            : "UI: Comfortable ▾";
-
-        UiDensityButton.ToolTip = isCompact
-            ? "Active UI density: Compact. Click to choose UI density."
-            : "Active UI density: Comfortable. Click to choose UI density.";
-
-        ApplyUiDensityMenuItemState(CompactUiDensityMenuItem, isCompact, "Compact");
-        ApplyUiDensityMenuItemState(ComfortableUiDensityMenuItem, !isCompact, "Comfortable");
-    }
-
-    private void ApplyUiDensityMenuItemState(MenuItem menuItem, bool isActive, string label)
-    {
-        menuItem.IsCheckable = false;
-        menuItem.IsChecked = false;
-        menuItem.Header = isActive
-            ? $"✓ {label}"
-            : label;
-
-        menuItem.Foreground = FindResource(isActive ? "AccentGreen" : "TextMain") as Brush ?? Brushes.White;
-        menuItem.FontWeight = isActive ? FontWeights.Bold : FontWeights.SemiBold;
-        menuItem.Opacity = isActive ? 1.0 : 0.78;
-    }
-
-    private static string NormalizeUiDensity(string? value)
-    {
-        return string.Equals(value, UiDensityComfortable, StringComparison.OrdinalIgnoreCase)
-            ? UiDensityComfortable
-            : UiDensityCompact;
     }
 
     private static string ResolveAppVersionText()

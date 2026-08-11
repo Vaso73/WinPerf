@@ -30,6 +30,7 @@ public sealed class ButtonChromeStyleTests
         Assert.Contains("x:Key=\"SidebarAppButton\"", MainWindowXaml);
         Assert.Contains("BasedOn=\"{StaticResource SecondaryButton}\"", MainWindowXaml);
         Assert.Contains("Property=\"MinHeight\" Value=\"30\"", MainWindowXaml);
-        Assert.DoesNotMatch("x:Name=\\\"SettingsButton\\\"[\\s\\S]{0,220}Background=\\\"#172A44\\\"", MainWindowXaml);
+        Assert.Contains("x:Name=\"AppMenuButton\"", MainWindowXaml);
+        Assert.DoesNotMatch("x:Name=\\\"AppMenuButton\\\"[\\s\\S]{0,220}Background=\\\"#172A44\\\"", MainWindowXaml);
     }
 }
