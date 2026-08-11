@@ -18,6 +18,7 @@ public partial class AdvancedCommandWindow : Window
     {
         InitializeComponent();
         WindowPlacementStore.Track(this, "AdvancedCommandWindow");
+        AppText.ApplyTo(this);
     }
 
     public string CommandText => PreviewBox.Text.Trim();
@@ -45,12 +46,11 @@ public partial class AdvancedCommandWindow : Window
         var validation = ValidateOptions();
         if (string.IsNullOrWhiteSpace(CommandText) || !string.IsNullOrWhiteSpace(validation))
         {
-            MessageBox.Show(
+            ConfirmDialogWindow.ShowMessage(
                 this,
-                validation ?? "Fix the advanced command options first.",
                 "WinPerf",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                validation ?? AppText.T("Fix the advanced command options first."),
+                "OK");
             return;
         }
 
@@ -164,12 +164,11 @@ public partial class AdvancedCommandWindow : Window
     {
         if (ProfileBox.SelectedItem is not SavedIperfProfile selectedProfile)
         {
-            MessageBox.Show(
+            ConfirmDialogWindow.ShowMessage(
                 this,
-                "Select a profile first.",
                 "WinPerf",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                AppText.T("Select a profile first."),
+                "OK");
             return;
         }
 
@@ -186,23 +185,21 @@ public partial class AdvancedCommandWindow : Window
     {
         if (ProfileBox.SelectedItem is not SavedIperfProfile selectedProfile)
         {
-            MessageBox.Show(
+            ConfirmDialogWindow.ShowMessage(
                 this,
-                "Select a profile first.",
                 "WinPerf",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                AppText.T("Select a profile first."),
+                "OK");
             return;
         }
 
-        var confirm = MessageBox.Show(
+        var confirm = ConfirmDialogWindow.Confirm(
             this,
-            $"Delete profile '{selectedProfile.Name}'?",
-            "WinPerf",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            AppText.T("Delete profile?"),
+            AppText.F("Delete profile '{0}'?", selectedProfile.Name),
+            "Delete");
 
-        if (confirm != MessageBoxResult.Yes)
+        if (!confirm)
         {
             return;
         }
@@ -295,12 +292,11 @@ public partial class AdvancedCommandWindow : Window
 
             if (showMessageOnError)
             {
-                MessageBox.Show(
+                ConfirmDialogWindow.ShowMessage(
                     this,
-                    $"Profile save failed:{Environment.NewLine}{ex.Message}",
                     "WinPerf",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    $"{AppText.T("Profile save failed:")}{Environment.NewLine}{ex.Message}",
+                    "OK");
             }
 
             return false;
@@ -342,12 +338,11 @@ public partial class AdvancedCommandWindow : Window
         var validation = ValidateOptions();
         if (!string.IsNullOrWhiteSpace(validation))
         {
-            MessageBox.Show(
+            ConfirmDialogWindow.ShowMessage(
                 this,
-                validation,
                 "WinPerf",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                validation,
+                "OK");
             return false;
         }
 
@@ -358,12 +353,11 @@ public partial class AdvancedCommandWindow : Window
 
             if (profileErrors.Count > 0)
             {
-                MessageBox.Show(
+                ConfirmDialogWindow.ShowMessage(
                     this,
-                    string.Join(Environment.NewLine, profileErrors),
                     "WinPerf",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    string.Join(Environment.NewLine, profileErrors),
+                    "OK");
                 return false;
             }
 
@@ -371,12 +365,11 @@ public partial class AdvancedCommandWindow : Window
         }
         catch (Exception ex) when (ex is FormatException or OverflowException)
         {
-            MessageBox.Show(
+            ConfirmDialogWindow.ShowMessage(
                 this,
-                $"Profile values are invalid:{Environment.NewLine}{ex.Message}",
                 "WinPerf",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                $"{AppText.T("Profile values are invalid:")}{Environment.NewLine}{ex.Message}",
+                "OK");
             return false;
         }
     }
@@ -512,7 +505,7 @@ public partial class AdvancedCommandWindow : Window
         var args = BuildArguments();
 
         PreviewBox.Text = string.Join(" ", args.Select(QuoteIfNeeded));
-        ValidationText.Text = "Ready";
+        ValidationText.Text = AppText.T("Ready");
         ValidationText.Foreground = (System.Windows.Media.Brush)FindResource("AccentGreen");
     }
 

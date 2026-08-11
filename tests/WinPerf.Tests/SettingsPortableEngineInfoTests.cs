@@ -50,10 +50,10 @@ public sealed class SettingsPortableEngineInfoTests
         Assert.Contains("PortableIperf2EngineDirectoryText.Text = PortableIperf2EngineDirectory;", code);
 
         Assert.Contains("private void OpenPortableEngineDirectoryButton_Click", code);
-        Assert.Contains("OpenDirectory(PortableIperf3EngineDirectory, \"portable iperf3 engine folder\");", code);
+        Assert.Contains("OpenDirectory(PortableIperf3EngineDirectory, AppText.T(\"portable iperf3 engine folder\"));", code);
 
         Assert.Contains("private void OpenPortableIperf2EngineDirectoryButton_Click", code);
-        Assert.Contains("OpenDirectory(PortableIperf2EngineDirectory, \"portable iperf2 engine folder\");", code);
+        Assert.Contains("OpenDirectory(PortableIperf2EngineDirectory, AppText.T(\"portable iperf2 engine folder\"));", code);
 
         Assert.Contains("Directory.CreateDirectory(directory);", code);
         Assert.Contains("FileName = directory", code);

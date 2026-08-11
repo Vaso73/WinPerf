@@ -62,6 +62,8 @@ public partial class MainWindow : Window
         WindowPlacementStore.Track(this, "MainWindow");
 
         _settings = _settingsStore.Load();
+        AppText.Initialize(AppContext.BaseDirectory, _settings.LanguageCode);
+        ApplyLocalization();
         RefreshEngineStatus();
         RefreshIntegrationStatus();
         PopulateRecentServers();
@@ -331,20 +333,73 @@ public partial class MainWindow : Window
 
     private void OpenSettingsWindow()
     {
-        var dialog = new SettingsWindow(_settings.IperfExecutablePath, _settings.Iperf2ExecutablePath, AppContext.BaseDirectory)
+        var originalSettings = CloneSettings(_settings);
+        var dialog = new SettingsWindow(
+            _settings.IperfExecutablePath,
+            _settings.Iperf2ExecutablePath,
+            AppContext.BaseDirectory,
+            _settings.LanguageCode)
         {
             Owner = this
         };
 
+        dialog.Applied += (_, args) =>
+        {
+            ApplyRuntimeSettings(
+                args.IperfExecutablePath,
+                args.Iperf2ExecutablePath,
+                args.LanguageCode);
+        };
+
         if (dialog.ShowDialog() == true)
         {
-            _settings.IperfExecutablePath = dialog.IperfExecutablePath;
-            _settings.Iperf2ExecutablePath = dialog.Iperf2ExecutablePath;
+            ApplyRuntimeSettings(
+                dialog.IperfExecutablePath,
+                dialog.Iperf2ExecutablePath,
+                dialog.SelectedLanguageCode);
             _settingsStore.Save(_settings);
+        }
+        else
+        {
+            _settings = originalSettings;
+            AppText.UseLanguage(_settings.LanguageCode);
+            ApplyLocalization();
             RefreshEngineStatus();
             RefreshIntegrationStatus();
             UpdateDashboardCommandPreview();
         }
+    }
+
+    private void ApplyRuntimeSettings(
+        string? iperfExecutablePath,
+        string? iperf2ExecutablePath,
+        string? languageCode)
+    {
+        _settings.IperfExecutablePath = iperfExecutablePath;
+        _settings.Iperf2ExecutablePath = iperf2ExecutablePath;
+        _settings.LanguageCode = languageCode;
+        AppText.UseLanguage(_settings.LanguageCode);
+        ApplyLocalization();
+        RefreshEngineStatus();
+        RefreshIntegrationStatus();
+        UpdateDashboardCommandPreview();
+        UpdateServerModeCommandPreview();
+    }
+
+    private static WinPerfSettings CloneSettings(WinPerfSettings source)
+    {
+        return new WinPerfSettings
+        {
+            IperfExecutablePath = source.IperfExecutablePath,
+            Iperf2ExecutablePath = source.Iperf2ExecutablePath,
+            SelectedEngine = source.SelectedEngine,
+            LastServer = source.LastServer,
+            RecentServers = [.. source.RecentServers],
+            RecentCustomCommands = [.. source.RecentCustomCommands],
+            LanguageCode = source.LanguageCode,
+            DashboardEngineOutputHeight = source.DashboardEngineOutputHeight,
+            DashboardLeftRailWidth = source.DashboardLeftRailWidth
+        };
     }
 
     private void OpenAboutWindow()
@@ -368,6 +423,11 @@ public partial class MainWindow : Window
         RefreshIntegrationStatus();
     }
 
+    private void ApplyLocalization()
+    {
+        AppText.ApplyTo(this);
+    }
+
     private async void StartServerButton_Click(object sender, RoutedEventArgs e)
     {
         if (_serverRunCancellation is not null)
@@ -382,8 +442,10 @@ public partial class MainWindow : Window
 
             if (!resolution.IsConfigured || string.IsNullOrWhiteSpace(resolution.ExecutablePath))
             {
-                ServerOutputText.Text = $"{GetEngineExecutableDisplayName(options.Engine)} is not configured. Open Settings and select the executable first.";
-                ServerModeStatusText.Text = "Server cannot start: engine missing.";
+                ServerOutputText.Text = AppText.F(
+                    "{0} is not configured. Open Settings and select the executable first.",
+                    GetEngineExecutableDisplayName(options.Engine));
+                ServerModeStatusText.Text = AppText.T("Server cannot start: engine missing.");
                 return;
             }
 
@@ -393,7 +455,7 @@ public partial class MainWindow : Window
             _serverRunCancellation = new CancellationTokenSource();
             _serverOutput.Clear();
             SetServerModeRunState(isRunning: true, options);
-            AppendServerOutput("Running server command:");
+            AppendServerOutput(AppText.T("Running server command:"));
             AppendServerOutput(commandDisplayText);
             AppendServerOutput(string.Empty);
 
@@ -409,28 +471,28 @@ public partial class MainWindow : Window
                 _serverRunCancellation.Token);
 
             AppendServerOutput(string.Empty);
-            AppendServerOutput($"Server process exited with code {result.ExitCode}.");
+            AppendServerOutput(AppText.F("Server process exited with code {0}.", result.ExitCode));
             ServerModeStatusText.Text = result.ExitCode == 0
-                ? "Server stopped."
-                : $"Server stopped with exit code {result.ExitCode}.";
+                ? AppText.T("Server stopped.")
+                : AppText.F("Server stopped with exit code {0}.", result.ExitCode);
         }
         catch (OperationCanceledException)
         {
             AppendServerOutput(string.Empty);
-            AppendServerOutput("Server stopped by user.");
-            ServerModeStatusText.Text = "Server stopped by user.";
+            AppendServerOutput(AppText.T("Server stopped by user."));
+            ServerModeStatusText.Text = AppText.T("Server stopped by user.");
         }
         catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or NotSupportedException)
         {
-            ServerOutputText.Text = "Invalid server configuration:" + Environment.NewLine + ex.Message;
-            ServerModeStatusText.Text = "Server configuration is invalid.";
+            ServerOutputText.Text = AppText.T("Invalid server configuration:") + Environment.NewLine + ex.Message;
+            ServerModeStatusText.Text = AppText.T("Server configuration is invalid.");
         }
         catch (Exception ex)
         {
             AppendServerOutput(string.Empty);
-            AppendServerOutput("Failed to run server:");
+            AppendServerOutput(AppText.T("Failed to run server:"));
             AppendServerOutput(ex.Message);
-            ServerModeStatusText.Text = "Server failed to start or stopped unexpectedly.";
+            ServerModeStatusText.Text = AppText.T("Server failed to start or stopped unexpectedly.");
         }
         finally
         {
@@ -524,17 +586,17 @@ public partial class MainWindow : Window
             var command = IperfCommandBuilder.BuildServerCommand(executablePath, options);
 
             ServerOutputText.Text =
-                "Server command preview:" + Environment.NewLine +
+                AppText.T("Server command preview:") + Environment.NewLine +
                 string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
-            ServerModeStatusText.Text = "Stopped. Ready to start local server.";
+            ServerModeStatusText.Text = AppText.T("Stopped. Ready to start local server.");
             SetServerModeStatusChip(isRunning: false, isError: false);
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
         {
             ServerOutputText.Text =
-                "Server command preview unavailable:" + Environment.NewLine +
+                AppText.T("Server command preview unavailable:") + Environment.NewLine +
                 ex.Message;
-            ServerModeStatusText.Text = "Server configuration is invalid.";
+            ServerModeStatusText.Text = AppText.T("Server configuration is invalid.");
             SetServerModeStatusChip(isRunning: false, isError: true);
         }
     }
@@ -583,19 +645,19 @@ public partial class MainWindow : Window
     {
         if (isRunning)
         {
-            ServerModeStatusChipText.Text = "Running";
+            ServerModeStatusChipText.Text = AppText.T("Running");
             SetIntegrationChipState(ServerModeStatusChip, ServerModeStatusChipText, isReady: true);
             return;
         }
 
         if (isError)
         {
-            ServerModeStatusChipText.Text = "Invalid";
+            ServerModeStatusChipText.Text = AppText.T("Invalid");
             SetIntegrationChipState(ServerModeStatusChip, ServerModeStatusChipText, isReady: false);
             return;
         }
 
-        ServerModeStatusChipText.Text = "Stopped";
+        ServerModeStatusChipText.Text = AppText.T("Stopped");
         ServerModeStatusChip.Background = GetThemeBrush("PanelSoft", Brushes.DarkSlateBlue);
         ServerModeStatusChip.BorderBrush = GetThemeBrush("BorderSoft", Brushes.SlateBlue);
         ServerModeStatusChipText.Foreground = GetThemeBrush("TextMuted", Brushes.LightSlateGray);
@@ -985,17 +1047,17 @@ public partial class MainWindow : Window
                 .ToList();
 
             HistoryItemsControl.ItemsSource = entries;
-            HistoryEmptyText.Text = "No saved history yet. Run a test and WinPerf will save the result here.";
+            HistoryEmptyText.Text = AppText.T("No saved history yet. Run a test and WinPerf will save the result here.");
             HistoryEmptyText.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             HistoryStatusText.Text = entries.Count == 1
-                ? "1 saved result"
-                : $"{entries.Count} saved results";
+                ? AppText.T("1 saved result")
+                : AppText.F("{0} saved results", entries.Count);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
         {
             HistoryItemsControl.ItemsSource = null;
             HistoryEmptyText.Visibility = Visibility.Visible;
-            HistoryEmptyText.Text = "History could not be loaded. Check the portable data folder.";
+            HistoryEmptyText.Text = AppText.T("History could not be loaded. Check the portable data folder.");
             HistoryStatusText.Text = ex.Message;
         }
     }
@@ -1023,14 +1085,14 @@ public partial class MainWindow : Window
         }
 
         if (string.IsNullOrWhiteSpace(item.CommandPreview) ||
-            string.Equals(item.CommandPreview, "Command unavailable.", StringComparison.OrdinalIgnoreCase))
+            string.Equals(item.CommandPreview, AppText.T("Command unavailable."), StringComparison.OrdinalIgnoreCase))
         {
-            HistoryStatusText.Text = "No command saved for this result.";
+            HistoryStatusText.Text = AppText.T("No command saved for this result.");
             return;
         }
 
         Clipboard.SetText(item.CommandPreview);
-        HistoryStatusText.Text = "Command copied.";
+        HistoryStatusText.Text = AppText.T("Command copied.");
     }
 
     private async void HistoryDeleteButton_Click(object sender, RoutedEventArgs e)
@@ -1042,9 +1104,9 @@ public partial class MainWindow : Window
 
         if (!ConfirmDialogWindow.Confirm(
                 this,
-                "Delete history result?",
-                $"Delete this saved result?\n\n{item.Title}\n{item.FinishedLocalText}",
-                "Delete"))
+                AppText.T("Delete history result?"),
+                $"{AppText.T("Delete this saved result?")}\n\n{item.Title}\n{item.FinishedLocalText}",
+                AppText.T("Delete")))
         {
             return;
         }
@@ -1053,11 +1115,11 @@ public partial class MainWindow : Window
         {
             var deleted = await _historyStore.DeleteAsync(item.Id);
             await RefreshHistoryPageAsync();
-            HistoryStatusText.Text = deleted ? "Result deleted." : "Result was not found.";
+            HistoryStatusText.Text = deleted ? AppText.T("Result deleted.") : AppText.T("Result was not found.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
         {
-            HistoryStatusText.Text = $"Delete failed: {ex.Message}";
+            HistoryStatusText.Text = AppText.F("Delete failed: {0}", ex.Message);
         }
     }
 
@@ -1068,26 +1130,26 @@ public partial class MainWindow : Window
             var document = await _historyStore.LoadAsync();
             if (document.Entries.Count == 0)
             {
-                HistoryStatusText.Text = "History is already empty.";
+                HistoryStatusText.Text = AppText.T("History is already empty.");
                 return;
             }
 
             if (!ConfirmDialogWindow.Confirm(
                     this,
-                    "Clear all history?",
-                    $"Delete all {document.Entries.Count} saved history results from this portable runtime?",
-                    "Clear all"))
+                    AppText.T("Clear all history?"),
+                    AppText.F("Delete all {0} saved history results from this portable runtime?", document.Entries.Count),
+                    AppText.T("Clear all")))
             {
                 return;
             }
 
             await _historyStore.ClearAsync();
             await RefreshHistoryPageAsync();
-            HistoryStatusText.Text = "History cleared.";
+            HistoryStatusText.Text = AppText.T("History cleared.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
         {
-            HistoryStatusText.Text = $"Clear failed: {ex.Message}";
+            HistoryStatusText.Text = AppText.F("Clear failed: {0}", ex.Message);
         }
     }
 
@@ -1098,7 +1160,7 @@ public partial class MainWindow : Window
             var document = await _historyStore.LoadAsync();
             var dialog = new SaveFileDialog
             {
-                Title = "Export WinPerf history",
+                Title = AppText.T("Export WinPerf history"),
                 FileName = $"WinPerf-history-{DateTime.Now:yyyyMMdd-HHmmss}.json",
                 DefaultExt = ".json",
                 Filter = "WinPerf history (*.json)|*.json|All files (*.*)|*.*"
@@ -1112,12 +1174,12 @@ public partial class MainWindow : Window
             var exportStore = new JsonIperfHistoryStore(dialog.FileName);
             await exportStore.SaveAsync(document);
             HistoryStatusText.Text = document.Entries.Count == 1
-                ? "Exported 1 result."
-                : $"Exported {document.Entries.Count} results.";
+                ? AppText.T("Exported 1 result.")
+                : AppText.F("Exported {0} results.", document.Entries.Count);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
         {
-            HistoryStatusText.Text = $"Export failed: {ex.Message}";
+            HistoryStatusText.Text = AppText.F("Export failed: {0}", ex.Message);
         }
     }
 
@@ -1127,7 +1189,7 @@ public partial class MainWindow : Window
         {
             var dialog = new OpenFileDialog
             {
-                Title = "Import WinPerf history",
+                Title = AppText.T("Import WinPerf history"),
                 DefaultExt = ".json",
                 Filter = "WinPerf history (*.json)|*.json|All files (*.*)|*.*",
                 CheckFileExists = true
@@ -1143,12 +1205,12 @@ public partial class MainWindow : Window
             var mergedCount = await _historyStore.MergeAsync(importedDocument);
             await RefreshHistoryPageAsync();
             HistoryStatusText.Text = importedDocument.Entries.Count == 1
-                ? $"Imported 1 result. History now has {mergedCount} results."
-                : $"Imported {importedDocument.Entries.Count} results. History now has {mergedCount} results.";
+                ? AppText.F("Imported 1 result. History now has {0} results.", mergedCount)
+                : AppText.F("Imported {0} results. History now has {1} results.", importedDocument.Entries.Count, mergedCount);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
         {
-            HistoryStatusText.Text = $"Import failed: {ex.Message}";
+            HistoryStatusText.Text = AppText.F("Import failed: {0}", ex.Message);
         }
     }
 
@@ -1170,11 +1232,11 @@ public partial class MainWindow : Window
         var finishedLocalText = entry.FinishedAtUtc
             .ToLocalTime()
             .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture);
-        var statusText = entry.Succeeded ? "OK" : $"Exit {entry.ExitCode}";
+        var statusText = entry.Succeeded ? AppText.T("OK") : $"Exit {entry.ExitCode}";
         var statusBrush = (Brush)FindResource(entry.Succeeded ? "AccentGreen" : "MissingChipForeground");
         var summary = BuildHistoryDisplaySummary(entry.Summary, title);
         var commandPreview = string.IsNullOrWhiteSpace(entry.CommandPreview)
-            ? "Command unavailable."
+            ? AppText.T("Command unavailable.")
             : entry.CommandPreview;
         var details = BuildHistoryDetails(entry);
 
@@ -1193,40 +1255,40 @@ public partial class MainWindow : Window
     {
         var lines = new List<string>
         {
-            $"Engine: {GetEngineDisplayName(entry.Engine)}",
-            $"Mode: {FormatModeLabel(entry.Mode)}",
-            $"Server: {entry.Server}",
-            $"Port: {entry.Port}",
-            $"Streams: {entry.Streams}",
-            $"Duration: {entry.DurationSeconds}s",
-            $"Omit: {entry.OmitSeconds}s",
-            $"Exit code: {entry.ExitCode}",
-            $"Status: {(entry.Succeeded ? "OK" : "Failed")}"
+            $"{AppText.T("Engine")}: {GetEngineDisplayName(entry.Engine)}",
+            $"{AppText.T("Mode")}: {FormatModeLabel(entry.Mode)}",
+            $"{AppText.T("Server")}: {entry.Server}",
+            $"{AppText.T("Port")}: {entry.Port}",
+            $"{AppText.T("Streams")}: {entry.Streams}",
+            $"{AppText.T("Duration")}: {entry.DurationSeconds}s",
+            $"{AppText.T("Omit")}: {entry.OmitSeconds}s",
+            $"{AppText.T("Exit code")}: {entry.ExitCode}",
+            $"{AppText.T("Status")}: {(entry.Succeeded ? AppText.T("OK") : AppText.T("Failed"))}"
         };
 
         if (!string.IsNullOrWhiteSpace(entry.UdpBandwidth))
         {
-            lines.Add($"UDP bandwidth: {entry.UdpBandwidth}");
+            lines.Add($"{AppText.T("UDP bandwidth")}: {entry.UdpBandwidth}");
         }
 
         if (entry.AverageMbps is double averageMbps)
         {
-            lines.Add($"Average: {FormatMegabits(averageMbps)}");
+            lines.Add($"{AppText.T("Average")}: {FormatMegabits(averageMbps)}");
         }
 
         if (entry.MinimumMbps is double minimumMbps)
         {
-            lines.Add($"Minimum: {FormatMegabits(minimumMbps)}");
+            lines.Add($"{AppText.T("Minimum")}: {FormatMegabits(minimumMbps)}");
         }
 
         if (entry.MaximumMbps is double maximumMbps)
         {
-            lines.Add($"Maximum: {FormatMegabits(maximumMbps)}");
+            lines.Add($"{AppText.T("Maximum")}: {FormatMegabits(maximumMbps)}");
         }
 
         if (entry.ReverseAverageMbps is double reverseAverageMbps)
         {
-            lines.Add($"Reverse average: {FormatMegabits(reverseAverageMbps)}");
+            lines.Add($"{AppText.T("Reverse average")}: {FormatMegabits(reverseAverageMbps)}");
         }
 
         return string.Join(Environment.NewLine, lines);
@@ -1236,7 +1298,7 @@ public partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(summary))
         {
-            return "No summary saved.";
+            return AppText.T("No summary saved.");
         }
 
         var lines = summary
@@ -1255,7 +1317,7 @@ public partial class MainWindow : Window
         }
 
         return lines.Count == 0
-            ? "No summary saved."
+            ? AppText.T("No summary saved.")
             : string.Join(Environment.NewLine, lines);
     }
 
@@ -1327,15 +1389,20 @@ public partial class MainWindow : Window
         if (_engineResolution.IsConfigured)
         {
             var source = string.IsNullOrWhiteSpace(_engineResolution.Source)
-                ? "Configured"
+                ? AppText.T("Configured")
                 : _engineResolution.Source;
 
-            EngineStatusText.Text = $"Engine  ●  {GetEngineDisplayName(selectedEngine)}  ●  Ready  ●  {source}";
+            EngineStatusText.Text = AppText.F(
+                "Engine  ●  {0}  ●  Ready  ●  {1}",
+                GetEngineDisplayName(selectedEngine),
+                source);
             EngineStatusText.ToolTip = _engineResolution.ExecutablePath;
             return;
         }
 
-        EngineStatusText.Text = $"Engine  ●  {GetEngineDisplayName(selectedEngine)}  ●  Not configured";
+        EngineStatusText.Text = AppText.F(
+            "Engine  ●  {0}  ●  Not configured",
+            GetEngineDisplayName(selectedEngine));
         EngineStatusText.ToolTip = _engineResolution.Message;
     }
 
@@ -1383,10 +1450,10 @@ public partial class MainWindow : Window
         if (resolution.IsConfigured)
         {
             var source = string.IsNullOrWhiteSpace(resolution.Source)
-                ? "Configured"
+                ? AppText.T("Configured")
                 : resolution.Source;
 
-            statusText.Text = "Ready";
+            statusText.Text = AppText.T("Ready");
             SetIntegrationChipState(statusChip, statusText, isReady: true);
             var displayPath = FormatIntegrationPath(resolution.ExecutablePath);
             detailText.Text = source;
@@ -1396,9 +1463,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        statusText.Text = "Missing";
+        statusText.Text = AppText.T("Missing");
         SetIntegrationChipState(statusChip, statusText, isReady: false);
-        detailText.Text = description + " not configured";
+        detailText.Text = AppText.F("{0} not configured", description);
         detailText.ToolTip = resolution.Message;
         pathText.Text = resolution.Message;
         pathText.ToolTip = resolution.Message;

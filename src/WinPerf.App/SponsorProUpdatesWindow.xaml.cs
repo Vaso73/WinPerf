@@ -21,12 +21,13 @@ public partial class SponsorProUpdatesWindow : Window
     {
         InitializeComponent();
         WindowPlacementStore.Track(this, "SponsorProUpdatesWindow");
+        AppText.ApplyTo(this);
 
         _versionText = versionText;
         InstalledVersionText.Text = versionText;
         ProductText.Text = WinPerfUpdateService.ProductId;
 
-        SetChip(UpdateCoreStatusChip, UpdateCoreStatusText, ChipState.Ready, "Ready");
+        SetChip(UpdateCoreStatusChip, UpdateCoreStatusText, ChipState.Ready, AppText.T("Ready"));
         RefreshSponsorProStatus();
         ResetUpdateState();
 
@@ -53,26 +54,26 @@ public partial class SponsorProUpdatesWindow : Window
             AccountBadgeText.Text = "GH";
             AccountTitleText.Text = $"GitHub: {login}";
             AccountStatusText.Text = $"{tier} active · expires {_session.ExpiresAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
-            SponsorProAccountButton.Content = "Sign out";
-            SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Ready, "Active");
-            StatusText.Text = "Sponsor Pro account is connected. You can check for private updates.";
+            SponsorProAccountButton.Content = AppText.T("Sign out");
+            SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Ready, AppText.T("Active"));
+            StatusText.Text = AppText.T("Sponsor Pro account is connected. You can check for private updates.");
             return;
         }
 
         AccountBadgeText.Text = "GH";
-        AccountTitleText.Text = "Not signed in";
-        AccountStatusText.Text = "Sign in with GitHub to use Sponsor Pro updates.";
-        SponsorProAccountButton.Content = "Sign in with GitHub";
-        SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Missing, "Missing");
-        StatusText.Text = "Ready. Sign in to enable Sponsor Pro update checks.";
+        AccountTitleText.Text = AppText.T("Not signed in");
+        AccountStatusText.Text = AppText.T("Sign in with GitHub to use Sponsor Pro updates.");
+        SponsorProAccountButton.Content = AppText.T("Sign in with GitHub");
+        SetChip(AccountStatusChip, AccountStatusChipText, ChipState.Missing, AppText.T("Missing"));
+        StatusText.Text = AppText.T("Ready. Sign in to enable Sponsor Pro update checks.");
     }
 
     private void ResetUpdateState()
     {
         _availableManifest = null;
-        LatestVersionText.Text = "Not checked yet";
+        LatestVersionText.Text = AppText.T("Not checked yet");
         InstallUpdateButton.IsEnabled = false;
-        SetChip(UpdateStateChip, UpdateStateText, ChipState.Idle, "Idle");
+        SetChip(UpdateStateChip, UpdateStateText, ChipState.Idle, AppText.T("Idle"));
     }
 
     private async void SponsorProAccountButton_Click(object sender, RoutedEventArgs e)
@@ -86,7 +87,7 @@ public partial class SponsorProUpdatesWindow : Window
 
         var cancellationToken = BeginOperation();
         SetBusy(true);
-        StatusText.Text = "Opening GitHub Sponsor Pro login...";
+        StatusText.Text = AppText.T("Opening GitHub Sponsor Pro login...");
 
         try
         {
@@ -98,7 +99,7 @@ public partial class SponsorProUpdatesWindow : Window
                 UseShellExecute = true
             });
 
-            StatusText.Text = "Waiting for GitHub authorization...";
+            StatusText.Text = AppText.T("Waiting for GitHub authorization...");
             var result = await service.PollLoginAsync(start, cancellationToken);
             if (result.Success && result.Session is not null)
             {
@@ -108,15 +109,15 @@ public partial class SponsorProUpdatesWindow : Window
                 return;
             }
 
-            StatusText.Text = "Sponsor Pro login failed or was not authorized.";
+            StatusText.Text = AppText.T("Sponsor Pro login failed or was not authorized.");
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Sponsor Pro login was cancelled.";
+            StatusText.Text = AppText.T("Sponsor Pro login was cancelled.");
         }
         catch (Exception)
         {
-            StatusText.Text = "Sponsor Pro login failed. Check your connection and try again.";
+            StatusText.Text = AppText.T("Sponsor Pro login failed. Check your connection and try again.");
         }
         finally
         {
@@ -132,8 +133,8 @@ public partial class SponsorProUpdatesWindow : Window
         RefreshSponsorProStatus();
         ResetUpdateState();
         StatusText.Text = cleared
-            ? "Signed out locally. Your GitHub browser session is unchanged."
-            : "Could not remove the local Sponsor Pro session.";
+            ? AppText.T("Signed out locally. Your GitHub browser session is unchanged.")
+            : AppText.T("Could not remove the local Sponsor Pro session.");
     }
 
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
@@ -141,15 +142,15 @@ public partial class SponsorProUpdatesWindow : Window
         RefreshSponsorProStatus();
         if (_session?.IsUsable != true)
         {
-            StatusText.Text = "Sign in with GitHub Sponsor Pro before checking for updates.";
-            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, "Login");
+            StatusText.Text = AppText.T("Sign in with GitHub Sponsor Pro before checking for updates.");
+            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, AppText.T("Login"));
             return;
         }
 
         var cancellationToken = BeginOperation();
         SetBusy(true);
-        StatusText.Text = "Checking Sponsor Pro update channel...";
-        SetChip(UpdateStateChip, UpdateStateText, ChipState.Idle, "Checking");
+        StatusText.Text = AppText.T("Checking Sponsor Pro update channel...");
+        SetChip(UpdateStateChip, UpdateStateText, ChipState.Idle, AppText.T("Checking"));
 
         try
         {
@@ -159,10 +160,10 @@ public partial class SponsorProUpdatesWindow : Window
             if (result.Status == UpdateCheckStatus.UpToDate)
             {
                 _availableManifest = null;
-                LatestVersionText.Text = result.LatestVersion?.ToString() ?? "Current version is up to date";
+                LatestVersionText.Text = result.LatestVersion?.ToString() ?? AppText.T("Current version is up to date");
                 InstallUpdateButton.IsEnabled = false;
-                SetChip(UpdateStateChip, UpdateStateText, ChipState.Ready, "Current");
-                StatusText.Text = "WinPerf is up to date on the Sponsor Pro channel.";
+                SetChip(UpdateStateChip, UpdateStateText, ChipState.Ready, AppText.T("Current"));
+                StatusText.Text = AppText.T("WinPerf is up to date on the Sponsor Pro channel.");
                 return;
             }
 
@@ -173,28 +174,28 @@ public partial class SponsorProUpdatesWindow : Window
                 _availableManifest = result.Manifest;
                 LatestVersionText.Text = $"v{result.LatestVersion} · {result.Manifest.AssetName}";
                 InstallUpdateButton.IsEnabled = false;
-                SetChip(UpdateStateChip, UpdateStateText, ChipState.Ready, "Available");
-                StatusText.Text = "Update found. Install button will be enabled after helper launcher/startup wiring.";
+                SetChip(UpdateStateChip, UpdateStateText, ChipState.Ready, AppText.T("Available"));
+                StatusText.Text = AppText.T("Update found. Install button will be enabled after helper launcher/startup wiring.");
                 return;
             }
 
             _availableManifest = null;
-            LatestVersionText.Text = result.ErrorCode ?? "Update check failed";
+            LatestVersionText.Text = result.ErrorCode ?? AppText.T("Update check failed");
             InstallUpdateButton.IsEnabled = false;
-            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, "Error");
-            StatusText.Text = "Update check failed or server response was invalid.";
+            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, AppText.T("Error"));
+            StatusText.Text = AppText.T("Update check failed or server response was invalid.");
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Update check was cancelled.";
+            StatusText.Text = AppText.T("Update check was cancelled.");
         }
         catch (Exception)
         {
             _availableManifest = null;
-            LatestVersionText.Text = "Update check failed";
+            LatestVersionText.Text = AppText.T("Update check failed");
             InstallUpdateButton.IsEnabled = false;
-            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, "Error");
-            StatusText.Text = "Update check failed. Check your connection and try again.";
+            SetChip(UpdateStateChip, UpdateStateText, ChipState.Missing, AppText.T("Error"));
+            StatusText.Text = AppText.T("Update check failed. Check your connection and try again.");
         }
         finally
         {

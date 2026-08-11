@@ -14,6 +14,7 @@ public partial class AboutWindow : Window
     {
         InitializeComponent();
         WindowPlacementStore.Track(this, "AboutWindow");
+        AppText.ApplyTo(this);
         _versionText = versionText;
         VersionText.Text = versionText;
         RefreshSponsorProStatus();
@@ -33,15 +34,15 @@ public partial class AboutWindow : Window
 
             AccountTitleText.Text = $"GitHub: {login}";
             AccountStatusText.Text = $"{tier} active · updates channel ready";
-            SponsorProAccountButton.Content = "Sponsor Pro / Updates";
+            SponsorProAccountButton.Content = AppText.T("Sponsor Pro / Updates");
             StatusText.Text = $"Connected to {WinPerfUpdateService.ProductId} / {WinPerfUpdateService.Channel}.";
             return;
         }
 
-        AccountTitleText.Text = "Not signed in";
-        AccountStatusText.Text = "Sign in with GitHub to use Sponsor Pro updates.";
-        SponsorProAccountButton.Content = "Sponsor Pro / Updates";
-        StatusText.Text = "Single portable WinPerf.exe. Updates use the private Sponsor Pro channel.";
+        AccountTitleText.Text = AppText.T("Not signed in");
+        AccountStatusText.Text = AppText.T("Sign in with GitHub to use Sponsor Pro updates.");
+        SponsorProAccountButton.Content = AppText.T("Sponsor Pro / Updates");
+        StatusText.Text = AppText.T("Single portable WinPerf.exe. Updates use the private Sponsor Pro channel.");
     }
 
     private void SponsorProAccountButton_Click(object sender, RoutedEventArgs e)

@@ -13,12 +13,20 @@ public partial class ConfirmDialogWindow : Window
     {
         InitializeComponent();
         WindowPlacementStore.Track(this, "ConfirmDialogWindow");
+        AppText.ApplyTo(this);
         Title = title;
         TitleText.Text = title;
         HeadingText.Text = title;
         MessageText.Text = message;
-        ConfirmButton.Content = confirmText;
-        CancelButton.Content = cancelText;
+        ConfirmButton.Content = AppText.T(confirmText);
+        if (string.IsNullOrWhiteSpace(cancelText))
+        {
+            CancelButton.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            CancelButton.Content = AppText.T(cancelText);
+        }
     }
 
     public static bool Confirm(
@@ -33,6 +41,20 @@ public partial class ConfirmDialogWindow : Window
         };
 
         return dialog.ShowDialog() == true;
+    }
+
+    public static void ShowMessage(
+        Window owner,
+        string title,
+        string message,
+        string buttonText = "OK")
+    {
+        var dialog = new ConfirmDialogWindow(title, message, buttonText, string.Empty)
+        {
+            Owner = owner
+        };
+
+        dialog.ShowDialog();
     }
 
     private void ConfirmButton_Click(object sender, RoutedEventArgs e)

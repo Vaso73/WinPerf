@@ -11,6 +11,7 @@ public partial class HistoryDetailWindow : Window
     {
         InitializeComponent();
         WindowPlacementStore.Track(this, "HistoryDetailWindow");
+        AppText.ApplyTo(this);
 
         _commandPreview = item.CommandPreview;
         TitleText.Text = item.Title;

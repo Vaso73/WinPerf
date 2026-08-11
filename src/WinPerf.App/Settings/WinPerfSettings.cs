@@ -8,6 +8,7 @@ public sealed class WinPerfSettings
     public string? LastServer { get; set; }
     public List<string> RecentServers { get; set; } = [];
     public List<string> RecentCustomCommands { get; set; } = [];
+    public string? LanguageCode { get; set; }
     public double? DashboardEngineOutputHeight { get; set; }
     public double? DashboardLeftRailWidth { get; set; }
 }

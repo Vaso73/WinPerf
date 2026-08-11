@@ -14,6 +14,7 @@ public partial class CustomCommandWindow : Window
     {
         InitializeComponent();
         WindowPlacementStore.Track(this, "CustomCommandWindow");
+        AppText.ApplyTo(this);
 
         _settings = _settingsStore.Load();
         PopulateRecentCommands();
@@ -104,12 +105,11 @@ public partial class CustomCommandWindow : Window
     {
         if (string.IsNullOrWhiteSpace(CommandText))
         {
-            MessageBox.Show(
+            ConfirmDialogWindow.ShowMessage(
                 this,
-                "Enter iperf3 arguments first.",
                 "WinPerf",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                AppText.T("Enter iperf3 arguments first."),
+                "OK");
             return;
         }
 

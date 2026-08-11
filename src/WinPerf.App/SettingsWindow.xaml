@@ -85,6 +85,45 @@
                             Padding="10"
                             ClipToBounds="True">
                         <StackPanel>
+                            <Border Background="{StaticResource PanelSoft}"
+                                    BorderBrush="{StaticResource BorderSoft}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="8"
+                                    Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="4" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="180" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Row="0"
+                                               Grid.Column="0"
+                                               Text="Language"
+                                               FontSize="11"
+                                               FontWeight="SemiBold" />
+
+                                    <TextBlock Grid.Row="2"
+                                               Grid.Column="0"
+                                               Text="WinPerfLanguage.Description"
+                                               Foreground="{StaticResource TextMuted}"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,12,0" />
+
+                                    <ComboBox x:Name="LanguageBox"
+                                              Grid.Row="0"
+                                              Grid.RowSpan="3"
+                                              Grid.Column="1"
+                                              VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
                             <TextBlock Text="Engines"
                                        FontSize="11"
                                        FontWeight="SemiBold"
@@ -268,7 +307,7 @@
                 <Grid Grid.Row="2" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="184" />
+                        <ColumnDefinition Width="278" />
                     </Grid.ColumnDefinitions>
 
                     <TextBlock x:Name="ValidationText"
@@ -282,6 +321,12 @@
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right">
+                        <Button Content="Apply"
+                                Style="{StaticResource CompactSecondaryButton}"
+                                Width="88"
+                                Margin="0,0,6,0"
+                                Click="ApplyButton_Click" />
+
                         <Button Content="Save"
                                 Style="{StaticResource CompactPrimaryButton}"
                                 Width="88"
