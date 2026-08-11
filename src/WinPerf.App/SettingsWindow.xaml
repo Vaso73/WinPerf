@@ -180,7 +180,8 @@
                                         Style="{StaticResource CompactSecondaryButton}"
                                         Click="ClearButton_Click" />
 
-                                <TextBlock Grid.Row="4"
+                                <TextBlock x:Name="Iperf2SettingsLabel"
+                                           Grid.Row="4"
                                            Grid.Column="0"
                                            Grid.ColumnSpan="7"
                                            Text="iperf2 executable · fallback tools\iperf2\iperf.exe or iperf2.exe"
@@ -193,19 +194,22 @@
                                          Grid.Column="0"
                                          VerticalContentAlignment="Center" />
 
-                                <Button Grid.Row="6"
+                                <Button x:Name="BrowseIperf2Button"
+                                        Grid.Row="6"
                                         Grid.Column="2"
                                         Content="Browse"
                                         Style="{StaticResource CompactSecondaryButton}"
                                         Click="BrowseIperf2Button_Click" />
 
-                                <Button Grid.Row="6"
+                                <Button x:Name="ImportPortableIperf2Button"
+                                        Grid.Row="6"
                                         Grid.Column="4"
                                         Content="Import"
                                         Style="{StaticResource CompactSecondaryButton}"
                                         Click="ImportPortableIperf2Button_Click" />
 
-                                <Button Grid.Row="6"
+                                <Button x:Name="ClearIperf2Button"
+                                        Grid.Row="6"
                                         Grid.Column="6"
                                         Content="Clear"
                                         Style="{StaticResource CompactSecondaryButton}"
@@ -278,7 +282,8 @@
                                                 Style="{StaticResource CompactSecondaryButton}"
                                                 Click="OpenPortableEngineDirectoryButton_Click" />
 
-                                        <TextBlock Grid.Row="4"
+                                        <TextBlock x:Name="PortableIperf2EngineDirectoryLabel"
+                                                   Grid.Row="4"
                                                    Grid.Column="0"
                                                    Text="Portable iperf2 engine folder"
                                                    FontWeight="SemiBold"

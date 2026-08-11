@@ -30,7 +30,7 @@ public sealed class SponsorProSessionStoreContractTests
         Assert.Contains("ProtectedData.Unprotect", code);
         Assert.Contains("DataProtectionScope.CurrentUser", code);
         Assert.Contains("sponsor-pro-session.dat", code);
-        Assert.Contains("Path.Combine(AppContext.BaseDirectory, \"data\")", code);
+        Assert.Contains("Path.Combine(AppContext.BaseDirectory, WinPerfProductEdition.DataDirectoryName)", code);
         Assert.Contains("System.Security.Cryptography.ProtectedData", project);
         Assert.DoesNotContain("SessionToken", settings, StringComparison.Ordinal);
     }

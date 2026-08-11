@@ -26,7 +26,7 @@ public sealed class SettingsPortableDataInfoTests
         var code = File.ReadAllText(SettingsWindowCodePath);
 
         Assert.Contains("DataDirectoryText.Text = DataDirectory;", code);
-        Assert.Contains("Path.Combine(_appDirectory, \"data\")", code);
+        Assert.Contains("Path.Combine(_appDirectory, WinPerfProductEdition.DataDirectoryName)", code);
         Assert.Contains("private void OpenDataDirectoryButton_Click", code);
         Assert.Contains("OpenDirectory(DataDirectory, AppText.T(\"data folder\"));", code);
         Assert.Contains("Directory.CreateDirectory(directory);", code);

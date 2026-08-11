@@ -6,6 +6,7 @@ using Microsoft.Win32;
 using WinPerf.App.Settings;
 using WinPerf.Core.Iperf;
 using WinPerf.Core.Localization;
+using WinPerf.Core.Product;
 
 namespace WinPerf.App;
 
@@ -30,6 +31,7 @@ public partial class SettingsWindow : Window
         DataDirectoryText.Text = DataDirectory;
         PortableIperf3EngineDirectoryText.Text = PortableIperf3EngineDirectory;
         PortableIperf2EngineDirectoryText.Text = PortableIperf2EngineDirectory;
+        ApplyProductEditionBoundary();
         IperfPathBox.Focus();
     }
 
@@ -50,6 +52,11 @@ public partial class SettingsWindow : Window
     {
         get
         {
+            if (!WinPerfProductEdition.SupportsIperf2)
+            {
+                return null;
+            }
+
             var value = Iperf2PathBox.Text.Trim();
             return string.IsNullOrWhiteSpace(value) ? null : value;
         }
@@ -68,7 +75,32 @@ public partial class SettingsWindow : Window
         Path.Combine(PortableIperf2EngineDirectory, "iperf.exe");
 
     private string DataDirectory =>
-        Path.Combine(_appDirectory, "data");
+        Path.Combine(_appDirectory, WinPerfProductEdition.DataDirectoryName);
+
+    private void ApplyProductEditionBoundary()
+    {
+        if (WinPerfProductEdition.SupportsIperf2)
+        {
+            return;
+        }
+
+        Iperf2PathBox.Text = string.Empty;
+
+        foreach (var element in new FrameworkElement[]
+                 {
+                     Iperf2SettingsLabel,
+                     Iperf2PathBox,
+                     BrowseIperf2Button,
+                     ImportPortableIperf2Button,
+                     ClearIperf2Button,
+                     PortableIperf2EngineDirectoryLabel,
+                     PortableIperf2EngineDirectoryText,
+                     OpenPortableIperf2EngineDirectoryButton
+                 })
+        {
+            element.Visibility = Visibility.Collapsed;
+        }
+    }
 
     private void PopulateLanguageBox(string? currentLanguageCode)
     {
@@ -112,6 +144,12 @@ public partial class SettingsWindow : Window
 
     private void BrowseIperf2Button_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            ValidationText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         BrowseExecutable(
             Iperf2PathBox,
             "Select iperf2 executable",
@@ -157,6 +195,12 @@ public partial class SettingsWindow : Window
 
     private void ImportPortableIperf2Button_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            ValidationText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         ImportPortableEngine(
             Iperf2PathBox,
             PortableIperf2ExecutablePath,
@@ -205,6 +249,12 @@ public partial class SettingsWindow : Window
 
     private void OpenPortableIperf2EngineDirectoryButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            ValidationText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         OpenDirectory(PortableIperf2EngineDirectory, AppText.T("portable iperf2 engine folder"));
     }
 
@@ -241,6 +291,12 @@ public partial class SettingsWindow : Window
 
     private void ClearIperf2Button_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            ValidationText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         Iperf2PathBox.Text = string.Empty;
         ValidationText.Text = AppText.T("Manual iperf2 path cleared. WinPerf will use fallback detection.");
     }

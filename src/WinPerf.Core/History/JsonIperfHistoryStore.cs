@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WinPerf.Core.Product;
 
 namespace WinPerf.Core.History;
 
@@ -31,7 +32,7 @@ public sealed class JsonIperfHistoryStore
 
     public static string GetDefaultFilePath()
     {
-        return Path.Combine(AppContext.BaseDirectory, "data", DefaultFileName);
+        return Path.Combine(AppContext.BaseDirectory, WinPerfProductEdition.DataDirectoryName, DefaultFileName);
     }
 
     public async Task<IperfHistoryDocument> LoadAsync(CancellationToken cancellationToken = default)

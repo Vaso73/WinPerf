@@ -177,7 +177,10 @@
                                                VerticalAlignment="Center" />
                                 </Border>
 
-                                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
+                                <StackPanel x:Name="Iperf2IntegrationPanel"
+                                            Grid.Row="2"
+                                            Grid.Column="0"
+                                            Margin="0,0,10,0">
                                     <TextBlock Text="iperf2" FontWeight="SemiBold" />
                                     <TextBlock x:Name="Iperf2IntegrationDetailText"
                                                Text="Checking..."
@@ -390,9 +393,11 @@
                                         Click="CommandMenuButton_Click">
                                     <Button.ContextMenu>
                                         <ContextMenu>
-                                            <MenuItem Header="Advanced builder..."
+                                            <MenuItem x:Name="AdvancedCommandMenuItem"
+                                                      Header="Advanced builder..."
                                                       Click="AdvancedCommandMenuItem_Click" />
-                                            <MenuItem Header="Custom command..."
+                                            <MenuItem x:Name="CustomCommandMenuItem"
+                                                      Header="Custom command..."
                                                       Click="CustomCommandMenuItem_Click" />
                                         </ContextMenu>
                                     </Button.ContextMenu>

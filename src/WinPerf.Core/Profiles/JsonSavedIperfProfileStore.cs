@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WinPerf.Core.Product;
 
 namespace WinPerf.Core.Profiles;
 
@@ -30,7 +31,7 @@ public sealed class JsonSavedIperfProfileStore : ISavedIperfProfileStore
 
     public static string GetDefaultFilePath()
     {
-        return Path.Combine(AppContext.BaseDirectory, "data", DefaultFileName);
+        return Path.Combine(AppContext.BaseDirectory, WinPerfProductEdition.DataDirectoryName, DefaultFileName);
     }
 
     private static string GetLegacyDefaultFilePath()

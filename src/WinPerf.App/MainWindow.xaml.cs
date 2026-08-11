@@ -69,6 +69,7 @@ public partial class MainWindow : Window
         RefreshEngineStatus();
         RefreshIntegrationStatus();
         PopulateRecentServers();
+        ApplyProductEditionBoundary();
         ApplyUnifiedCompactLayout();
         ApplyDashboardLayout();
         ShowDashboardPage();
@@ -81,6 +82,7 @@ public partial class MainWindow : Window
         {
             ApplyUnifiedCompactLayout();
             ApplyDashboardLayout();
+            ApplyProductEditionBoundary();
             await LoadDashboardProfilesAsync();
             ShowStartupUpdateResult();
         };
@@ -239,7 +241,7 @@ public partial class MainWindow : Window
             AppendEngineOutput(string.Empty);
             AppendEngineOutput(AppText.T("Test stopped by user."));
         }
-        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or NotSupportedException)
+        catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or FormatException or InvalidOperationException or NotSupportedException)
         {
             EngineOutputText.Text = AppText.T("Invalid test configuration:") + Environment.NewLine + ex.Message;
         }
@@ -269,6 +271,15 @@ public partial class MainWindow : Window
 
     private void ServerModeNavButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsServerMode)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                WinPerfProductEdition.EditionName,
+                AppText.T("Available in WinPerf Sponsor Pro."));
+            return;
+        }
+
         ShowServerModePage();
     }
 
@@ -314,6 +325,140 @@ public partial class MainWindow : Window
         DashboardNavButton.Style = FindResource(activePage == ActivePage.Dashboard ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
         ServerModeNavButton.Style = FindResource(activePage == ActivePage.ServerMode ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
         HistoryNavButton.Style = FindResource(activePage == ActivePage.History ? "SidebarNavSelectedButton" : "SidebarNavButton") as Style;
+    }
+
+    private void ApplyProductEditionBoundary()
+    {
+        if (!WinPerfProductEdition.SupportsIperf2)
+        {
+            HideComboBoxItemByContent(EngineBox, "iperf2");
+            Iperf2IntegrationPanel.Visibility = Visibility.Collapsed;
+            Iperf2IntegrationStatusChip.Visibility = Visibility.Collapsed;
+            if (GetSelectedEngine() == IperfEngine.Iperf2)
+            {
+                SelectEngine(IperfEngine.Iperf3);
+            }
+        }
+
+        if (!WinPerfProductEdition.SupportsUdp)
+        {
+            HideComboBoxItemByTag(ModeBox, "udp-upload");
+            HideComboBoxItemByTag(ModeBox, "udp-download");
+        }
+
+        if (!WinPerfProductEdition.SupportsBidirectional)
+        {
+            HideComboBoxItemByTag(ModeBox, "tcp-bidirectional");
+        }
+
+        NormalizeDashboardForProductEdition();
+        ServerModeNavButton.IsEnabled = WinPerfProductEdition.SupportsServerMode;
+        ServerModeNavButton.ToolTip = WinPerfProductEdition.SupportsServerMode
+            ? null
+            : AppText.T("Available in WinPerf Sponsor Pro.");
+        CommandMenuButton.IsEnabled =
+            WinPerfProductEdition.SupportsAdvancedCommands ||
+            WinPerfProductEdition.SupportsCustomCommands;
+        AdvancedCommandMenuItem.IsEnabled = WinPerfProductEdition.SupportsAdvancedCommands;
+        CustomCommandMenuItem.IsEnabled = WinPerfProductEdition.SupportsCustomCommands;
+        HistoryExportButton.IsEnabled = WinPerfProductEdition.SupportsHistoryExportImport;
+        HistoryImportButton.IsEnabled = WinPerfProductEdition.SupportsHistoryExportImport;
+
+        if (WinPerfProductEdition.IsPublicFree)
+        {
+            DashboardProfileStatusText.Text = AppText.T("WinPerf Free includes iperf3 TCP upload/download, 1 stream and 10 second tests.");
+        }
+    }
+
+    private static void HideComboBoxItemByContent(ComboBox comboBox, string content)
+    {
+        foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Content?.ToString(), content, StringComparison.Ordinal))
+            {
+                item.Visibility = Visibility.Collapsed;
+                item.IsEnabled = false;
+            }
+        }
+    }
+
+    private static void HideComboBoxItemByTag(ComboBox comboBox, string tag)
+    {
+        foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString(), tag, StringComparison.Ordinal))
+            {
+                item.Visibility = Visibility.Collapsed;
+                item.IsEnabled = false;
+            }
+        }
+    }
+
+    private void NormalizeDashboardForProductEdition()
+    {
+        if (EngineBox is null ||
+            ModeBox is null ||
+            StreamsBox is null ||
+            DurationBox is null ||
+            UdpBandwidthPanel is null ||
+            UdpBandwidthBox is null)
+        {
+            return;
+        }
+
+        if (WinPerfProductEdition.SupportsIperf2 &&
+            WinPerfProductEdition.SupportsUdp &&
+            WinPerfProductEdition.SupportsBidirectional &&
+            WinPerfProductEdition.MaxStreams == int.MaxValue &&
+            WinPerfProductEdition.MaxDurationSeconds == int.MaxValue)
+        {
+            return;
+        }
+
+        if (!WinPerfProductEdition.SupportsIperf2 && GetSelectedEngine() == IperfEngine.Iperf2)
+        {
+            SelectEngine(IperfEngine.Iperf3);
+        }
+
+        var selectedMode = GetSelectedMode();
+        if (!IsModeAllowedByProductEdition(selectedMode))
+        {
+            SelectMode(IperfMode.TcpUpload);
+        }
+
+        NormalizeLimitedPositiveIntBox(StreamsBox, WinPerfProductEdition.MaxStreams);
+        NormalizeLimitedPositiveIntBox(DurationBox, WinPerfProductEdition.MaxDurationSeconds);
+        UpdateUdpBandwidthVisibility();
+    }
+
+    private static void NormalizeLimitedPositiveIntBox(TextBox box, int maxValue)
+    {
+        if (maxValue == int.MaxValue)
+        {
+            return;
+        }
+
+        if (!int.TryParse(box.Text.Trim(), out var value) || value < 1 || value > maxValue)
+        {
+            box.Text = maxValue.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+
+    private static bool IsModeAllowedByProductEdition(IperfMode mode)
+    {
+        if (!WinPerfProductEdition.SupportsUdp &&
+            mode is IperfMode.UdpUpload or IperfMode.UdpDownload)
+        {
+            return false;
+        }
+
+        if (!WinPerfProductEdition.SupportsBidirectional &&
+            mode == IperfMode.TcpBidirectional)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void AppMenuButton_Click(object sender, RoutedEventArgs e)
@@ -636,7 +781,7 @@ public partial class MainWindow : Window
             ServerModeStatusText.Text = AppText.T("Stopped. Ready to start local server.");
             SetServerModeStatusChip(isRunning: false, isError: false);
         }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
+        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or InvalidOperationException or NotSupportedException)
         {
             ServerOutputText.Text =
                 AppText.T("Server command preview unavailable:") + Environment.NewLine +
@@ -1096,7 +1241,7 @@ public partial class MainWindow : Window
                 summaryExitCode,
                 commandPreview);
 
-            await _historyStore.AddAsync(entry);
+            await _historyStore.AddAsync(entry, WinPerfProductEdition.MaxSavedHistoryResults);
 
             if (HistoryContentPanel.Visibility == Visibility.Visible)
             {
@@ -1284,6 +1429,12 @@ public partial class MainWindow : Window
 
     private async void HistoryExportButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsHistoryExportImport)
+        {
+            HistoryStatusText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         try
         {
             var document = await _historyStore.LoadAsync();
@@ -1314,6 +1465,12 @@ public partial class MainWindow : Window
 
     private async void HistoryImportButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsHistoryExportImport)
+        {
+            HistoryStatusText.Text = AppText.T("Available in WinPerf Sponsor Pro.");
+            return;
+        }
+
         try
         {
             var dialog = new OpenFileDialog
@@ -1331,7 +1488,7 @@ public partial class MainWindow : Window
 
             var importStore = new JsonIperfHistoryStore(dialog.FileName);
             var importedDocument = await importStore.LoadAsync();
-            var mergedCount = await _historyStore.MergeAsync(importedDocument);
+            var mergedCount = await _historyStore.MergeAsync(importedDocument, WinPerfProductEdition.MaxSavedHistoryResults);
             await RefreshHistoryPageAsync();
             HistoryStatusText.Text = importedDocument.Entries.Count == 1
                 ? AppText.F("Imported 1 result. History now has {0} results.", mergedCount)
@@ -1537,7 +1694,7 @@ public partial class MainWindow : Window
             version = version[..metadataIndex];
         }
 
-        return $"WinPerf v{version}";
+        return $"{WinPerfProductEdition.EditionName} v{version}";
     }
 
     private static IperfEngine ParseStoredEngine(string? value)
@@ -1702,11 +1859,29 @@ public partial class MainWindow : Window
 
     private async void AdvancedCommandMenuItem_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsAdvancedCommands)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                WinPerfProductEdition.EditionName,
+                AppText.T("Available in WinPerf Sponsor Pro."));
+            return;
+        }
+
         await OpenAdvancedCommandWindowAsync();
     }
 
     private void CustomCommandMenuItem_Click(object sender, RoutedEventArgs e)
     {
+        if (!WinPerfProductEdition.SupportsCustomCommands)
+        {
+            ConfirmDialogWindow.ShowMessage(
+                this,
+                WinPerfProductEdition.EditionName,
+                AppText.T("Available in WinPerf Sponsor Pro."));
+            return;
+        }
+
         OpenCustomCommandWindow();
     }
 
@@ -1745,7 +1920,7 @@ public partial class MainWindow : Window
 
     private IperfTestOptions BuildDashboardTestOptions()
     {
-        return new IperfTestOptions
+        var options = new IperfTestOptions
         {
             Engine = GetSelectedEngine(),
             Server = GetServerText(),
@@ -1757,6 +1932,9 @@ public partial class MainWindow : Window
             AddressFamily = IperfAddressFamily.IPv4,
             UdpBandwidth = NormalizeUdpBandwidth(UdpBandwidthBox.Text)
         };
+
+        ValidateProductEditionTestOptions(options);
+        return options;
     }
 
     private string BuildDashboardCommandArgumentsPreview()
@@ -1767,7 +1945,7 @@ public partial class MainWindow : Window
             var command = IperfCommandBuilder.BuildClientCommand(GetEngineExecutableDisplayName(options.Engine), options);
             return string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
         }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
+        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or InvalidOperationException or NotSupportedException)
         {
             return string.Empty;
         }
@@ -1778,7 +1956,7 @@ public partial class MainWindow : Window
         var args = SplitCommandLine(commandArguments);
         var mode = InferCustomCommandMode(args);
 
-        return new IperfTestOptions
+        var options = new IperfTestOptions
         {
             Engine = GetSelectedEngine(),
             Server = TryGetArgumentValue(args, "-c") ?? GetServerText(),
@@ -1792,6 +1970,34 @@ public partial class MainWindow : Window
                 : IperfAddressFamily.IPv4,
             UdpBandwidth = TryGetArgumentValue(args, "-b") ?? "0"
         };
+
+        ValidateProductEditionTestOptions(options);
+        return options;
+    }
+
+    private static void ValidateProductEditionTestOptions(IperfTestOptions options)
+    {
+        if (!WinPerfProductEdition.SupportsIperf2 && options.Engine == IperfEngine.Iperf2)
+        {
+            throw new InvalidOperationException(AppText.T("iperf2 is available in WinPerf Sponsor Pro."));
+        }
+
+        if (!IsModeAllowedByProductEdition(options.Mode))
+        {
+            throw new InvalidOperationException(AppText.T("This test mode is available in WinPerf Sponsor Pro."));
+        }
+
+        if (options.Streams > WinPerfProductEdition.MaxStreams)
+        {
+            throw new InvalidOperationException(
+                AppText.F("WinPerf Free allows up to {0} stream.", WinPerfProductEdition.MaxStreams));
+        }
+
+        if (options.DurationSeconds > WinPerfProductEdition.MaxDurationSeconds)
+        {
+            throw new InvalidOperationException(
+                AppText.F("WinPerf Free allows tests up to {0} seconds.", WinPerfProductEdition.MaxDurationSeconds));
+        }
     }
 
     private static IperfMode InferCustomCommandMode(IReadOnlyList<string> args)
@@ -2023,6 +2229,7 @@ public partial class MainWindow : Window
             _isApplyingDashboardProfile = false;
         }
 
+        NormalizeDashboardForProductEdition();
         UpdateUdpBandwidthVisibility();
         UpdateDashboardCommandPreview();
     }
@@ -2058,6 +2265,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        NormalizeDashboardForProductEdition();
         UpdateUdpBandwidthVisibility();
 
         if (NormalizeUnsupportedDashboardModeForSelectedEngine())
@@ -2078,6 +2286,12 @@ public partial class MainWindow : Window
             UdpBandwidthBox is null ||
             ModeBox is null)
         {
+            return;
+        }
+
+        if (!WinPerfProductEdition.SupportsUdp)
+        {
+            UdpBandwidthPanel.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -2446,7 +2660,10 @@ public partial class MainWindow : Window
         StartButton.IsEnabled = !isRunning;
         StopButton.IsEnabled = isRunning;
         EngineBox.IsEnabled = !isRunning;
-        CommandMenuButton.IsEnabled = !isRunning;
+        CommandMenuButton.IsEnabled =
+            !isRunning &&
+            (WinPerfProductEdition.SupportsAdvancedCommands ||
+             WinPerfProductEdition.SupportsCustomCommands);
         RemoveServerButton.IsEnabled = !isRunning;
     }
 

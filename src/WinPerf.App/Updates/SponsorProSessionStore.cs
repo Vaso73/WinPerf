@@ -2,6 +2,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using WinPerf.Core.Product;
 using WinPerf.Core.Updates;
 
 namespace WinPerf.App.Updates;
@@ -12,7 +13,7 @@ internal sealed class SponsorProSessionStore
     private readonly string _sessionFile;
 
     public SponsorProSessionStore()
-        : this(Path.Combine(AppContext.BaseDirectory, "data"))
+        : this(Path.Combine(AppContext.BaseDirectory, WinPerfProductEdition.DataDirectoryName))
     {
     }
 

@@ -12,7 +12,8 @@ public sealed class AppVersionFooterTests
         Assert.Contains("Application version from the running executable.", xaml);
         Assert.Contains("AppVersionText.Text = ResolveAppVersionText();", code);
         Assert.Contains("AssemblyInformationalVersionAttribute", code);
-        Assert.Contains("WinPerf v{version}", code);
+        Assert.Contains("WinPerfProductEdition.EditionName", code);
+        Assert.Contains("v{version}", code);
     }
 
     [Fact]
