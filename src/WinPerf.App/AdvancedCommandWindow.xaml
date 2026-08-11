@@ -201,7 +201,10 @@
                                     <TextBlock Text="Endpoint" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
 
                                     <TextBlock Text="Server address / host" Foreground="{StaticResource TextMuted}" FontSize="11" />
-                                    <TextBox x:Name="ServerAddressBox" Text="10.100.100.1" TextChanged="AnyInputChanged" Margin="0,3,0,7" />
+                                    <TextBox x:Name="ServerAddressBox"
+                                             ToolTip="Enter target server address."
+                                             TextChanged="AnyInputChanged"
+                                             Margin="0,3,0,7" />
 
                                     <TextBlock Text="Bind address, optional" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <TextBox x:Name="BindAddressBox" TextChanged="AnyInputChanged" Margin="0,3,0,7" />
@@ -407,14 +410,14 @@
 
                             <Button Content="Cancel"
                                     DockPanel.Dock="Right"
-                                    Style="{StaticResource SecondaryButton}"
+                                    Style="{StaticResource CompactSecondaryButton}"
                                     Width="100"
                                     Margin="6,0,0,0"
                                     Click="CancelButton_Click" />
 
                             <Button Content="Use Command"
                                     DockPanel.Dock="Right"
-                                    Style="{StaticResource PrimaryButton}"
+                                    Style="{StaticResource CompactPrimaryButton}"
                                     Width="140"
                                     Click="UseButton_Click" />
                         </DockPanel>

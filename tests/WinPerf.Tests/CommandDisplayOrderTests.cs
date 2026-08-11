@@ -24,10 +24,10 @@ public sealed class CommandDisplayOrderTests
     {
         var xaml = ReadFile("src", "WinPerf.App", "CustomCommandWindow.xaml");
 
-        Assert.Contains("-c 10.100.100.1 -p 5201 -4 -t 10 -P 10 --json-stream", xaml);
-        Assert.Contains("TCP upload:     -c 10.100.100.1 -p 5201 -4 -t 10 -P 10 --json-stream", xaml);
-        Assert.Contains("TCP download:   -c 10.100.100.1 -p 5201 -4 -R -t 10 -P 10 --json-stream", xaml);
-        Assert.Contains("UDP upload:     -c 10.100.100.1 -p 5201 -4 -u -b 0 -t 10 -P 10 --json-stream", xaml);
+        Assert.DoesNotContain("Text=\"-c ", xaml);
+        Assert.Contains("TCP upload:     -c &lt;server&gt; -p 5201 -4 -t 10 -P 10 --json-stream", xaml);
+        Assert.Contains("TCP download:   -c &lt;server&gt; -p 5201 -4 -R -t 10 -P 10 --json-stream", xaml);
+        Assert.Contains("UDP upload:     -c &lt;server&gt; -p 5201 -4 -u -b 0 -t 10 -P 10 --json-stream", xaml);
 
         Assert.DoesNotContain("-t 10 -P 10 --json-stream -4", xaml);
         Assert.DoesNotContain("-R -P 10 -t 10 -4 --json-stream", xaml);

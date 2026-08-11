@@ -129,7 +129,7 @@
                                 <Button x:Name="SponsorProAccountButton"
                                         Grid.Column="2"
                                         Content="Sign in with GitHub"
-                                        Style="{StaticResource SecondaryButton}"
+                                        Style="{StaticResource CompactSecondaryButton}"
                                         Width="180"
                                         Margin="14,0,0,0"
                                         VerticalAlignment="Center"
@@ -247,12 +247,12 @@
                                             Margin="0,8,0,0">
                                     <Button x:Name="CheckUpdatesButton"
                                             Content="Check for updates"
-                                            Style="{StaticResource SecondaryButton}"
+                                            Style="{StaticResource CompactSecondaryButton}"
                                             Width="170"
                                             Click="CheckUpdatesButton_Click" />
                                     <Button x:Name="InstallUpdateButton"
                                             Content="Install update"
-                                            Style="{StaticResource SecondaryButton}"
+                                            Style="{StaticResource CompactSecondaryButton}"
                                             Width="150"
                                             Margin="8,0,0,0"
                                             IsEnabled="False"
@@ -276,7 +276,7 @@
 
                 <Button Grid.Row="2"
                         Content="Close"
-                        Style="{StaticResource PrimaryButton}"
+                        Style="{StaticResource CompactPrimaryButton}"
                         Width="110"
                         HorizontalAlignment="Right"
                         Margin="0,12,0,0"

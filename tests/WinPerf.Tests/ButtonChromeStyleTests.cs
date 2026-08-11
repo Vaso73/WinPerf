@@ -35,6 +35,16 @@ public sealed class ButtonChromeStyleTests
     }
 
     [Fact]
+    public void CompactButtonsMatchCompactFormControlHeight()
+    {
+        Assert.Contains("x:Key=\"CompactPrimaryButton\"", ThemeXaml);
+        Assert.Contains("x:Key=\"CompactSecondaryButton\"", ThemeXaml);
+        Assert.Contains("Property=\"Padding\" Value=\"10,0\"", ThemeXaml);
+        Assert.Contains("Property=\"MinHeight\" Value=\"30\"", ThemeXaml);
+        Assert.Contains("Property=\"FontSize\" Value=\"13\"", ThemeXaml);
+    }
+
+    [Fact]
     public void InputsAndComboBoxesUseDarkCustomChromeInsteadOfWhiteWindowsDefault()
     {
         Assert.Contains("x:Key=\"TextBoxBase\"", ThemeXaml);

@@ -6,9 +6,9 @@
         Title="Custom iperf3 command"
         Icon="Assets/WinPerf.ico"
         Width="760"
-        Height="500"
+        Height="420"
         MinWidth="640"
-        MinHeight="440"
+        MinHeight="360"
         Background="{StaticResource Bg}"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
@@ -78,7 +78,7 @@
                 <Grid Grid.Row="1">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="130" />
+                        <RowDefinition Height="116" />
                     </Grid.RowDefinitions>
 
                     <Border Grid.Row="0"
@@ -107,8 +107,7 @@
                                       FontSize="13"
                                       IsEditable="True"
                                       IsTextSearchEnabled="False"
-                                      VerticalContentAlignment="Center"
-                                      Text="-c 10.100.100.1 -p 5201 -4 -t 10 -P 10 --json-stream" />
+                                      VerticalContentAlignment="Center" />
                         </Grid>
                     </Border>
 
@@ -125,7 +124,7 @@
                             <TextBlock Foreground="{StaticResource TextMuted}"
                                        FontFamily="Cascadia Mono, Consolas"
                                        FontSize="11"
-                                       TextWrapping="Wrap"><Run Text="TCP upload:     -c 10.100.100.1 -p 5201 -4 -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="TCP download:   -c 10.100.100.1 -p 5201 -4 -R -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="UDP upload:     -c 10.100.100.1 -p 5201 -4 -u -b 0 -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="Server mode:    -s -p 5201" /></TextBlock>
+                                       TextWrapping="Wrap"><Run Text="TCP upload:     -c &lt;server&gt; -p 5201 -4 -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="TCP download:   -c &lt;server&gt; -p 5201 -4 -R -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="UDP upload:     -c &lt;server&gt; -p 5201 -4 -u -b 0 -t 10 -P 10 --json-stream" /><LineBreak /><Run Text="Server mode:    -s -p 5201" /></TextBlock>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -138,14 +137,14 @@
 
                     <Button Content="Cancel"
                             DockPanel.Dock="Right"
-                            Style="{StaticResource SecondaryButton}"
+                            Style="{StaticResource CompactSecondaryButton}"
                             Width="100"
                             Margin="6,0,0,0"
                             Click="CancelButton_Click" />
 
                     <Button Content="Use Command"
                             DockPanel.Dock="Right"
-                            Style="{StaticResource PrimaryButton}"
+                            Style="{StaticResource CompactPrimaryButton}"
                             Width="140"
                             Click="UseButton_Click" />
                 </DockPanel>

@@ -47,9 +47,9 @@ public sealed class UnifiedCompactLayoutTests
         Assert.Contains("Width=\"140\"", advanced);
 
         Assert.Contains("Width=\"760\"", custom);
-        Assert.Contains("Height=\"500\"", custom);
+        Assert.Contains("Height=\"420\"", custom);
         Assert.Contains("MinWidth=\"640\"", custom);
-        Assert.Contains("MinHeight=\"440\"", custom);
+        Assert.Contains("MinHeight=\"360\"", custom);
         Assert.Contains("Width=\"140\"", custom);
 
         Assert.Contains("Width=\"720\"", settings);

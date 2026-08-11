@@ -226,7 +226,7 @@
                                           Grid.Column="0"
                                           IsEditable="True"
                                           IsTextSearchEnabled="True"
-                                          Text="10.100.100.1"
+                                          ToolTip="Enter server address or select one from recent servers."
                                           TextBoxBase.TextChanged="DashboardInputChanged"
                                           SelectionChanged="DashboardInputChanged"
                                           KeyUp="DashboardInputChanged"

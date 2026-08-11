@@ -822,9 +822,16 @@ public partial class MainWindow : Window
 
     private string BuildDashboardCommandArgumentsPreview()
     {
-        var options = BuildDashboardTestOptions();
-        var command = IperfCommandBuilder.BuildClientCommand(GetEngineExecutableDisplayName(options.Engine), options);
-        return string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+        try
+        {
+            var options = BuildDashboardTestOptions();
+            var command = IperfCommandBuilder.BuildClientCommand(GetEngineExecutableDisplayName(options.Engine), options);
+            return string.Join(" ", command.Arguments.Select(QuoteIfNeeded));
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
+        {
+            return string.Empty;
+        }
     }
 
     private IperfTestOptions BuildCustomCommandOptions(string commandArguments)
@@ -1255,8 +1262,9 @@ public partial class MainWindow : Window
         catch (Exception ex) when (ex is FormatException or ArgumentException or ArgumentOutOfRangeException or NotSupportedException)
         {
             EngineOutputText.Text =
-                "Command preview unavailable:" + Environment.NewLine +
-                ex.Message;
+                string.IsNullOrWhiteSpace(GetServerText())
+                    ? "Enter a server to preview the iperf command."
+                    : "Command preview unavailable:" + Environment.NewLine + ex.Message;
         }
     }
 
@@ -1278,7 +1286,7 @@ public partial class MainWindow : Window
 
         ServerBox.Text = !string.IsNullOrWhiteSpace(_settings.LastServer)
             ? _settings.LastServer
-            : servers.FirstOrDefault() ?? "10.100.100.1";
+            : servers.FirstOrDefault() ?? string.Empty;
     }
 
     private void SaveRecentServer(string server)
@@ -1338,7 +1346,7 @@ public partial class MainWindow : Window
 
         ServerBox.Text = _settings.LastServer
             ?? servers.FirstOrDefault()
-            ?? "10.100.100.1";
+            ?? string.Empty;
     }
 
     private IperfEngine GetSelectedEngine()
