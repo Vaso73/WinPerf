@@ -43,6 +43,7 @@
                                 shell:WindowChrome.IsHitTestVisibleInChrome="True">
                         <Button x:Name="AppMenuButton"
                                 Content="⋯"
+                                AutomationProperties.AutomationId="AppMenuButton"
                                 Style="{StaticResource ShellMenuButton}"
                                 ToolTip="Open app settings, updates and information"
                                 Click="AppMenuButton_Click">
@@ -52,12 +53,15 @@
                                              Padding="4">
                                     <MenuItem x:Name="SettingsMenuItem"
                                               Header="Settings"
+                                              AutomationProperties.AutomationId="SettingsMenuItem"
                                               Click="SettingsMenuItem_Click" />
                                     <MenuItem x:Name="UpdatesMenuItem"
                                               Header="Sponsor Pro / Updates"
+                                              AutomationProperties.AutomationId="UpdatesMenuItem"
                                               Click="UpdatesMenuItem_Click" />
                                     <MenuItem x:Name="AboutMenuItem"
                                               Header="About WinPerf"
+                                              AutomationProperties.AutomationId="AboutMenuItem"
                                               Click="AboutMenuItem_Click" />
                                 </ContextMenu>
                             </Button.ContextMenu>
@@ -103,19 +107,23 @@
 
                     <Button x:Name="DashboardNavButton"
                             Content="Dashboard"
+                            AutomationProperties.AutomationId="DashboardNavButton"
                             Style="{StaticResource SidebarNavSelectedButton}"
                             Click="DashboardNavButton_Click" />
                     <Button x:Name="SpeedTestNavButton"
                             Content="Speed Test"
+                            AutomationProperties.AutomationId="SpeedTestNavButton"
                             Style="{StaticResource SidebarNavButton}"
                             IsEnabled="False"
                             ToolTip="Speed Test page will be added later." />
                     <Button x:Name="ServerModeNavButton"
                             Content="Server Mode"
+                            AutomationProperties.AutomationId="ServerModeNavButton"
                             Style="{StaticResource SidebarNavButton}"
                             Click="ServerModeNavButton_Click" />
                     <Button x:Name="HistoryNavButton"
                             Content="History"
+                            AutomationProperties.AutomationId="HistoryNavButton"
                             Style="{StaticResource SidebarNavButton}"
                             IsEnabled="False"
                             ToolTip="History page will be added later." />
@@ -227,6 +235,7 @@
 
                                 <ComboBox x:Name="ServerBox"
                                           Grid.Column="0"
+                                          AutomationProperties.AutomationId="DashboardServerBox"
                                           IsEditable="True"
                                           IsTextSearchEnabled="True"
                                           ToolTip="Enter server address or select one from recent servers."
@@ -238,6 +247,7 @@
                                 <Button x:Name="RemoveServerButton"
                                           Grid.Column="2"
                                           Content="Remove"
+                                          AutomationProperties.AutomationId="DashboardRemoveServerButton"
                                           Style="{StaticResource CompactSecondaryButton}"
                                           Padding="6,0"
                                           MinHeight="30"
@@ -256,6 +266,7 @@
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="Engine" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <ComboBox x:Name="EngineBox"
+                                              AutomationProperties.AutomationId="DashboardEngineBox"
                                               SelectedIndex="0"
                                               Margin="0,3,0,0"
                                               SelectionChanged="EngineSelectionChanged">
@@ -266,6 +277,7 @@
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Text="Mode" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <ComboBox x:Name="ModeBox"
+                                              AutomationProperties.AutomationId="DashboardModeBox"
                                               SelectedIndex="0"
                                               Margin="0,3,0,0"
                                               SelectionChanged="DashboardInputChanged">
@@ -279,6 +291,7 @@
                                 <StackPanel Grid.Column="4">
                                     <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <TextBox x:Name="PortBox"
+                                             AutomationProperties.AutomationId="DashboardPortBox"
                                              Text="5201"
                                              Margin="0,3,0,0"
                                              TextChanged="DashboardInputChanged"
@@ -298,6 +311,7 @@
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="Streams" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <TextBox x:Name="StreamsBox"
+                                               AutomationProperties.AutomationId="DashboardStreamsBox"
                                                Text="10"
                                                Margin="0,3,0,0"
                                                TextChanged="DashboardInputChanged"
@@ -307,6 +321,7 @@
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Text="Duration" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <TextBox x:Name="DurationBox"
+                                               AutomationProperties.AutomationId="DashboardDurationBox"
                                                Text="10"
                                                Margin="0,3,0,0"
                                                TextChanged="DashboardInputChanged"
@@ -316,6 +331,7 @@
                                 <StackPanel Grid.Column="4">
                                     <TextBlock Text="Omit" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                     <TextBox x:Name="OmitSecondsBox"
+                                               AutomationProperties.AutomationId="DashboardOmitSecondsBox"
                                                Text="0"
                                                Margin="0,3,0,0"
                                                ToolTip="Warm-up seconds to ignore. Use 10–15 for routed, VLAN, VPN, or public server download tests."
@@ -332,6 +348,7 @@
                                            Foreground="{StaticResource TextMuted}"
                                            FontSize="11" />
                                 <TextBox x:Name="UdpBandwidthBox"
+                                         AutomationProperties.AutomationId="DashboardUdpBandwidthBox"
                                          Text="10M"
                                          Margin="0,3,0,0"
                                          ToolTip="Target UDP bandwidth per stream. With 10 streams, 10M is about 100M total."
@@ -351,12 +368,14 @@
                                     <Button x:Name="StartButton"
                                             Grid.Column="0"
                                             Content="Start"
+                                            AutomationProperties.AutomationId="DashboardStartButton"
                                             Style="{StaticResource PrimaryButton}"
                                             MinHeight="36"
                                             Click="StartButton_Click" />
                                     <Button x:Name="StopButton"
                                             Grid.Column="2"
                                             Content="Stop"
+                                            AutomationProperties.AutomationId="DashboardStopButton"
                                             Style="{StaticResource SecondaryButton}"
                                             MinHeight="36"
                                             IsEnabled="False"
@@ -365,6 +384,7 @@
 
                                 <Button x:Name="CommandMenuButton"
                                         Content="Command ▾"
+                                        AutomationProperties.AutomationId="DashboardCommandMenuButton"
                                         Style="{StaticResource SecondaryButton}"
                                         MinHeight="36"
                                         HorizontalContentAlignment="Center"
@@ -593,6 +613,7 @@
 
                             <TextBox x:Name="EngineOutputText"
                                      Grid.Row="1"
+                                     AutomationProperties.AutomationId="DashboardEngineOutputText"
                                      Text="iperf output will appear here."
                                      Foreground="{StaticResource TextMuted}"
                                      Background="{StaticResource PanelDark}"
@@ -687,6 +708,7 @@
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="Engine" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                 <ComboBox x:Name="ServerEngineBox"
+                                          AutomationProperties.AutomationId="ServerModeEngineBox"
                                           SelectedIndex="0"
                                           Margin="0,3,0,0"
                                           SelectionChanged="ServerModeInputChanged">
@@ -698,6 +720,7 @@
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="Protocol" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                 <ComboBox x:Name="ServerProtocolBox"
+                                          AutomationProperties.AutomationId="ServerModeProtocolBox"
                                           SelectedIndex="0"
                                           Margin="0,3,0,0"
                                           SelectionChanged="ServerModeInputChanged">
@@ -709,6 +732,7 @@
                             <StackPanel Grid.Column="4">
                                 <TextBlock Text="Port" Foreground="{StaticResource TextMuted}" FontSize="11" />
                                 <TextBox x:Name="ServerPortBox"
+                                         AutomationProperties.AutomationId="ServerModePortBox"
                                          Text="5201"
                                          Margin="0,3,0,0"
                                          TextChanged="ServerModeInputChanged"
@@ -720,11 +744,13 @@
                                   VerticalAlignment="Bottom">
                                 <CheckBox x:Name="ServerOneOffBox"
                                           Content="Stop after one client (--one-off)"
+                                          AutomationProperties.AutomationId="ServerModeOneOffBox"
                                           VerticalAlignment="Center"
                                           Checked="ServerModeInputChanged"
                                           Unchecked="ServerModeInputChanged" />
                                 <TextBlock x:Name="ServerOneOffUnavailableText"
                                            Text="One-off is iperf3 only. iperf2 runs until stopped."
+                                           AutomationProperties.AutomationId="ServerModeOneOffUnavailableText"
                                            Foreground="{StaticResource TextMuted}"
                                            FontSize="11"
                                            VerticalAlignment="Center"
@@ -742,12 +768,14 @@
                             <Button x:Name="StartServerButton"
                                     Grid.Column="0"
                                     Content="Start server"
+                                    AutomationProperties.AutomationId="ServerModeStartServerButton"
                                     Style="{StaticResource PrimaryButton}"
                                     MinHeight="36"
                                     Click="StartServerButton_Click" />
                             <Button x:Name="StopServerButton"
                                     Grid.Column="2"
                                     Content="Stop server"
+                                    AutomationProperties.AutomationId="ServerModeStopServerButton"
                                     Style="{StaticResource SecondaryButton}"
                                     MinHeight="36"
                                     IsEnabled="False"
@@ -770,6 +798,7 @@
 
                         <TextBox x:Name="ServerOutputText"
                                  Grid.Row="1"
+                                 AutomationProperties.AutomationId="ServerModeOutputText"
                                  Text="Server command preview will appear here."
                                  Foreground="{StaticResource TextMuted}"
                                  Background="{StaticResource PanelDark}"
