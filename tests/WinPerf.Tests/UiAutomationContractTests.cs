@@ -12,7 +12,6 @@ public sealed class UiAutomationContractTests
         [
             "AppMenuButton",
             "SettingsMenuItem",
-            "UpdatesMenuItem",
             "AboutMenuItem",
             "DashboardNavButton",
             "ServerModeNavButton",

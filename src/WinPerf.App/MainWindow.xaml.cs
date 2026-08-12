@@ -477,11 +477,6 @@ public partial class MainWindow : Window
         OpenSettingsWindow();
     }
 
-    private void UpdatesMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        OpenSponsorProUpdatesWindow();
-    }
-
     private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
     {
         OpenAboutWindow();
@@ -566,26 +561,6 @@ public partial class MainWindow : Window
         };
 
         dialog.ShowDialog();
-    }
-
-    private void OpenSponsorProUpdatesWindow()
-    {
-        if (!WinPerfProductEdition.SupportsSponsorProUpdates)
-        {
-            ConfirmDialogWindow.ShowMessage(
-                this,
-                AppText.T("Sponsor Pro / Updates"),
-                AppText.T("Sponsor Pro updates are available only in WinPerf Sponsor Pro."));
-            return;
-        }
-
-        var dialog = new SponsorProUpdatesWindow(ResolveAppVersionText())
-        {
-            Owner = this
-        };
-
-        dialog.ShowDialog();
-        RefreshIntegrationStatus();
     }
 
     private void ShowStartupUpdateResult()

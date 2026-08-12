@@ -38,7 +38,6 @@ public sealed class UnifiedCompactLayoutTests
         var custom = ReadXaml("CustomCommandWindow.xaml");
         var settings = ReadXaml("SettingsWindow.xaml");
         var about = ReadXaml("AboutWindow.xaml");
-        var updates = ReadXaml("SponsorProUpdatesWindow.xaml");
 
         Assert.Contains("Width=\"980\"", advanced);
         Assert.Contains("Height=\"680\"", advanced);
@@ -62,11 +61,6 @@ public sealed class UnifiedCompactLayoutTests
         Assert.Contains("MinWidth=\"600\"", about);
         Assert.Contains("MinHeight=\"480\"", about);
         Assert.Contains("ResizeMode=\"NoResize\"", about);
-
-        Assert.Contains("Width=\"760\"", updates);
-        Assert.Contains("Height=\"560\"", updates);
-        Assert.Contains("MinWidth=\"680\"", updates);
-        Assert.Contains("MinHeight=\"500\"", updates);
     }
 
     [Fact]
@@ -77,14 +71,13 @@ public sealed class UnifiedCompactLayoutTests
             ReadXaml("AdvancedCommandWindow.xaml") +
             ReadXaml("CustomCommandWindow.xaml") +
             ReadXaml("SettingsWindow.xaml") +
-            ReadXaml("AboutWindow.xaml") +
-            ReadXaml("SponsorProUpdatesWindow.xaml");
+            ReadXaml("AboutWindow.xaml");
 
         Assert.DoesNotContain("CaptionHeight=\"42\"", combined);
         Assert.DoesNotContain("<RowDefinition Height=\"42\" />", combined);
         Assert.DoesNotContain("Width=\"46\"", combined);
-        Assert.Equal(6, CountOccurrences(combined, "<app:AppWindowChrome />"));
-        Assert.Equal(6, CountOccurrences(combined, "Style=\"{StaticResource ShellTitleBar}\""));
+        Assert.Equal(5, CountOccurrences(combined, "<app:AppWindowChrome />"));
+        Assert.Equal(5, CountOccurrences(combined, "Style=\"{StaticResource ShellTitleBar}\""));
 
         var chrome = File.ReadAllText(
             Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "WinPerf.App", "AppWindowChrome.cs"));
@@ -102,7 +95,6 @@ public sealed class UnifiedCompactLayoutTests
         Assert.Contains("Content=\"⋯\"", xaml);
         Assert.Contains("x:Name=\"AppContextMenu\"", xaml);
         Assert.Contains("x:Name=\"SettingsMenuItem\"", xaml);
-        Assert.Contains("x:Name=\"UpdatesMenuItem\"", xaml);
         Assert.Contains("x:Name=\"AboutMenuItem\"", xaml);
         Assert.Contains("Style=\"{StaticResource ShellMenuButton}\"", xaml);
         Assert.DoesNotContain("x:Name=\"AppMenuSection\"", xaml);

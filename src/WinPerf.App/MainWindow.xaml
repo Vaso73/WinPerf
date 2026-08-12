@@ -45,7 +45,7 @@
                                 Content="⋯"
                                 AutomationProperties.AutomationId="AppMenuButton"
                                 Style="{StaticResource ShellMenuButton}"
-                                ToolTip="Open app settings, updates and information"
+                                ToolTip="Open app settings and information"
                                 Click="AppMenuButton_Click">
                             <Button.ContextMenu>
                                 <ContextMenu x:Name="AppContextMenu"
@@ -55,10 +55,6 @@
                                               Header="Settings"
                                               AutomationProperties.AutomationId="SettingsMenuItem"
                                               Click="SettingsMenuItem_Click" />
-                                    <MenuItem x:Name="UpdatesMenuItem"
-                                              Header="Sponsor Pro / Updates"
-                                              AutomationProperties.AutomationId="UpdatesMenuItem"
-                                              Click="UpdatesMenuItem_Click" />
                                     <MenuItem x:Name="AboutMenuItem"
                                               Header="About WinPerf"
                                               AutomationProperties.AutomationId="AboutMenuItem"

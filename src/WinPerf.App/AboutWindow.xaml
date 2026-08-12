@@ -53,7 +53,15 @@
                             Style="{StaticResource SecondaryButton}"
                             Margin="0,0,8,0"
                             Click="CheckForUpdatesButton_Click" />
-                    <Button Content="Close"
+                    <Button x:Name="InstallUpdateButton"
+                            Content="Update"
+                            Style="{StaticResource SecondaryButton}"
+                            Width="130"
+                            Margin="0,0,8,0"
+                            IsEnabled="False"
+                            Click="InstallUpdateButton_Click" />
+                    <Button x:Name="CloseButton"
+                            Content="Close"
                             Style="{StaticResource PrimaryButton}"
                             Click="CloseButton_Click" />
                 </StackPanel>
@@ -124,11 +132,23 @@
                                 CornerRadius="21"
                                 Background="{StaticResource Accent}"
                                 Margin="0,0,12,0">
-                            <TextBlock Text="GH"
-                                       Foreground="{StaticResource Bg}"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center" />
+                            <Grid>
+                                <Ellipse x:Name="AccountAvatar"
+                                         Width="42"
+                                         Height="42"
+                                         Visibility="Collapsed" />
+                                <Viewbox x:Name="AccountGitHubIcon"
+                                         Width="22"
+                                         Height="22"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center">
+                                    <Canvas Width="16" Height="16">
+                                        <Path Data="{StaticResource WinPerfGitHubMarkGeometry}"
+                                              Fill="{StaticResource Bg}"
+                                              Stretch="Uniform" />
+                                    </Canvas>
+                                </Viewbox>
+                            </Grid>
                         </Border>
 
                         <StackPanel Grid.Column="1"
@@ -147,8 +167,9 @@
 
                         <Button x:Name="SponsorProAccountButton"
                                 Grid.Column="2"
-                                Content="Sponsor Pro / Updates"
+                                Content="Sign in with GitHub"
                                 Style="{StaticResource SecondaryButton}"
+                                Width="170"
                                 Margin="14,0,0,0"
                                 VerticalAlignment="Center"
                                 Click="SponsorProAccountButton_Click" />
