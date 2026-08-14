@@ -1,4 +1,4 @@
-# WinPerf
+# WinPerf 🚀
 
 **Portable Windows GUI for iperf, Ookla Speedtest, and repeatable network
 throughput checks.**
@@ -17,37 +17,65 @@ command preview matter.
 ![Ookla](https://img.shields.io/badge/Ookla-Speedtest%20CLI-FF6B35?style=flat-square)
 ![Portable](https://img.shields.io/badge/Portable-no%20installer-8B5CF6?style=flat-square)
 
-## Screenshots
+<p align="center">
+  <picture>
+    <source srcset="docs/images/winperf-hero.webp" type="image/webp">
+    <img src="docs/images/winperf-hero.png"
+         alt="WinPerf network performance toolkit overview"
+         width="960">
+  </picture>
+</p>
 
-![WinPerf Speed Test page](docs/images/winperf-speed-test.png)
+## ✨ Highlights
 
-![WinPerf Dashboard result page](docs/images/winperf-dashboard.png)
-
-![WinPerf Server Mode page](docs/images/winperf-server-mode.png)
-
-![WinPerf History page](docs/images/winperf-history.png)
-
-![WinPerf Settings window](docs/images/winperf-settings.png)
-
-## Highlights
-
-- Guided iperf dashboard for TCP upload, TCP download, bidirectional tests, UDP
-  upload/download, streams, warm-up/omit time, and command preview.
-- iperf3 and iperf2 support, including portable executable discovery/import and
-  engine status checks.
-- Ookla Speedtest CLI integration for internet speed tests alongside technical
-  iperf LAN/WAN tests.
-- Server mode for turning the current Windows machine into an iperf receiver.
-- Live gauges, throughput charting, total/per-stream samples, jitter/loss, and
-  raw engine output.
-- Saved profiles, friendly server names, and recent targets for repeatable
+- 🧭 Guided iperf dashboard for TCP upload, TCP download, bidirectional tests,
+  UDP upload/download, streams, warm-up/omit time, and command preview.
+- ⚙️ iperf3 and iperf2 support, including portable executable discovery/import
+  and engine status checks.
+- 🌐 Ookla Speedtest CLI integration for internet speed tests alongside
+  technical iperf LAN/WAN tests.
+- 🖥️ Server mode for turning the current Windows machine into an iperf receiver.
+- 📊 Live gauges, throughput charting, total/per-stream samples, jitter/loss,
+  and raw engine output.
+- 💾 Saved profiles, friendly server names, and recent targets for repeatable
   before/after testing.
-- Portable history, settings, language packs, and engine folders kept beside the
-  app instead of scattered through the system.
-- Guarded package/update handling for full builds, designed to replace only
+- 📦 Portable history, settings, language packs, and engine folders kept beside
+  the app instead of scattered through the system.
+- 🛡️ Guarded package/update handling for full builds, designed to replace only
   `WinPerf.exe` and preserve runtime data.
 
-## Good For
+## 📷 Screenshots
+
+<p align="center">
+  <img src="docs/images/winperf-speed-test.png"
+       alt="WinPerf Speed Test page"
+       width="760">
+</p>
+
+<details>
+<summary><strong>More screenshots</strong></summary>
+
+<p align="center">
+  <img src="docs/images/winperf-dashboard.png"
+       alt="WinPerf Dashboard result page"
+       width="390">
+  <img src="docs/images/winperf-server-mode.png"
+       alt="WinPerf Server Mode page"
+       width="390">
+</p>
+
+<p align="center">
+  <img src="docs/images/winperf-history.png"
+       alt="WinPerf History page"
+       width="390">
+  <img src="docs/images/winperf-settings.png"
+       alt="WinPerf Settings window"
+       width="390">
+</p>
+
+</details>
+
+## 🧩 Good For
 
 | Scenario | Why it helps |
 |---|---|
@@ -58,7 +86,7 @@ command preview matter.
 | Internet speed checks | Run Ookla CLI tests from the same portable tool surface |
 | Portable toolkits | Carry one self-contained Windows executable plus portable data folders |
 
-## Typical Workflow
+## 🛠️ Typical Workflow
 
 1. Import or select an `iperf3.exe`, `iperf.exe` / `iperf2.exe`, or Ookla
    `speedtest.exe`.
@@ -71,7 +99,7 @@ command preview matter.
 5. Save the profile or review the portable history when the result needs to be
    repeated or compared later.
 
-## Main Workflows
+## ⚙️ Main Workflows
 
 | Area | What it does |
 |---|---|
@@ -82,7 +110,7 @@ command preview matter.
 | Profiles | Stores reusable iperf configurations and named targets |
 | Settings | Manages engines, portable paths, language selection, and update checks |
 
-## Test Types
+## 🧪 Test Types
 
 | Mode | Notes |
 |---|---|
@@ -94,7 +122,7 @@ command preview matter.
 | Server mode | Run this Windows machine as the iperf receiver |
 | Custom command | Use advanced flags directly when the dashboard is not enough |
 
-## Portable Runtime
+## 💾 Portable Runtime
 
 WinPerf is designed around a portable runtime folder. The executable can live
 beside user data and tools, while updates and smoke builds must preserve those
@@ -109,14 +137,14 @@ runtime folders.
 Packaged builds are intended as a single self-contained `WinPerf.exe`. Source
 development uses .NET 9.
 
-## Profiles And History
+## 🔁 Profiles And History
 
 Profiles keep common test settings together. Friendly server names make direct
 targets easier to recognize while commands still use the raw address. History
 keeps recent results and command details so before/after testing does not depend
 on screenshots alone.
 
-## Releases
+## 📦 Releases
 
 Public/source repository releases are manual-only and may lag private
 distribution builds. Release ZIPs must contain exactly one file:
@@ -125,7 +153,7 @@ distribution builds. Release ZIPs must contain exactly one file:
 
 [View public source releases](https://github.com/Vaso73/WinPerf/releases)
 
-## Goal
+## 💡 Goal
 
 WinPerf is meant to be a calm, practical companion for network testing: quick
 enough for daily troubleshooting, clear enough for repeatable checks, and still
