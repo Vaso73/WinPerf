@@ -22,7 +22,7 @@ clear results, portable data, and a readable command preview matter.
   </picture>
 </p>
 
-## Download
+## 🚀 Download
 
 Public GitHub releases provide **WinPerf Free** builds.
 
@@ -32,27 +32,22 @@ Public GitHub releases provide **WinPerf Free** builds.
 - No installer is required. Keep the executable in a portable folder with your
   runtime data.
 
-## Editions
+## ✨ Included In WinPerf Free
 
-### WinPerf Free
+WinPerf Free is meant for quick, safe public network checks:
 
-WinPerf Free is meant for quick, safe public testing:
-
-- iperf3 TCP upload and TCP download
-- 1 stream
-- 10 second tests
+- iperf3 TCP upload and TCP download tests
+- fixed 1 stream and 10 second test duration
 - Ookla Speedtest with automatic server selection only
 - local history capped to 5 results
 - separate portable data folder: `free-data/`
-- built-in path to verify GitHub Sponsor Pro access and install Sponsor Pro
+- GitHub-based path to Sponsor Pro
 
-### WinPerf Sponsor Pro
+## 🔒 Sponsor Pro
 
 Sponsor Pro keeps the full toolkit for active GitHub Sponsors:
 
-- iperf2 support
-- UDP tests
-- bidirectional tests
+- iperf2, UDP, and bidirectional tests
 - server mode
 - advanced/custom commands
 - manual Ookla server selection and favorites
@@ -63,7 +58,7 @@ Sponsor Pro keeps the full toolkit for active GitHub Sponsors:
 [Support the project through GitHub Sponsors](https://github.com/sponsors/Vaso73)
 to unlock the Sponsor Pro channel.
 
-## Screenshots
+## 🖼️ Screenshots
 
 <p align="center">
   <img src="docs/images/winperf-speed-test.png"
@@ -85,7 +80,7 @@ to unlock the Sponsor Pro channel.
 
 </details>
 
-## Good For
+## 🧩 Good For
 
 | Scenario | Why it helps |
 |---|---|
@@ -95,7 +90,7 @@ to unlock the Sponsor Pro channel.
 | Internet speed checks | Run Ookla CLI tests from the same portable tool surface |
 | Portable toolkits | Carry one self-contained Windows executable plus portable data folders |
 
-## Public Repository Scope
+## 📦 Public Repository Scope
 
 This public repository is used for WinPerf Free presentation and distribution.
 The full development source and Sponsor Pro release channel are maintained
@@ -104,8 +99,13 @@ privately.
 Public release packages must not contain source code, runtime data, tools,
 language packs, debug symbols, or configuration files.
 
-## License
+## 📜 License
 
 WinPerf Free is distributed as a binary public freeware build under the terms in
 [`LICENSE`](LICENSE). The public repository does not grant an open-source
 license to the private WinPerf source code or Sponsor Pro-only features.
+
+## ❤️ Support
+
+[Compare editions](#-included-in-winperf-free) ·
+[Get Sponsor Pro](https://github.com/sponsors/Vaso73)
