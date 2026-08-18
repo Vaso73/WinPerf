@@ -1,0 +1,29 @@
+WinPerf Free Binary License
+
+Copyright (c) 2026 Vaso73.
+
+WinPerf Free is provided as a public freeware binary for personal, internal,
+administrative, and troubleshooting use.
+
+You may:
+
+- download and use official WinPerf Free release binaries;
+- copy the unmodified WinPerf Free release package inside your own machines or
+  organization;
+- link to the official WinPerf public release page.
+
+You may not:
+
+- sell, repackage, or redistribute modified WinPerf binaries;
+- remove or alter product identity, edition labels, update behavior, or Sponsor
+  Pro access controls;
+- claim ownership of WinPerf or publish unofficial builds as official releases;
+- use this public repository as a source-code license grant.
+
+Sponsor Pro builds, private updater logic, private source code, and Sponsor
+Pro-only functionality remain privately licensed and are not covered by this
+Free binary permission.
+
+The software is provided "as is", without warranty of any kind. Network testing
+can affect systems and links; use WinPerf only on networks where you have
+permission to run throughput tests.

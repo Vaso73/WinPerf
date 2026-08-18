@@ -1,0 +1,29 @@
+# Local build and runtime output
+artifacts/
+.artifacts/
+bin/
+obj/
+Debug/
+Release/
+TestResults/
+
+# IDE and user-local files
+.vs/
+.vscode/
+*.user
+*.suo
+*.rsuser
+*.log
+
+# Portable runtime data
+data/
+free-data/
+tools/
+lang/
+
+# Local-only AI/development context
+AGENTS.md
+docs/CURRENT_STATE.md
+docs/AI_CONTEXT_HANDOFF_TEMPLATE.md
+docs/RELEASE_CHECKLIST.md
+.local-context/
